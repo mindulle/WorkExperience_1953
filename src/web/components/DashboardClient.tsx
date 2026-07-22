@@ -30,7 +30,7 @@ export function DashboardClient({ initialData }: { initialData: any }) {
             <p className="text-sm text-gray-500">리뷰 분석 및 현황</p>
           </div>
 
-          <nav className="flex flex-col gap-4 mb-8">
+          <nav className="flex flex-col gap-6 mb-8">
             <Button className="w-full text-left font-bold text-xl">대시보드 (Page 1)</Button>
             <Button disabled className="w-full text-left text-gray-400">로우 데이터 (Page 2) - 준비중</Button>
             <Button disabled className="w-full text-left text-gray-400">기획서 (Page 3) - 준비중</Button>
@@ -53,28 +53,32 @@ export function DashboardClient({ initialData }: { initialData: any }) {
       <main className="flex-1 flex flex-col gap-6 overflow-y-auto pr-4 pb-4">
         
         {/* 상단 헤더 (지점 및 채널 필터) */}
-        <header className="flex justify-between items-center relative z-50">
+        <header className="flex justify-between items-center relative z-50 mb-4">
           <h2 className="text-3xl font-bold">실시간 분석 리포트</h2>
-          <div className="flex gap-4 items-center">
-            <span className="text-xl">지점 선택:</span>
-            <Select 
-              options={[
-                { value: "all", label: "전체 지점" },
-                { value: "main", label: "경성대본점" },
-                { value: "gwangan", label: "광안점" }
-              ]} 
-              selected={branch}
-              onSelect={setBranch}
-            />
-            <span className="text-xl ml-4">채널:</span>
-            <Select 
-              options={[
-                { value: "all", label: "통합 (네이버+유튜브)" },
-                { value: "naver", label: "네이버 리뷰" },
-                { value: "youtube", label: "유튜브 댓글" }
-              ]} 
-              selected="all"
-            />
+          <div className="flex gap-6 items-center">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">지점 선택:</span>
+              <Select 
+                options={[
+                  { value: "all", label: "전체 지점" },
+                  { value: "main", label: "경성대본점" },
+                  { value: "gwangan", label: "광안점" }
+                ]} 
+                selected={branch}
+                onSelect={setBranch}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xl">채널:</span>
+              <Select 
+                options={[
+                  { value: "all", label: "통합 (네이버+유튜브)" },
+                  { value: "naver", label: "네이버 리뷰" },
+                  { value: "youtube", label: "유튜브 댓글" }
+                ]} 
+                selected="all"
+              />
+            </div>
           </div>
         </header>
 
