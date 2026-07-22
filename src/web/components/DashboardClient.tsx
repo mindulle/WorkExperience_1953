@@ -56,10 +56,10 @@ export function DashboardClient({ initialData }: { initialData: any }) {
         
         {/* 상단 헤더 (지점 및 채널 필터) */}
         <header className="flex justify-between items-center relative z-50 mb-6 bg-white/50 p-6 rounded-2xl border-2 border-dashed border-gray-300">
-          <h2 className="text-4xl font-bold">실시간 분석 리포트</h2>
-          <div className="flex gap-8 items-center">
+          <h2 className="text-4xl font-bold whitespace-nowrap">실시간 분석 리포트</h2>
+          <div className="flex gap-8 items-center shrink-0">
             <div className="flex items-center gap-3">
-              <span className="text-2xl font-bold">지점 선택:</span>
+              <span className="text-2xl font-bold whitespace-nowrap">지점 선택:</span>
               <Select 
                 options={[
                   { value: "all", label: "전체 지점" },
@@ -68,11 +68,11 @@ export function DashboardClient({ initialData }: { initialData: any }) {
                 ]} 
                 selected={branch}
                 onSelect={setBranch}
-                className="text-xl"
+                className="text-xl min-w-40"
               />
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-2xl font-bold">채널:</span>
+              <span className="text-2xl font-bold whitespace-nowrap">채널:</span>
               <Select 
                 options={[
                   { value: "all", label: "통합 (네이버+유튜브)" },
@@ -80,7 +80,7 @@ export function DashboardClient({ initialData }: { initialData: any }) {
                   { value: "youtube", label: "유튜브 댓글" }
                 ]} 
                 selected="all"
-                className="text-xl"
+                className="text-xl min-w-48"
               />
             </div>
           </div>
