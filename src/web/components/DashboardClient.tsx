@@ -54,7 +54,7 @@ export function DashboardClient({ initialData }: { initialData: any }) {
       <main className="flex-1 flex flex-col gap-6 overflow-y-auto pr-4 pb-4">
         
         {/* 상단 헤더 (지점 및 채널 필터) */}
-        <header className="flex justify-between items-center z-10">
+        <header className="flex justify-between items-center relative z-50">
           <h2 className="text-3xl font-bold">실시간 분석 리포트</h2>
           <div className="flex gap-4 items-center">
             <span className="text-xl">지점 선택:</span>
