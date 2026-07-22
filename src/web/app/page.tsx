@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import React, { useState } from "react";
+import { DatePicker } from "@/components/ui/DatePicker";
 
 // 다이나믹 임포트로 클라이언트 사이드 렌더링 강제 (wired-elements 호환성)
 const Button = dynamic(() => import("@/components/ui/Button").then((mod) => mod.Button), { ssr: false });
@@ -42,8 +43,8 @@ export default function Dashboard() {
               <p className="font-bold text-blue-800">{todayDate} (오늘)</p>
               <p className="text-sm text-blue-600">기본값 적용됨</p>
             </div>
-            <Input placeholder="시작일 (YYYY.MM.DD)" className="mb-2 w-full" />
-            <Input placeholder="종료일 (YYYY.MM.DD)" className="w-full" />
+            <DatePicker label="시작일" className="mb-2 w-full" />
+            <DatePicker label="종료일" className="w-full" />
             <Button onClick={() => alert('조회 기간 필터 적용!')} className="w-full mt-4">기간 적용</Button>
           </div>
         </Card>
