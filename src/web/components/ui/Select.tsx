@@ -18,16 +18,15 @@ interface SelectProps {
 export function Select({ options, selected, onSelect, className }: SelectProps) {
   return (
     <div className={className}>
-      {/* @ts-expect-error wired-elements-react types missing onselected */}
       <WiredCombo
         selected={selected}
         onselected={(e: any) => onSelect && onSelect(e.detail.value)}
       >
-        {options.map((opt) => (
+        {(options.map((opt) => (
           <WiredItem key={opt.value} value={opt.value}>
-            {opt.label}
+            {opt.label as any}
           </WiredItem>
-        ))}
+        ))) as any}
       </WiredCombo>
     </div>
   );
