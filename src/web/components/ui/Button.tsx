@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect } from "react";
+import React from "react";
 import { WiredButton } from "wired-elements-react";
 
 interface ButtonProps {
@@ -16,8 +16,10 @@ export function Button({ children, onClick, className, disabled }: ButtonProps) 
   // 로 교체하면 전역 적용됩니다!
   
   return (
-    <div className={className} onClick={disabled ? undefined : onClick}>
-      <WiredButton disabled={disabled}>{children as any}</WiredButton>
+    <div className={className}>
+      <WiredButton disabled={disabled} onClick={disabled ? undefined : onClick}>
+        {children as any}
+      </WiredButton>
     </div>
   );
 }
