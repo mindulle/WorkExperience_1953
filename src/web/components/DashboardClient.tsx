@@ -23,41 +23,43 @@ export function DashboardClient({ initialData }: { initialData: any }) {
     <div className="flex h-screen bg-[#fdfbf7] text-gray-800 p-4 gap-6 font-sans">
       
       {/* 1. 좌측 사이드바 (메뉴 및 기간 필터) */}
-      <aside className="w-64 flex flex-col gap-6">
+      <aside className="w-80 flex flex-col gap-8">
         <Card elevation={3} className="h-full flex flex-col">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">1953 대시보드</h1>
-            <p className="text-sm text-gray-500">리뷰 분석 및 현황</p>
+          <div className="mb-10 p-2">
+            <h1 className="text-4xl font-bold mb-4">1953 대시보드</h1>
+            <p className="text-lg text-gray-500">리뷰 분석 및 현황</p>
           </div>
 
-          <nav className="flex flex-col gap-6 mb-8">
-            <Button className="w-full text-left font-bold text-xl">대시보드 (Page 1)</Button>
-            <Button disabled className="w-full text-left text-gray-400">로우 데이터 (Page 2) - 준비중</Button>
-            <Button disabled className="w-full text-left text-gray-400">기획서 (Page 3) - 준비중</Button>
+          <nav className="flex flex-col gap-6 mb-10 p-2">
+            <Button className="w-full text-left font-bold text-2xl">대시보드 (Page 1)</Button>
+            <Button disabled className="w-full text-left text-gray-400 text-xl">로우 데이터 (Page 2) - 준비중</Button>
+            <Button disabled className="w-full text-left text-gray-400 text-xl">기획서 (Page 3) - 준비중</Button>
           </nav>
 
-          <div className="mt-auto border-t border-dashed border-gray-400 pt-6">
-            <h3 className="text-xl mb-4 font-semibold">조회 기간</h3>
-            <div className="bg-blue-100/50 p-4 rounded-xl border border-blue-200 border-dashed mb-4">
-              <p className="font-bold text-blue-800">{todayDate} (오늘)</p>
-              <p className="text-sm text-blue-600">기본값 적용됨</p>
+          <div className="mt-auto border-t-2 border-dashed border-gray-400 pt-8 p-2">
+            <h3 className="text-2xl mb-6 font-semibold">조회 기간</h3>
+            <div className="bg-blue-100/50 p-6 rounded-2xl border-2 border-blue-300 border-dashed mb-6">
+              <p className="font-bold text-xl text-blue-800 mb-2">{todayDate} (오늘)</p>
+              <p className="text-md text-blue-600">기본값 적용됨</p>
             </div>
-            <DatePicker label="시작일" className="mb-2 w-full" />
-            <DatePicker label="종료일" className="w-full" />
-            <Button onClick={() => alert('조회 기간 필터 적용!')} className="w-full mt-4">기간 적용</Button>
+            <div className="space-y-4">
+              <DatePicker label="시작일" className="w-full" />
+              <DatePicker label="종료일" className="w-full" />
+              <Button onClick={() => alert('조회 기간 필터 적용!')} className="w-full mt-6">기간 적용</Button>
+            </div>
           </div>
         </Card>
       </aside>
 
       {/* 우측 메인 영역 */}
-      <main className="flex-1 flex flex-col gap-6 overflow-y-auto pr-4 pb-4">
+      <main className="flex-1 flex flex-col gap-10 overflow-y-auto pr-6 pb-6 pl-4">
         
         {/* 상단 헤더 (지점 및 채널 필터) */}
-        <header className="flex justify-between items-center relative z-50 mb-4">
-          <h2 className="text-3xl font-bold">실시간 분석 리포트</h2>
-          <div className="flex gap-6 items-center">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">지점 선택:</span>
+        <header className="flex justify-between items-center relative z-50 mb-6 bg-white/50 p-6 rounded-2xl border-2 border-dashed border-gray-300">
+          <h2 className="text-4xl font-bold">실시간 분석 리포트</h2>
+          <div className="flex gap-8 items-center">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl font-bold">지점 선택:</span>
               <Select 
                 options={[
                   { value: "all", label: "전체 지점" },
@@ -66,10 +68,11 @@ export function DashboardClient({ initialData }: { initialData: any }) {
                 ]} 
                 selected={branch}
                 onSelect={setBranch}
+                className="text-xl"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl">채널:</span>
+            <div className="flex items-center gap-3">
+              <span className="text-2xl font-bold">채널:</span>
               <Select 
                 options={[
                   { value: "all", label: "통합 (네이버+유튜브)" },
@@ -77,13 +80,14 @@ export function DashboardClient({ initialData }: { initialData: any }) {
                   { value: "youtube", label: "유튜브 댓글" }
                 ]} 
                 selected="all"
+                className="text-xl"
               />
             </div>
           </div>
         </header>
 
         {/* 대시보드 그리드 영역 */}
-        <div className="grid grid-cols-3 gap-6 flex-1">
+        <div className="grid grid-cols-3 gap-8 flex-1">
           
           {/* 1. 긍정/부정 리뷰 (도넛 그래프) - 실제 데이터 연동 예정 */}
           <Card className="col-span-1 flex flex-col">

@@ -11,14 +11,12 @@ interface ButtonProps {
 }
 
 export function Button({ children, onClick, className, disabled }: ButtonProps) {
-  // 나중에 디자인 시스템이 나오면 이 컴포넌트 내부만 
-  // <button className={`bg-blue-500 rounded... ${className}`}>{children}</button>
-  // 로 교체하면 전역 적용됩니다!
-  
   return (
     <div className={className}>
       <WiredButton disabled={disabled} onclick={disabled ? undefined : onClick}>
-        {children as any}
+        {(<div className="px-4 py-2 flex items-center justify-center">
+          {children as any}
+        </div>) as any}
       </WiredButton>
     </div>
   );
