@@ -35,18 +35,22 @@ def main():
     print("==================================================")
 
     # 1. 수집 스크립트 실행 (실행 디렉토리를 RAW_DATA_DIR로 맞춰 원천 데이터가 올바른 위치에 저장되도록 함)
-    print("\n[1/2] 데이터 수집 시작...")
+    print("\n[1/3] 데이터 수집 시작...")
     run_script(PIPELINE_DIR / "collect" / "naver_review_collector.py", cwd=RAW_DATA_DIR)
     run_script(PIPELINE_DIR / "collect" / "youtube_collector.py", cwd=RAW_DATA_DIR)
     run_script(PIPELINE_DIR / "collect" / "naver_datalab_trend.py", cwd=RAW_DATA_DIR)
 
     # 2. 정제 스크립트 실행
-    print("\n[2/2] 데이터 정제 검증 시작...")
+    print("\n[2/3] 데이터 정제 검증 시작...")
     run_script(PIPELINE_DIR / "clean" / "clean_mentions.py", 
                "--outdir", str(CLEAN_DATA_DIR),
                "--naver", str(RAW_DATA_DIR / "naver_mentions_raw.csv"),
                "--xlsx", str(PROJECT_ROOT / "data/1953_일경험프로젝트_통합자료/04_프로젝트_실무_및_참고자료/1953_통합분석_대시보드.xlsx"),
                cwd=RAW_DATA_DIR)
+
+    # 3. 구글 시트 업로드 실행
+    print("\n[3/3] Google Sheets 자동 업로드 시작...")
+    run_script(PIPELINE_DIR / "upload" / "google_sheets.py", cwd=PIPELINE_DIR)
 
     print("\n🎉 모든 파이프라인 실행이 완료되었습니다!")
     print(f"정제된 결과물은 '{CLEAN_DATA_DIR}' 폴더에서 확인 가능합니다.")
