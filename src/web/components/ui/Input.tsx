@@ -16,7 +16,7 @@ export function Input({ value, placeholder, onChange, className }: InputProps) {
       <WiredInput 
         placeholder={placeholder} 
         value={value} 
-        onInput={(e: any) => onChange && onChange(e as any)} 
+        oninput={(e: any) => onChange && onChange(e as any)} 
       />
     </div>
   );

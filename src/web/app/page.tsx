@@ -1,8 +1,10 @@
 "use client";
 
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Card } from "@/components/ui/Card";
+import dynamic from "next/dynamic";
+
+const Button = dynamic(() => import("@/components/ui/Button").then((mod) => mod.Button), { ssr: false });
+const Input = dynamic(() => import("@/components/ui/Input").then((mod) => mod.Input), { ssr: false });
+const Card = dynamic(() => import("@/components/ui/Card").then((mod) => mod.Card), { ssr: false });
 
 export default function Home() {
   return (

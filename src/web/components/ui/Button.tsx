@@ -17,7 +17,7 @@ export function Button({ children, onClick, className, disabled }: ButtonProps) 
   
   return (
     <div className={className} onClick={disabled ? undefined : onClick}>
-      <WiredButton disabled={disabled}>{children}</WiredButton>
+      <WiredButton disabled={disabled}>{children as any}</WiredButton>
     </div>
   );
 }
