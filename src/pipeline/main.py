@@ -35,7 +35,7 @@ def main():
     print("==================================================")
 
     # 1. 수집 스크립트 실행 (실행 디렉토리를 RAW_DATA_DIR로 맞춰 원천 데이터가 올바른 위치에 저장되도록 함)
-    print("\n[1/2] 데이터 수집 시작...")
+    print("\n[1/3] 데이터 수집 시작...")
     run_script(PIPELINE_DIR / "collect" / "naver_review_collector.py", cwd=RAW_DATA_DIR)
     run_script(PIPELINE_DIR / "collect" / "youtube_collector.py", cwd=RAW_DATA_DIR)
     run_script(PIPELINE_DIR / "collect" / "naver_datalab_trend.py", cwd=RAW_DATA_DIR)

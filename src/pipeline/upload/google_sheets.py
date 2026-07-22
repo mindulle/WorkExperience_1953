@@ -9,7 +9,6 @@
 
 import os
 import sys
-import json
 import pandas as pd
 from pathlib import Path
 from google.oauth2.service_account import Credentials
@@ -21,7 +20,15 @@ PROJECT_ROOT = PIPELINE_DIR.parent.parent.resolve()
 CLEAN_DATA_DIR = PROJECT_ROOT / "data" / "clean"
 RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw"
 
-# 환경변수 로드 (.env에서 주입됨)
+# 환경변수 로드 (.env 처리)
+if os.environ.get("NAVER_ENV_FILE") and Path(os.environ["NAVER_ENV_FILE"]).exists():
+    with open(os.environ["NAVER_ENV_FILE"], "r", encoding="utf-8") as f:
+        for ln in f:
+            ln = ln.strip()
+            if ln and not ln.startswith("#") and "=" in ln:
+                k, v = ln.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+
 GOOGLE_CREDENTIALS_PATH = os.environ.get("GOOGLE_CREDENTIALS_PATH")
 GOOGLE_SHEET_URL = os.environ.get("GOOGLE_SHEET_URL")
 
@@ -34,38 +41,41 @@ SHEET_MAPPING = {
 }
 
 def get_gspread_client():
-    if not GOOGLE_CREDENTIALS_PATH or not os.path.exists(GOOGLE_CREDENTIALS_PATH):
-        print("⚠️ GOOGLE_CREDENTIALS_PATH 가 설정되지 않았거나 파일이 없습니다. (업로드 스킵)")
+    if not GOOGLE_CREDENTIALS_PATH:
+        print("⚠️ GOOGLE_CREDENTIALS_PATH 가 설정되지 않았습니다. (업로드 스킵)")
+        return None
+    
+    cred_path = Path(GOOGLE_CREDENTIALS_PATH).expanduser()
+    if not cred_path.exists():
+        print(f"⚠️ 인증 파일을 찾을 수 없습니다: {cred_path} (업로드 스킵)")
         return None
     
     scopes = [
         'https://www.googleapis.com/auth/spreadsheets',
         'https://www.googleapis.com/auth/drive'
     ]
-    credentials = Credentials.from_service_account_file(GOOGLE_CREDENTIALS_PATH, scopes=scopes)
+    credentials = Credentials.from_service_account_file(cred_path, scopes=scopes)
     client = gspread.authorize(credentials)
     return client
 
 def upload_dataframe_to_sheet(sh, df, sheet_name):
     """데이터프레임을 특정 시트(탭)에 덮어씁니다. 없으면 생성합니다."""
-    # 시트 존재 여부 확인 및 생성
+    req_rows = max(100, len(df) + 10)
+    req_cols = max(26, len(df.columns) + 5)
+    
     try:
         worksheet = sh.worksheet(sheet_name)
-        # 기존 데이터 초기화
+        # 기존 데이터 초기화 및 충분한 크기로 리사이즈
         worksheet.clear()
+        worksheet.resize(rows=req_rows, cols=req_cols)
     except gspread.exceptions.WorksheetNotFound:
-        # 데이터프레임 크기보다 넉넉하게 시트 생성
-        rows = max(100, len(df) + 10)
-        cols = max(26, len(df.columns) + 5)
-        worksheet = sh.add_worksheet(title=sheet_name, rows=rows, cols=cols)
+        worksheet = sh.add_worksheet(title=sheet_name, rows=req_rows, cols=req_cols)
 
-    # 데이터 업로드를 위해 결측치(NaN, NaT 등)를 빈 문자열로 처리
+    # 결측치 빈 문자열 처리
     df = df.fillna('')
-    
-    # 헤더와 데이터 결합
     data_to_upload = [df.columns.values.tolist()] + df.values.tolist()
     
-    # 구글 시트에 일괄 업데이트 (gspread 6.0+ 문법)
+    # 구글 시트 일괄 업데이트
     worksheet.update(values=data_to_upload, range_name='A1')
     print(f"  └ ✅ 시트 갱신 완료: '{sheet_name}' ({len(df)}행)")
 
@@ -87,6 +97,7 @@ def main():
         print(f"❌ 구글 시트 연결 실패: {e}")
         return 1
 
+    has_error = False
     for file_path, sheet_name in SHEET_MAPPING.items():
         if not file_path.exists():
             print(f"  └ ⚠️ 파일 없음 스킵: {file_path.name}")
@@ -98,9 +109,14 @@ def main():
             upload_dataframe_to_sheet(sh, df, sheet_name)
         except Exception as e:
             print(f"  └ ❌ {sheet_name} 업로드 중 오류 발생: {e}")
+            has_error = True
 
-    print("\n🎉 모든 데이터가 Google Sheets로 성공적으로 전송되었습니다!")
-    return 0
+    if has_error:
+        print("\n⚠️ 일부 데이터 업로드 중 오류가 발생했습니다.")
+        return 1
+    else:
+        print("\n🎉 모든 데이터가 Google Sheets로 성공적으로 전송되었습니다!")
+        return 0
 
 if __name__ == "__main__":
     sys.exit(main())
