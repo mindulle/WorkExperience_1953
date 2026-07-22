@@ -12,6 +12,11 @@ const Progress = dynamic(() => import("@/components/ui/Progress").then((mod) => 
 
 export default function Dashboard() {
   const [branch, setBranch] = useState("all");
+  const todayDate = new Date().toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).replace(/\.$/, '');
 
   return (
     <div className="flex h-screen bg-[#fdfbf7] text-gray-800 p-4 gap-6 font-sans">
@@ -34,12 +39,12 @@ export default function Dashboard() {
             <h3 className="text-xl mb-4 font-semibold">📅 조회 기간</h3>
             {/* 오늘 날짜 파란색 음영 기획 반영 */}
             <div className="bg-blue-100/50 p-4 rounded-xl border border-blue-200 border-dashed mb-4">
-              <p className="font-bold text-blue-800">2026.07.22 (오늘)</p>
+              <p className="font-bold text-blue-800">{todayDate} (오늘)</p>
               <p className="text-sm text-blue-600">기본값 적용됨</p>
             </div>
             <Input placeholder="시작일 (YYYY.MM.DD)" className="mb-2 w-full" />
             <Input placeholder="종료일 (YYYY.MM.DD)" className="w-full" />
-            <Button className="w-full mt-4">기간 적용</Button>
+            <Button onClick={() => alert('조회 기간 필터 적용!')} className="w-full mt-4">기간 적용</Button>
           </div>
         </Card>
       </aside>
@@ -59,6 +64,7 @@ export default function Dashboard() {
                 { value: "gwangan", label: "광안점" }
               ]} 
               selected={branch}
+              onSelect={setBranch}
             />
             <span className="text-xl ml-4">채널:</span>
             <Select 
