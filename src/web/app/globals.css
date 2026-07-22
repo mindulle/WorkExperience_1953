@@ -1,0 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #fdfbf7;
+  --foreground: #171717;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: 'Nanum Pen Script', cursive;
+  font-size: 1.25rem;
+}
+
+/* wired-elements 내부 폰트 강제 상속 */
+wired-button, wired-input, wired-card {
+  font-family: inherit;
+}
