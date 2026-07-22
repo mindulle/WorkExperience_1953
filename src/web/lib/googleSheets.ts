@@ -1,11 +1,5 @@
-import { google } from "googleapis";
-
 export async function getDashboardData() {
-  const sheetId = process.env.GOOGLE_SHEET_ID;
-  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-  const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
-
-  const mockData = {
+  const MOCK_DATA = {
     totalReviews: 1716,
     positivePct: 80,
     negativePct: 20,
@@ -14,42 +8,47 @@ export async function getDashboardData() {
     purposes: []
   };
 
-  if (!sheetId || !privateKey || !clientEmail) {
-    console.warn("[WARN] Google Sheets credentials not fully configured. Using mock data.");
-    return mockData;
-  }
+  const SHEET_ID = process.env.GOOGLE_SHEET_ID || "13Z0VlvkblfBrT7BtNK1iw2dbVsLMkrAh1XgP1SfRnJg";
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=%EC%A0%95%EC%A0%9C_%EC%96%B8%EA%B8%89%EB%8D%B0%EC%9D%B4%ED%84%B0`;
 
   try {
-    const auth = new google.auth.GoogleAuth({
-      credentials: {
-        client_email: clientEmail,
-        private_key: privateKey,
-      },
-      scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
-    });
-
-    const sheets = google.sheets({ version: "v4", auth });
+    const res = await fetch(url, { next: { revalidate: 60 } });
+    if (!res.ok) throw new Error("Failed to fetch sheet");
+    const csv = await res.text();
     
-    // 1. 정제_언급데이터 가져오기
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: sheetId,
-      range: "정제_언급데이터!A:Z",
-    });
+    let positive = 0;
+    let negative = 0;
+    let neutral = 0;
 
-    const rows = response.data.values;
-    if (!rows || rows.length === 0) return mockData;
+    const lines = csv.split('\n');
+    for (const line of lines) {
+      if (line.includes('"긍정"')) {
+        const val = line.split(',')[1]?.replace(/"/g, '');
+        if (val) positive = parseInt(val, 10);
+      }
+      if (line.includes('"부정"')) {
+        const val = line.split(',')[1]?.replace(/"/g, '');
+        if (val) negative = parseInt(val, 10);
+      }
+      if (line.includes('"중립"')) {
+        const val = line.split(',')[1]?.replace(/"/g, '');
+        if (val) neutral = parseInt(val, 10);
+      }
+    }
 
-    // 실제 데이터 연동 로직 (데이터 스키마에 맞춰 집계 로직을 짜야 하지만, 
-    // 현재는 샘플로 행 갯수를 총 리뷰 수로 사용하고, 나머지는 mockData 구조를 반환)
-    const data = rows.slice(1);
-    const totalReviews = data.length;
-    
+    const total = positive + neutral + negative;
+    const totalPosNeg = positive + negative;
+    const posPct = totalPosNeg > 0 ? Math.round((positive / totalPosNeg) * 100) : 80;
+    const negPct = totalPosNeg > 0 ? 100 - posPct : 20;
+
     return {
-      ...mockData,
-      totalReviews: totalReviews > 0 ? totalReviews : mockData.totalReviews,
+      ...MOCK_DATA,
+      totalReviews: total > 0 ? total : MOCK_DATA.totalReviews,
+      positivePct: posPct,
+      negativePct: negPct,
     };
   } catch (error) {
-    console.error("[ERROR] Failed to fetch Google Sheets data:", error);
-    return mockData;
+    console.error("[ERROR] Public Sheets fetch failed:", error);
+    return MOCK_DATA;
   }
 }
