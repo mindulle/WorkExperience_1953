@@ -2,7 +2,8 @@ import type { StorybookConfig } from '@storybook/nextjs-vite';
 
 const config: StorybookConfig = {
   "stories": [
-    "../stories/**/*.mdx",
+    // MDX 문서 페이지를 추가할 때 "../stories/**/*.mdx" 를 다시 넣는다.
+    // 대상 파일이 없으면 빌드마다 "No story files found" 경고가 뜨므로 제거해 둔다.
     "../stories/**/*.stories.@(js|jsx|mjs|ts|tsx)",
     // 실제 디자인 시스템 스토리는 components/ 에 있다.
     // 이 경로가 빠져 있으면 Chromatic 이 설치 예제만 검증하게 된다.
