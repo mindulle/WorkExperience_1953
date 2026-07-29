@@ -123,12 +123,37 @@ export function DashboardClient({
           )}
         </Card>
 
-        {/* 3. 메뉴 데이터 (프로그레스 바) - 미구현 */}
+        {/* 3. 메뉴 데이터 (프로그레스 바) */}
         <Card className="col-span-1 flex flex-col">
           <h3 className="text-base font-bold mb-4">긍정 추천 메뉴</h3>
-          <div className="flex-1 flex items-center justify-center border border-dashed border-gray-200 bg-[var(--plane)] rounded-lg text-[var(--muted)] text-sm min-h-28">
-            미구현 (메뉴 키워드 추출 파이프라인 연동 필요)
-          </div>
+          {initialData.menuRanking.length > 0 ? (
+            <div className="flex-1 flex flex-col justify-center gap-3">
+              {(() => {
+                const maxCount = Math.max(...initialData.menuRanking.map((m) => m.count));
+                return initialData.menuRanking.map((m) => (
+                  <div key={m.menu}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="font-medium">{m.menu}</span>
+                      <span className="text-[var(--muted)] [font-variant-numeric:tabular-nums]">{m.count}건</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-[var(--plane)] overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-[var(--brand)]"
+                        style={{ width: `${maxCount > 0 ? (m.count / maxCount) * 100 : 0}%` }}
+                      />
+                    </div>
+                  </div>
+                ));
+              })()}
+              <p className="mt-1 text-[11px] text-[var(--muted)]">
+                긍정 리뷰에서 언급된 메뉴만 집계했습니다.
+              </p>
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center border border-dashed border-gray-200 bg-[var(--plane)] rounded-lg text-[var(--muted)] text-sm min-h-28">
+              미구현 (메뉴 키워드 추출 파이프라인 연동 필요)
+            </div>
+          )}
         </Card>
 
         {/* 4. 방문 목적 (도넛 차트) */}
