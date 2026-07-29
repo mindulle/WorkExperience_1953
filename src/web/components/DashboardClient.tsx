@@ -7,6 +7,13 @@ import { Topbar } from "@/components/dashboard/Topbar";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import type { DashboardData } from "@/lib/types";
 
+// "정보없음"은 축소하지 않고 실제 비중대로 muted 색으로 크게 보여준다 (데이터 한계를 숨기지 않음).
+const PURPOSE_COLORS: Record<string, string> = {
+  "외지/관광 방문": "var(--s-blue)",
+  "현지인/단골": "var(--s-aqua)",
+  "정보없음": "var(--muted)",
+};
+
 export function DashboardClient({
   initialData,
   updatedAt,
@@ -92,12 +99,59 @@ export function DashboardClient({
           </div>
         </Card>
 
-        {/* 4. 방문 목적 (도넛 차트) - 미구현 */}
+        {/* 4. 방문 목적 (도넛 차트) */}
         <Card className="col-span-1 flex flex-col">
           <h3 className="text-base font-bold mb-4">방문 목적 (타깃 분석)</h3>
-          <div className="flex-1 flex items-center justify-center border border-dashed border-gray-200 bg-[var(--plane)] rounded-lg text-[var(--muted)] text-sm min-h-28">
-            미구현 (방문 목적 분류 모델 적용 필요)
-          </div>
+          {initialData.purposes.length > 0 ? (
+            <>
+              {/* 리뷰 본문에 방문 목적을 알 수 있는 언급이 있는 경우만 분류 가능하다.
+                  대부분은 언급이 없어 "정보없음"이 압도적으로 크며, 이는 데이터 한계이지
+                  실제로 방문자 대부분의 목적이 불명확하다는 뜻이 아니다 — 축소 표시하지 않는다. */}
+              <div className="flex-1 flex items-center justify-center relative w-40 h-40 mx-auto my-4">
+                <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+                  {(() => {
+                    let offset = 0;
+                    return initialData.purposes.map((p) => {
+                      const dash = (p.ratio / 100) * 251;
+                      const el = (
+                        <circle
+                          key={p.purpose}
+                          cx="50"
+                          cy="50"
+                          r="40"
+                          fill="transparent"
+                          stroke={PURPOSE_COLORS[p.purpose] ?? "var(--muted)"}
+                          strokeWidth="20"
+                          strokeDasharray={`${dash} ${251 - dash}`}
+                          strokeDashoffset={`-${offset}`}
+                        />
+                      );
+                      offset += dash;
+                      return el;
+                    });
+                  })()}
+                </svg>
+              </div>
+              <div className="flex flex-col gap-1.5 mt-2 text-sm">
+                {initialData.purposes.map((p) => (
+                  <span key={p.purpose} className="flex items-center gap-1.5">
+                    <span
+                      className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ background: PURPOSE_COLORS[p.purpose] ?? "var(--muted)" }}
+                    />
+                    {p.purpose} {p.ratio}%
+                  </span>
+                ))}
+              </div>
+              <p className="mt-3 text-[11px] text-[var(--muted)]">
+                리뷰 본문에 방문 목적이 직접 언급된 경우만 분류했습니다. 대부분 언급이 없어 &ldquo;정보없음&rdquo;이 큰 비중을 차지합니다.
+              </p>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center border border-dashed border-gray-200 bg-[var(--plane)] rounded-lg text-[var(--muted)] text-sm min-h-28">
+              미구현 (방문 목적 분류 모델 적용 필요)
+            </div>
+          )}
         </Card>
 
         {/* 5. 지점별 강점 & 6. 키워드 분석 - 미구현 */}
