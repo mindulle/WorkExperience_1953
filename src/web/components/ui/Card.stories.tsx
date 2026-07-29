@@ -3,6 +3,7 @@ import { expect } from 'storybook/test';
 import { Card } from './Card';
 
 const meta = {
+  title: "UI/Card",
   component: Card,
   tags: ['ai-generated'],
 } satisfies Meta<typeof Card>;

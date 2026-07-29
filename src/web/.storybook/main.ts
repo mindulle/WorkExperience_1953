@@ -3,7 +3,10 @@ import type { StorybookConfig } from '@storybook/nextjs-vite';
 const config: StorybookConfig = {
   "stories": [
     "../stories/**/*.mdx",
-    "../stories/**/*.stories.@(js|jsx|mjs|ts|tsx)"
+    "../stories/**/*.stories.@(js|jsx|mjs|ts|tsx)",
+    // 실제 디자인 시스템 스토리는 components/ 에 있다.
+    // 이 경로가 빠져 있으면 Chromatic 이 설치 예제만 검증하게 된다.
+    "../components/**/*.stories.@(js|jsx|mjs|ts|tsx)"
   ],
   "addons": [
     "@chromatic-com/storybook",
