@@ -17,7 +17,7 @@ export function DatePicker({ value, onChange, className = "", label }: DatePicke
         type="date"
         value={value}
         onChange={onChange}
-        className="px-3 py-2 bg-[var(--surface)] border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent text-[var(--ink)] w-full transition-all"
+        className="px-3 py-2 bg-[var(--surface)] border border-[var(--hairline)] rounded-[var(--r-sm)] outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent text-[var(--ink)] w-full transition-all"
       />
     </div>
   );

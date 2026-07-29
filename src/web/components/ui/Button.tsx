@@ -20,9 +20,9 @@ export function Button({
   
   const variants = {
     primary: "bg-[var(--primary)] text-[var(--surface)] hover:brightness-110 focus:ring-[var(--primary)]",
-    secondary: "bg-[var(--plane)] text-[var(--ink)] hover:bg-gray-200 focus:ring-gray-400",
-    outline: "border-2 border-[var(--primary)] text-[var(--primary)] hover:bg-blue-50 focus:ring-[var(--primary)]",
-    ghost: "text-[var(--ink)] hover:bg-[var(--plane)] focus:ring-gray-400",
+    secondary: "bg-[var(--surface-2)] text-[var(--ink)] hover:bg-[var(--hairline)] focus:ring-[var(--hairline)]",
+    outline: "border-2 border-[var(--primary)] text-[var(--primary)] hover:bg-[var(--primary-soft)] focus:ring-[var(--primary)]",
+    ghost: "text-[var(--ink-2)] hover:bg-[var(--surface-2)] focus:ring-[var(--hairline)]",
   };
 
   return (

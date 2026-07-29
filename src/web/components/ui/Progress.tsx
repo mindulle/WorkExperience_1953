@@ -15,7 +15,7 @@ export function Progress({ value, label, className = "" }: ProgressProps) {
   return (
     <div className={`flex flex-col gap-2 ${className}`}>
       {label && <span className="text-sm font-medium text-[var(--ink)]">{label}</span>}
-      <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+      <div className="w-full bg-[var(--surface-2)] rounded-full h-2.5 overflow-hidden border border-[var(--hairline-2)]">
         <div 
           className="bg-[var(--primary)] h-2.5 rounded-full transition-all duration-300 ease-in-out" 
           style={{ width: `${safeValue}%` }}

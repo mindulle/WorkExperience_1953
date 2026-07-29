@@ -33,9 +33,9 @@ export function DashboardClient({ initialData }: { initialData: any }) {
             <Button disabled className="w-full" variant="ghost">기획서 (Page 3) - 준비중</Button>
           </nav>
 
-          <div className="mt-auto border-t border-gray-200 pt-6 p-2">
+          <div className="mt-auto border-t border-[var(--hairline)] pt-6 p-2">
             <h3 className="text-base font-semibold mb-4 text-[var(--ink)]">조회 기간</h3>
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-4">
+            <div className="bg-[var(--primary-soft)] p-4 rounded-[var(--r-sm)] border border-[var(--hairline)] mb-4">
               <p className="font-semibold text-sm text-[var(--primary)] mb-1">{todayDate} (오늘)</p>
               <p className="text-xs text-[var(--muted)]">기본값 적용됨</p>
             </div>
@@ -52,7 +52,7 @@ export function DashboardClient({ initialData }: { initialData: any }) {
       <main className="flex-1 flex flex-col gap-6 overflow-y-auto pr-4 pb-4">
         
         {/* 상단 헤더 (지점 및 채널 필터) */}
-        <header className="flex justify-between items-center relative z-50 bg-[var(--surface)] p-5 rounded-xl border border-gray-100 shadow-sm">
+        <header className="flex justify-between items-center relative z-50 bg-[var(--surface)] p-5 rounded-[var(--r-lg)] border border-[var(--hairline)] [box-shadow:var(--shadow-sm)]">
           <h2 className="text-2xl font-bold whitespace-nowrap">실시간 분석 리포트</h2>
           <div className="flex gap-6 items-center shrink-0">
             <div className="flex items-center gap-2">
