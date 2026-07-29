@@ -39,6 +39,19 @@ export type MonthlyTrend = {
   avgRating?: number;
 };
 
+/**
+ * 지점별 강점(경쟁우위) 비교. 프로토타입의 "지점별 강점" 카드용.
+ * "강점"은 긍정률 기준 내림차순으로 정의한다(이슈 #72). 표본이 적은 지점은
+ * 비율이 극단적으로 나올 수 있어 reviewCount를 함께 보여줘 오해를 막는다.
+ */
+export type BranchStat = {
+  branch: string;
+  reviewCount: number;
+  avgRating?: number;
+  positivePct: number;
+  negativePct: number;
+};
+
 /** 데이터 출처. 시트 조회 실패 시 기본값이 쓰였음을 화면에 알리기 위해 필요하다. */
 export type DashboardSource = "sheet" | "fallback";
 
@@ -62,6 +75,7 @@ export type DashboardData = {
   menuRanking: MenuMention[];
   purposes: VisitPurpose[];
   monthlyTrend: MonthlyTrend[];
+  branchStats: BranchStat[];
 
   // ── 아직 수집하지 않는 항목 ──
   // 값이 생기면 선택 필드를 채우면 되고, 화면은 없을 때 사유를 표시한다.

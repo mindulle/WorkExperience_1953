@@ -1,4 +1,4 @@
-import type { DashboardData, VisitPurpose, MonthlyTrend, MenuMention } from "./types";
+import type { DashboardData, VisitPurpose, MonthlyTrend, MenuMention, BranchStat } from "./types";
 
 // 랭킹 집계 시 서로 다른 표기를 하나로 합친다(원본 값 자체는 건드리지 않음).
 // "국밥"은 국밥집 리뷰 대부분에 등장해 랭킹 변별력이 없어 제외한다.
@@ -153,6 +153,56 @@ function deriveMenuRanking(header: string[], rows: string[][], topN = 5): MenuMe
     .map(([menu, count]) => ({ menu, count }));
 }
 
+/**
+ * 지점별 리뷰수·평균평점·긍정률·부정률. "강점"은 긍정률 내림차순으로 정의한다(#72).
+ * sentiment_basis == "비리뷰"(수집 불가 메모 등 실제 리뷰가 아닌 행)는 제외.
+ */
+function deriveBranchStats(header: string[], rows: string[][]): BranchStat[] | null {
+  const branchCol = header.indexOf("branch");
+  const ratingCol = header.indexOf("rating");
+  const sentimentCol = header.indexOf("sentiment_final");
+  const basisCol = header.indexOf("sentiment_basis");
+  if (branchCol === -1 || sentimentCol === -1) return null;
+
+  const byBranch: Record<
+    string,
+    { count: number; ratingSum: number; ratingN: number; pos: number; neg: number; judged: number }
+  > = {};
+  for (const row of rows) {
+    if (basisCol !== -1 && row[basisCol] === "비리뷰") continue;
+    const branch = row[branchCol];
+    if (!branch) continue;
+    const b = (byBranch[branch] ??= { count: 0, ratingSum: 0, ratingN: 0, pos: 0, neg: 0, judged: 0 });
+    b.count += 1;
+    const rating = ratingCol === -1 ? NaN : parseFloat(row[ratingCol]);
+    if (!Number.isNaN(rating)) {
+      b.ratingSum += rating;
+      b.ratingN += 1;
+    }
+    const s = row[sentimentCol];
+    if (s === "긍정" || s === "부정" || s === "중립" || s === "혼합") {
+      b.judged += 1;
+      if (s === "긍정") b.pos += 1;
+      if (s === "부정") b.neg += 1;
+    }
+  }
+
+  const branches = Object.keys(byBranch);
+  if (branches.length === 0) return null;
+  return branches
+    .map((branch) => {
+      const b = byBranch[branch];
+      return {
+        branch,
+        reviewCount: b.count,
+        avgRating: b.ratingN > 0 ? Math.round((b.ratingSum / b.ratingN) * 100) / 100 : undefined,
+        positivePct: b.judged > 0 ? Math.round((b.pos / b.judged) * 100) : 0,
+        negativePct: b.judged > 0 ? Math.round((b.neg / b.judged) * 100) : 0,
+      };
+    })
+    .sort((a, b) => b.positivePct - a.positivePct);
+}
+
 export async function getDashboardData(): Promise<DashboardData> {
   // output:"export" 정적 익스포트라 이 함수는 빌드 시점에 한 번 실행된다.
   // 즉 화면에 표시되는 "마지막 조회"는 마지막 배포 시각과 같다.
@@ -178,6 +228,15 @@ export async function getDashboardData(): Promise<DashboardData> {
       { menu: "맑은국밥", count: 14 },
     ],
     purposes: toRatios({ "외지/관광 방문": 11, "현지인/단골": 9, "정보없음": 574 }),
+    // 이슈 #72 실측치 (긍정률 내림차순 — 서면점은 표본이 15건뿐이라 100%가 다소 불안정할 수 있음).
+    branchStats: [
+      { branch: "서면점", reviewCount: 15, avgRating: 5.0, positivePct: 100, negativePct: 0 },
+      { branch: "광안점", reviewCount: 258, avgRating: 4.5, positivePct: 85, negativePct: 9 },
+      { branch: "중앙동점", reviewCount: 29, avgRating: 4.42, positivePct: 76, negativePct: 10 },
+      { branch: "본점", reviewCount: 276, avgRating: 4.26, positivePct: 75, negativePct: 12 },
+      { branch: "사직점", reviewCount: 7, avgRating: 4.43, positivePct: 71, negativePct: 14 },
+      { branch: "BIFC문현점", reviewCount: 7, avgRating: 4.36, positivePct: 57, negativePct: 14 },
+    ],
     // 594건 중 314건만 연-월을 알 수 있음(#68) — 나머지는 "N년 전"처럼 연 단위뿐이라 집계에서 제외.
     monthlyTrend: [
       { month: "2025-07", count: 9, avgRating: 4.91 },
@@ -233,6 +292,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     const purposes = reviewSheet ? derivePurposes(reviewSheet.header, reviewSheet.rows) : null;
     const monthlyTrend = reviewSheet ? deriveMonthlyTrend(reviewSheet.header, reviewSheet.rows) : null;
     const menuRanking = reviewSheet ? deriveMenuRanking(reviewSheet.header, reviewSheet.rows) : null;
+    const branchStats = reviewSheet ? deriveBranchStats(reviewSheet.header, reviewSheet.rows) : null;
 
     return {
       ...FALLBACK,
@@ -243,6 +303,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       purposes: purposes ?? FALLBACK.purposes,
       monthlyTrend: monthlyTrend ?? FALLBACK.monthlyTrend,
       menuRanking: menuRanking ?? FALLBACK.menuRanking,
+      branchStats: branchStats ?? FALLBACK.branchStats,
     };
   } catch (error) {
     console.error("[ERROR] Public Sheets fetch failed:", error);
