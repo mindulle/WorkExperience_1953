@@ -1,64 +1,55 @@
 "use client";
 
-import React, { useState } from "react";
-import { DatePicker } from "@/components/ui/DatePicker";
-import { Button } from "@/components/ui/Button";
+import React from "react";
+import { MessageSquare, Star, ThumbsUp, ThumbsDown, Inbox } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { Select } from "@/components/ui/Select";
+import { Topbar } from "@/components/dashboard/Topbar";
+import { KpiCard } from "@/components/dashboard/KpiCard";
 
 export function DashboardClient({ initialData }: { initialData: any }) {
-  const [branch, setBranch] = useState("all");
-  const todayDate = new Date().toLocaleDateString("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).replace(/\.$/, '');
+  const updatedAt = new Date(initialData.fetchedAt).toLocaleString("ko-KR", {
+    timeZone: "Asia/Seoul",
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
 
   return (
     <>
-      {/* 상단 헤더 (지점 및 채널 필터) */}
-      <header className="flex justify-between items-center relative z-50 bg-[var(--surface)] p-5 rounded-[var(--r-lg)] border border-[var(--hairline)] [box-shadow:var(--shadow-sm)]">
-        <h2 className="text-2xl font-bold whitespace-nowrap">실시간 분석 리포트</h2>
-        <div className="flex gap-6 items-center shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold whitespace-nowrap text-[var(--muted)]">지점 선택:</span>
-            <Select
-              options={[
-                { value: "all", label: "전체 지점" },
-                { value: "main", label: "경성대본점" },
-                { value: "gwangan", label: "광안점" }
-              ]}
-              selected={branch}
-              onSelect={setBranch}
-              className="min-w-36"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold whitespace-nowrap text-[var(--muted)]">채널:</span>
-            <Select
-              options={[
-                { value: "all", label: "통합 (네이버+유튜브)" },
-                { value: "naver", label: "네이버 리뷰" },
-                { value: "youtube", label: "유튜브 댓글" }
-              ]}
-              selected="all"
-              className="min-w-44"
-            />
-          </div>
-        </div>
-      </header>
+      <Topbar updatedAt={updatedAt} />
 
-      {/* 조회 기간 툴바.
-          프로토타입에서 사이드바는 내비게이션 전용이고 필터는 페이지 상단에 있다. */}
-      <section className="flex flex-wrap items-end gap-4 bg-[var(--surface)] p-5 rounded-[var(--r-lg)] border border-[var(--hairline)] [box-shadow:var(--shadow-sm)]">
-        <div className="bg-[var(--s-blue-soft)] px-4 py-2.5 rounded-[var(--r-sm)] border border-[var(--hairline)]">
-          <p className="font-semibold text-sm text-[var(--brand)]">{todayDate} (오늘)</p>
-          <p className="text-xs text-[var(--muted)]">기본값 적용됨</p>
-        </div>
-        <DatePicker label="시작일" className="w-44" />
-        <DatePicker label="종료일" className="w-44" />
-        <Button onClick={() => alert('조회 기간 필터 적용!')}>기간 적용</Button>
-      </section>
+      {/* KPI 행. 데이터가 없는 지표는 값을 지어내지 않고 사유를 표시한다. */}
+      <div className="grid grid-cols-5 gap-[18px]">
+        <KpiCard
+          label="전체 리뷰 수"
+          icon={MessageSquare}
+          value={initialData.totalReviews.toLocaleString()}
+          meta="정제 완료 기준 (RULES §2.3)"
+        />
+        <KpiCard
+          label="평균 평점"
+          icon={Star}
+          pending="평점 수집 미구현"
+        />
+        <KpiCard
+          label="긍정률"
+          icon={ThumbsUp}
+          value={String(initialData.positivePct)}
+          unit="%"
+          meta={`${Math.round(initialData.totalReviews * initialData.positivePct / 100).toLocaleString()}건`}
+        />
+        <KpiCard
+          label="부정률"
+          icon={ThumbsDown}
+          value={String(initialData.negativePct)}
+          unit="%"
+          meta={`${Math.round(initialData.totalReviews * initialData.negativePct / 100).toLocaleString()}건`}
+        />
+        <KpiCard
+          label="응답 필요 리뷰"
+          icon={Inbox}
+          pending="오너 콘솔 연동 필요"
+        />
+      </div>
 
       {/* 대시보드 그리드 영역 */}
       <div className="grid grid-cols-3 gap-5 flex-1">

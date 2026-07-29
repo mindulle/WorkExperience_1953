@@ -1,5 +1,10 @@
 export async function getDashboardData() {
+  // output:"export" 정적 익스포트라 이 함수는 빌드 시점에 한 번 실행된다.
+  // 즉 화면에 표시되는 "마지막 조회"는 마지막 배포 시각과 같다.
+  const fetchedAt = new Date().toISOString();
+
   const MOCK_DATA = {
+    fetchedAt,
     totalReviews: 1716,
     positivePct: 80,
     negativePct: 20,
