@@ -83,12 +83,44 @@ export function DashboardClient({
           </div>
         </Card>
 
-        {/* 2. 월별 추이 (막대 그래프) - 미구현 */}
+        {/* 2. 월별 추이 (막대 그래프) */}
         <Card className="col-span-2 flex flex-col">
           <h3 className="text-base font-bold mb-4">월별 리뷰 추이 (시즌 비교)</h3>
-          <div className="flex-1 flex items-center justify-center border border-dashed border-gray-200 bg-[var(--plane)] rounded-lg text-[var(--muted)] text-sm h-40">
-            미구현 (추후 데이터 연동 및 차트 구현 예정)
-          </div>
+          {initialData.monthlyTrend.length > 0 ? (
+            <>
+              <div className="flex-1 flex items-end gap-2 h-40 px-1">
+                {(() => {
+                  const maxCount = Math.max(...initialData.monthlyTrend.map((m) => m.count));
+                  return initialData.monthlyTrend.map((m) => {
+                    const [year, mon] = m.month.split("-");
+                    const heightPct = maxCount > 0 ? (m.count / maxCount) * 100 : 0;
+                    return (
+                      <div key={m.month} className="flex-1 flex flex-col items-center h-full justify-end gap-1">
+                        <span className="text-[10px] text-[var(--muted)] [font-variant-numeric:tabular-nums]">
+                          {m.count}
+                        </span>
+                        <div
+                          className="w-full rounded-t-[4px] bg-[var(--brand)]"
+                          style={{ height: `${Math.max(heightPct, 2)}%` }}
+                          title={`${m.month}: ${m.count}건${m.avgRating ? `, 평균 ${m.avgRating}점` : ""}`}
+                        />
+                        <span className="text-[10px] text-[var(--muted)] mt-1 whitespace-nowrap">
+                          {mon}월{mon === "01" ? ` '${year.slice(2)}` : ""}
+                        </span>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+              <p className="mt-3 text-[11px] text-[var(--muted)]">
+                연-월을 알 수 있는 리뷰만 집계했습니다 (상대 날짜 &ldquo;N년 전&rdquo;만 있는 리뷰는 월 단위를 알 수 없어 제외 — 자세한 내용은 이슈 #68 참고).
+              </p>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center border border-dashed border-gray-200 bg-[var(--plane)] rounded-lg text-[var(--muted)] text-sm h-40">
+              미구현 (추후 데이터 연동 및 차트 구현 예정)
+            </div>
+          )}
         </Card>
 
         {/* 3. 메뉴 데이터 (프로그레스 바) - 미구현 */}

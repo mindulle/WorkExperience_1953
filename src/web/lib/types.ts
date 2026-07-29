@@ -25,6 +25,20 @@ export type VisitPurpose = {
   ratio: number;
 };
 
+/**
+ * 월별 리뷰 추이. 프로토타입의 "월별 리뷰 추이 (시즌 비교)" 막대그래프용.
+ * 상대 날짜("3주 전")만 있어 연-월조차 알 수 없는 리뷰는 집계에서 제외한다 —
+ * 이슈 #68 기준 전체의 약 47%가 이에 해당하므로, 이 배열의 count 합계는
+ * totalReviews 보다 작은 게 정상이다.
+ */
+export type MonthlyTrend = {
+  /** "YYYY-MM" */
+  month: string;
+  count: number;
+  /** 해당 월 평균 평점(5점 만점). 평점이 없는 행은 평균 계산에서 제외. */
+  avgRating?: number;
+};
+
 /** 데이터 출처. 시트 조회 실패 시 기본값이 쓰였음을 화면에 알리기 위해 필요하다. */
 export type DashboardSource = "sheet" | "fallback";
 
@@ -47,6 +61,7 @@ export type DashboardData = {
   topKeywords: KeywordMention[];
   menuRanking: MenuMention[];
   purposes: VisitPurpose[];
+  monthlyTrend: MonthlyTrend[];
 
   // ── 아직 수집하지 않는 항목 ──
   // 값이 생기면 선택 필드를 채우면 되고, 화면은 없을 때 사유를 표시한다.
