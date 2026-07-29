@@ -1,4 +1,4 @@
-import type { DashboardData, VisitPurpose, MonthlyTrend, MenuMention, BranchStat } from "./types";
+import type { DashboardData, VisitPurpose, MonthlyTrend, MenuMention, BranchStat, KeywordMention } from "./types";
 
 // 랭킹 집계 시 서로 다른 표기를 하나로 합친다(원본 값 자체는 건드리지 않음).
 // "국밥"은 국밥집 리뷰 대부분에 등장해 랭킹 변별력이 없어 제외한다.
@@ -203,6 +203,31 @@ function deriveBranchStats(header: string[], rows: string[][]): BranchStat[] | n
     .sort((a, b) => b.positivePct - a.positivePct);
 }
 
+/** positive_keywords + negative_keywords(세미콜론 구분)를 합쳐 Top N 언급 키워드를 낸다(#73). */
+function deriveTopKeywords(header: string[], rows: string[][], topN = 5): KeywordMention[] | null {
+  const posCol = header.indexOf("positive_keywords");
+  const negCol = header.indexOf("negative_keywords");
+  if (posCol === -1 && negCol === -1) return null;
+
+  const counts: Record<string, number> = {};
+  for (const row of rows) {
+    for (const col of [posCol, negCol]) {
+      if (col === -1) continue;
+      const raw = row[col];
+      if (!raw) continue;
+      for (const kw of raw.split(";").map((s) => s.trim()).filter(Boolean)) {
+        counts[kw] = (counts[kw] ?? 0) + 1;
+      }
+    }
+  }
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  if (total === 0) return null;
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, topN)
+    .map(([keyword, count]) => ({ keyword, count }));
+}
+
 export async function getDashboardData(): Promise<DashboardData> {
   // output:"export" 정적 익스포트라 이 함수는 빌드 시점에 한 번 실행된다.
   // 즉 화면에 표시되는 "마지막 조회"는 마지막 배포 시각과 같다.
@@ -218,7 +243,14 @@ export async function getDashboardData(): Promise<DashboardData> {
     totalReviews: 1716,
     positivePct: 80,
     negativePct: 20,
-    topKeywords: [],
+    // 이슈 #73 실측치 (positive_keywords + negative_keywords 언급 합계, 지어낸 값 아님).
+    topKeywords: [
+      { keyword: "맛있", count: 177 },
+      { keyword: "깔끔", count: 65 },
+      { keyword: "친절", count: 39 },
+      { keyword: "좋았", count: 33 },
+      { keyword: "추천", count: 29 },
+    ],
     // 이슈 #70: 긍정(sentiment_final=="긍정") 리뷰에서만 언급을 센 실측 Top5 (지어낸 값 아님).
     menuRanking: [
       { menu: "돼지국밥", count: 51 },
@@ -293,6 +325,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     const monthlyTrend = reviewSheet ? deriveMonthlyTrend(reviewSheet.header, reviewSheet.rows) : null;
     const menuRanking = reviewSheet ? deriveMenuRanking(reviewSheet.header, reviewSheet.rows) : null;
     const branchStats = reviewSheet ? deriveBranchStats(reviewSheet.header, reviewSheet.rows) : null;
+    const topKeywords = reviewSheet ? deriveTopKeywords(reviewSheet.header, reviewSheet.rows) : null;
 
     return {
       ...FALLBACK,
@@ -304,6 +337,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       monthlyTrend: monthlyTrend ?? FALLBACK.monthlyTrend,
       menuRanking: menuRanking ?? FALLBACK.menuRanking,
       branchStats: branchStats ?? FALLBACK.branchStats,
+      topKeywords: topKeywords ?? FALLBACK.topKeywords,
     };
   } catch (error) {
     console.error("[ERROR] Public Sheets fetch failed:", error);
