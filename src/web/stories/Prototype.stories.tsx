@@ -28,7 +28,10 @@ type Story = StoryObj<typeof meta>;
 // 기준 문서. 6개 뷰(대시보드·리뷰 탐색·트렌드 분석·지점 관리·고객 세그먼트·AI 추천)를 모두 포함한다.
 export const Console: Story = {
   args: {
-    src: '/design/wave-and-vibe-console.html',
+    // 루트 절대경로(/design/...)로 쓰면 GitHub Pages처럼 서브경로(/WorkExperience_1953/)에
+    // 배포됐을 때 도메인 루트를 가리켜 404가 난다. iframe.html 기준 상대경로로 둬야
+    // 로컬(루트 서빙)과 서브경로 배포 양쪽에서 다 맞는다.
+    src: 'design/wave-and-vibe-console.html',
     title: '웨이브앤바이브 콘솔 프로토타입 (기준)',
   },
 };
@@ -36,21 +39,21 @@ export const Console: Story = {
 // 아래 3종은 콘솔의 개별 화면을 따로 뽑아둔 것으로, 콘솔과 세부가 다를 수 있다.
 export const Dashboard: Story = {
   args: {
-    src: '/design/dashboard.html',
+    src: 'design/dashboard.html',
     title: '매장 리뷰 현황 (단독)',
   },
 };
 
 export const CustomerSegment: Story = {
   args: {
-    src: '/design/customer-segment.html',
+    src: 'design/customer-segment.html',
     title: '고객 세그먼트 (단독)',
   },
 };
 
 export const AiRecommendations: Story = {
   args: {
-    src: '/design/ai-recommendations.html',
+    src: 'design/ai-recommendations.html',
     title: 'AI 추천 액션 (단독)',
   },
 };
