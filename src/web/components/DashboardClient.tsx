@@ -1,15 +1,12 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import React, { useState } from "react";
 import { DatePicker } from "@/components/ui/DatePicker";
-
-// 다이나믹 임포트로 클라이언트 사이드 렌더링 강제 (wired-elements 호환성)
-const Button = dynamic(() => import("@/components/ui/Button").then((mod) => mod.Button), { ssr: false });
-const Input = dynamic(() => import("@/components/ui/Input").then((mod) => mod.Input), { ssr: false });
-const Card = dynamic(() => import("@/components/ui/Card").then((mod) => mod.Card), { ssr: false });
-const Select = dynamic(() => import("@/components/ui/Select").then((mod) => mod.Select), { ssr: false });
-const Progress = dynamic(() => import("@/components/ui/Progress").then((mod) => mod.Progress), { ssr: false });
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Card } from "@/components/ui/Card";
+import { Select } from "@/components/ui/Select";
+import { Progress } from "@/components/ui/Progress";
 
 export function DashboardClient({ initialData }: { initialData: any }) {
   const [branch, setBranch] = useState("all");

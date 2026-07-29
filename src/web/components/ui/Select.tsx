@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ChevronDown } from "lucide-react";
 
@@ -16,7 +16,7 @@ interface SelectProps {
   className?: string;
 }
 
-export function Select({ options, selected, onSelect, className }: SelectProps) {
+export function Select({ options, selected, onSelect, className = "" }: SelectProps) {
   const selectedLabel = options.find((o) => o.value === selected)?.label || "선택...";
 
   return (
@@ -24,24 +24,24 @@ export function Select({ options, selected, onSelect, className }: SelectProps) 
       <DropdownMenu.Root>
         <DropdownMenu.Trigger asChild>
           <button
-            className="flex w-full items-center justify-between border-2 border-black rounded-lg bg-white px-4 py-2 font-bold outline-none cursor-pointer hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-[2px] active:shadow-none transition-all"
+            className="flex w-full items-center justify-between border border-gray-300 rounded-lg bg-[var(--surface)] px-4 py-2 font-medium text-[var(--ink)] outline-none cursor-pointer hover:bg-gray-50 focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent transition-all"
             role="combobox"
             aria-haspopup="menu"
           >
-            {selectedLabel}
-            <ChevronDown className="w-5 h-5 ml-2 text-gray-600" />
+            <span className="truncate">{selectedLabel}</span>
+            <ChevronDown className="w-5 h-5 ml-2 text-[var(--muted)] shrink-0" />
           </button>
         </DropdownMenu.Trigger>
         <DropdownMenu.Portal>
           <DropdownMenu.Content
-            className="bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rounded-xl p-2 min-w-[220px] z-50 animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2"
+            className="bg-[var(--surface)] border border-gray-200 shadow-lg rounded-xl p-1 min-w-[220px] z-50 animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2"
             align="start"
-            sideOffset={8}
+            sideOffset={4}
           >
             {options.map((opt) => (
               <DropdownMenu.Item
                 key={opt.value}
-                className="px-4 py-3 text-lg font-bold text-gray-800 rounded-lg cursor-pointer outline-none hover:bg-blue-100 focus:bg-blue-100 data-[highlighted]:bg-blue-100"
+                className="px-3 py-2 text-sm font-medium text-[var(--ink)] rounded-md cursor-pointer outline-none hover:bg-blue-50 focus:bg-blue-50 data-[highlighted]:bg-blue-50 transition-colors"
                 onClick={() => onSelect && onSelect(opt.value)}
               >
                 {opt.label}
