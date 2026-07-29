@@ -15,6 +15,15 @@ export default defineConfig({
   test: {
     projects: [
       {
+        // 디자인 토큰 정합 검사. 브라우저가 필요 없어 CI 에서 단독 실행한다.
+        // (npm run test:tokens)
+        test: {
+          name: 'tokens',
+          environment: 'node',
+          include: ['checks/**/*.test.ts'],
+        },
+      },
+      {
         extends: true,
         plugins: [
           // The plugin will run tests for the stories defined in your Storybook config
