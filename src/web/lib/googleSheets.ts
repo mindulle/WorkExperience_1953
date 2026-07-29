@@ -1,10 +1,15 @@
-export async function getDashboardData() {
+import type { DashboardData } from "./types";
+
+export async function getDashboardData(): Promise<DashboardData> {
   // output:"export" 정적 익스포트라 이 함수는 빌드 시점에 한 번 실행된다.
   // 즉 화면에 표시되는 "마지막 조회"는 마지막 배포 시각과 같다.
   const fetchedAt = new Date().toISOString();
 
-  const MOCK_DATA = {
+  // 조회 실패 시 쓰는 값. 실제 정제 결과(99% / 1%)와 다르므로
+  // source: "fallback" 으로 표시해 화면이 실제 값과 구분할 수 있게 한다.
+  const FALLBACK: DashboardData = {
     fetchedAt,
+    source: "fallback",
     totalReviews: 1716,
     positivePct: 80,
     negativePct: 20,
@@ -47,13 +52,14 @@ export async function getDashboardData() {
     const negPct = totalPosNeg > 0 ? 100 - posPct : 20;
 
     return {
-      ...MOCK_DATA,
-      totalReviews: total > 0 ? total : MOCK_DATA.totalReviews,
+      ...FALLBACK,
+      source: "sheet",
+      totalReviews: total > 0 ? total : FALLBACK.totalReviews,
       positivePct: posPct,
       negativePct: negPct,
     };
   } catch (error) {
     console.error("[ERROR] Public Sheets fetch failed:", error);
-    return MOCK_DATA;
+    return FALLBACK;
   }
 }

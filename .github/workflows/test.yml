@@ -32,6 +32,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npx tsc --noEmit
+
       # 브라우저가 필요 없는 node 프로젝트만 돌린다.
       # 스토리 상호작용 테스트는 Chromatic 의 UI Tests 가 담당한다.
       - name: Check design tokens against prototype
