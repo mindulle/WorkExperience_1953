@@ -59,7 +59,7 @@
 *   **버전 관리 (SemVer):** 초기 개발 단계는 `v0.1.0`부터 시작하며, 정식 릴리즈 시 `v1.0.0` 태그를 달고 릴리즈 노트를 작성합니다.
 *   **CI/CD 자동화:**
     *   **파이프라인 스크립트:** `main` 브랜치 머지 시 GitHub Actions나 스케줄러(Cron)를 통해 자동 실행 환경에 동기화합니다.
-    *   **웹 대시보드 (프론트엔드):** 향후 구현될 프론트엔드 코드는 **Cloudflare Pages**를 공식 호스팅 플랫폼으로 사용하여, 깃허브 `main` 브랜치 푸시 시 자동 배포되도록 CI/CD를 연동합니다.
+    *   **웹 대시보드 (프론트엔드):** **Cloudflare Workers 정적 자산(Static Assets)** 을 공식 호스팅 플랫폼으로 사용합니다. `src/web`을 정적 익스포트(`next build` → `out/`)한 뒤 `wrangler deploy`로 배포하며, 깃허브 `main` 브랜치 푸시 시 `.github/workflows/deploy.yml`을 통해 자동 배포됩니다. (배포 설정: `src/web/wrangler.jsonc`, 서비스 도메인: `workexpr.proto.sonagi.space`)
 *   **보안 (Secret Ops):** `API Key`, `DB 주소` 등 민감한 정보는 절대 소스코드에 하드코딩하지 않습니다. `.env.example` 파일에 템플릿만 남기고, 실제 값은 배포 환경의 Secret Variable에서 관리합니다.
 
 ---
