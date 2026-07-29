@@ -1,38 +1,28 @@
-@import url('https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap');
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: #fdfbf7;
-  --foreground: #171717;
+  /* 화이트보드 지정 컬러 토큰 */
+  --plane: #f6f6f3;
+  --surface: #ffffff;
+  --ink: #0b0b0b;
+  --muted: #8b8a84;
+  
+  /* 포인트 컬러 (Reference) */
+  --primary: #2a78d6;
+  --accent-orange: #eb6834;
+  --accent-green: #1baf7a;
+  
+  --background: var(--plane);
+  --foreground: var(--ink);
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: 'Nanum Pen Script', cursive;
-  font-size: 1.25rem;
-}
-
-/* wired-elements 내부 폰트 강제 상속 및 드롭다운 버그 픽스 */
-wired-button, wired-input, wired-card, wired-combo, wired-item, wired-progress {
-  font-family: inherit;
-}
-
-wired-button {
-  padding: 0.5rem 1rem;
-}
-
-wired-combo {
-  --wired-item-selected-bg: #e5e7eb; /* 회색 배경 */
-  --wired-item-selected-color: #000;
-  background-color: white; /* 콤보박스 배경색 강제 지정 */
-  padding: 0.5rem;
-}
-
-wired-item {
-  color: #1f2937; /* 아이템 텍스트 색상 강제 지정 */
-  padding: 0.5rem;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  font-size: 1rem;
 }

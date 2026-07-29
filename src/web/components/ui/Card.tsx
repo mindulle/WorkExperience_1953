@@ -1,20 +1,25 @@
 "use client";
 
 import React from "react";
-import { WiredCard } from "wired-elements-react";
 
 interface CardProps {
   children: React.ReactNode;
   className?: string;
-  elevation?: number;
+  elevation?: number; // kept for compatibility, translated to shadow
 }
 
-export function Card({ children, className, elevation = 2 }: CardProps) {
+export function Card({ children, className = "", elevation = 1 }: CardProps) {
+  // Map elevation to shadow depth
+  const shadowClass = 
+    elevation === 0 ? "shadow-none" :
+    elevation === 1 ? "shadow-sm" :
+    elevation === 2 ? "shadow-md" :
+    elevation === 3 ? "shadow-lg" :
+    "shadow-xl";
+
   return (
-    <div className={className}>
-      <WiredCard elevation={elevation}>
-        {(<div className="p-4">{children}</div>) as any}
-      </WiredCard>
+    <div className={`bg-[var(--surface)] rounded-xl border border-gray-100 ${shadowClass} p-6 ${className}`}>
+      {children}
     </div>
   );
 }
