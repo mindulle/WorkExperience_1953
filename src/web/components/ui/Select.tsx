@@ -23,10 +23,12 @@ export function Select({ options, selected, onSelect, className = "" }: SelectPr
     <div className={className}>
       <DropdownMenu.Root>
         <DropdownMenu.Trigger asChild>
+          {/* role 을 지정하지 않는다. DropdownMenu.Trigger 가 button 역할과
+              aria-haspopup / aria-expanded / aria-controls 를 직접 관리한다.
+              combobox 는 선택 위젯의 role 이라 드롭다운 메뉴에 맞지 않고,
+              필수 속성(aria-controls, aria-expanded)이 없어 a11y 위반이었다. */}
           <button
             className="flex w-full items-center justify-between border border-[var(--hairline)] rounded-[var(--r-sm)] bg-[var(--surface)] px-4 py-2 font-medium text-[var(--ink-2)] outline-none cursor-pointer hover:bg-[var(--surface-2)] focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent transition-all [box-shadow:var(--shadow-sm)]"
-            role="combobox"
-            aria-haspopup="menu"
           >
             <span className="truncate">{selectedLabel}</span>
             <ChevronDown className="w-5 h-5 ml-2 text-[var(--muted)] shrink-0" />
