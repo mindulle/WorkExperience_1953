@@ -244,9 +244,32 @@ export function DashboardClient({
 
           <Card className="flex-1 flex flex-col">
             <h3 className="text-base font-bold mb-2">Top 5 핵심 키워드</h3>
-            <div className="flex-1 border border-dashed border-gray-200 flex items-center justify-center text-[var(--muted)] bg-[var(--plane)] rounded-lg text-center text-sm p-4">
-              미구현<br/>(워드클라우드/키워드 추출 연동 예정)
-            </div>
+            {initialData.topKeywords.length > 0 ? (
+              <div className="flex-1 flex flex-wrap content-center items-center justify-center gap-2 p-2">
+                {(() => {
+                  const maxCount = Math.max(...initialData.topKeywords.map((k) => k.count));
+                  return initialData.topKeywords.map((k) => {
+                    // 언급량 비례로 칩 크기를 다르게 해 워드클라우드 느낌을 낸다.
+                    const scale = maxCount > 0 ? k.count / maxCount : 0;
+                    const fontPx = 13 + Math.round(scale * 11); // 13~24px
+                    return (
+                      <span
+                        key={k.keyword}
+                        className="inline-flex items-center gap-1 rounded-full bg-[var(--s-blue-soft)] text-[var(--brand)] font-semibold px-3 py-1"
+                        style={{ fontSize: `${fontPx}px` }}
+                      >
+                        {k.keyword}
+                        <span className="text-[10px] font-normal text-[var(--muted)]">{k.count}</span>
+                      </span>
+                    );
+                  });
+                })()}
+              </div>
+            ) : (
+              <div className="flex-1 border border-dashed border-gray-200 flex items-center justify-center text-[var(--muted)] bg-[var(--plane)] rounded-lg text-center text-sm p-4">
+                미구현<br/>(워드클라우드/키워드 추출 연동 예정)
+              </div>
+            )}
           </Card>
         </div>
 
