@@ -211,13 +211,35 @@ export function DashboardClient({
           )}
         </Card>
 
-        {/* 5. 지점별 강점 & 6. 키워드 분석 - 미구현 */}
+        {/* 5. 지점별 강점 & 6. 키워드 분석 */}
         <div className="col-span-1 flex flex-col gap-4">
           <Card className="flex-1 flex flex-col">
             <h3 className="text-base font-bold mb-2">지점별 강점 (경쟁우위)</h3>
-            <div className="flex-1 border border-dashed border-gray-200 flex items-center justify-center text-[var(--muted)] bg-[var(--plane)] rounded-lg text-center text-sm p-4">
-              미구현<br/>(지점별 차원 분석 데이터 필요)
-            </div>
+            {initialData.branchStats.length > 0 ? (
+              <div className="flex-1 flex flex-col gap-2 overflow-y-auto">
+                {initialData.branchStats.map((b, i) => (
+                  <div key={b.branch} className="flex items-center justify-between text-sm py-1 border-b border-[var(--hairline)] last:border-0">
+                    <div>
+                      <span className="font-medium">
+                        {i === 0 && "🏆 "}
+                        {b.branch}
+                      </span>
+                      <div className="text-[11px] text-[var(--muted)]">
+                        {b.reviewCount}건{b.avgRating !== undefined ? ` · 평균 ${b.avgRating}점` : ""}
+                        {b.reviewCount < 10 ? " (표본 적음)" : ""}
+                      </div>
+                    </div>
+                    <span className="font-semibold text-[var(--brand)] [font-variant-numeric:tabular-nums]">
+                      긍정 {b.positivePct}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex-1 border border-dashed border-gray-200 flex items-center justify-center text-[var(--muted)] bg-[var(--plane)] rounded-lg text-center text-sm p-4">
+                미구현<br/>(지점별 차원 분석 데이터 필요)
+              </div>
+            )}
           </Card>
 
           <Card className="flex-1 flex flex-col">
