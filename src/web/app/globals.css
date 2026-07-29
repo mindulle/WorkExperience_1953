@@ -14,10 +14,13 @@
   --muted: #8b8a84;
   --hairline: rgba(11, 11, 11, 0.08);
   --hairline-2: rgba(11, 11, 11, 0.055);
+  --grid: #ececE7; /* 차트 격자선. 프로토타입 표기를 그대로 따른다 */
 
   /* ---- Brand / series ---- */
-  --primary: #2a78d6;
-  --primary-soft: #dbe9fb;
+  /* 이름은 docs/design/wave-and-vibe-console.html 을 정본으로 따른다 (RULES 3.2.1). */
+  --brand: #2a78d6;
+  --s-blue: #2a78d6;
+  --s-blue-soft: #dbe9fb;
   --s-orange: #eb6834;
   --s-aqua: #1baf7a;
   --s-yellow: #eda100;
@@ -25,6 +28,9 @@
   --s-violet: #4a3aa7;
 
   /* ---- 하위 호환 alias ---- */
+  /* 프로토타입에는 없는 이름이나 기존 컴포넌트가 참조하므로 별칭으로 유지한다. */
+  --primary: var(--brand);
+  --primary-soft: var(--s-blue-soft);
   --accent-orange: var(--s-orange);
   --accent-green: var(--s-aqua);
 
