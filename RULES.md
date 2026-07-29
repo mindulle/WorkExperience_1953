@@ -59,8 +59,29 @@
 *   **버전 관리 (SemVer):** 초기 개발 단계는 `v0.1.0`부터 시작하며, 정식 릴리즈 시 `v1.0.0` 태그를 달고 릴리즈 노트를 작성합니다.
 *   **CI/CD 자동화:**
     *   **파이프라인 스크립트:** `main` 브랜치 머지 시 GitHub Actions나 스케줄러(Cron)를 통해 자동 실행 환경에 동기화합니다.
-    *   **웹 대시보드 (프론트엔드):** 향후 구현될 프론트엔드 코드는 **Cloudflare Pages**를 공식 호스팅 플랫폼으로 사용하여, 깃허브 `main` 브랜치 푸시 시 자동 배포되도록 CI/CD를 연동합니다.
+    *   **웹 대시보드 (프론트엔드):** **Cloudflare Workers 정적 자산(Static Assets)** 을 공식 호스팅 플랫폼으로 사용하며, 배포 자동화는 **Cloudflare Workers Builds**(Git 연동)가 담당합니다. 상세는 아래 3.4를 참고합니다.
 *   **보안 (Secret Ops):** `API Key`, `DB 주소` 등 민감한 정보는 절대 소스코드에 하드코딩하지 않습니다. `.env.example` 파일에 템플릿만 남기고, 실제 값은 배포 환경의 Secret Variable에서 관리합니다.
+
+### 3.4 웹 대시보드 배포 파이프라인 (Deployment Pipeline)
+
+> ⚠️ **배포 설정은 이 저장소에 없습니다.** Cloudflare 대시보드 쪽에 Git 연동으로 구성되어 있어 `.github/workflows/`를 아무리 뒤져도 배포 단계가 보이지 않습니다. 이 사실을 모르면 "배포가 연결되어 있지 않다"고 오판하기 쉬우므로 여기에 명시합니다.
+
+*   **호스팅:** Cloudflare Workers (정적 자산)
+    *   Worker 이름: `work-experience-1953`
+    *   서비스 도메인: `workexpr.proto.sonagi.space`
+    *   배포 설정 파일: `src/web/wrangler.jsonc`
+    *   빌드 산출물: `next build` → `out/` (`src/web/next.config.ts`의 `output: "export"`)
+*   **자동 배포 (Workers Builds):**
+    *   `main` 브랜치 푸시 → **프로덕션 배포**
+    *   PR / 기능 브랜치 푸시 → **빌드 + 버전 업로드(미리보기)까지만**. 프로덕션은 갱신되지 않습니다.
+    *   PR 체크에 `Workers Builds: work-experience-1953` 항목으로 결과가 표시됩니다.
+*   **GitHub Actions로 배포 워크플로우를 추가하지 마십시오.** Workers Builds와 중복되어 `main` 푸시마다 동일 Worker를 두 곳에서 배포하게 되며, 경합과 빌드 시간 낭비가 발생합니다.
+*   **빌드 쿼터:** Free 플랜 기준 월 3,000 빌드분 / 동시 빌드 1개 / 빌드 타임아웃 20분. 현재 빌드는 회당 수 분 수준이라 여유가 충분합니다.
+*   **배포 상태 확인:**
+    ```bash
+    npx wrangler deployments list   # 프로덕션 배포 이력
+    npx wrangler versions list      # 업로드된 버전(미리보기 포함) 이력
+    ```
 
 ---
 
