@@ -15,6 +15,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // 빌드 산출물과 로컬 캐시. 압축된 번들까지 검사하면 문제가 1만 건 넘게 잡힌다.
+    "storybook-static/**",
+    "playwright-report/**",
+    "test-results/**",
+    ".wrangler/**",
   ]),
   ...storybook.configs["flat/recommended"]
 ]);
