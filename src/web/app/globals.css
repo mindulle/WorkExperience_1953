@@ -5,17 +5,55 @@
 @tailwind utilities;
 
 :root {
-  /* 화이트보드 지정 컬러 토큰 */
+  /* ---- Surfaces / ink ---- */
   --plane: #f6f6f3;
   --surface: #ffffff;
+  --surface-2: #fbfbfa;
   --ink: #0b0b0b;
+  --ink-2: #52514e;
   --muted: #8b8a84;
-  
-  /* 포인트 컬러 (Reference) */
+  --hairline: rgba(11, 11, 11, 0.08);
+  --hairline-2: rgba(11, 11, 11, 0.055);
+
+  /* ---- Brand / series ---- */
   --primary: #2a78d6;
-  --accent-orange: #eb6834;
-  --accent-green: #1baf7a;
-  
+  --primary-soft: #dbe9fb;
+  --s-orange: #eb6834;
+  --s-aqua: #1baf7a;
+  --s-yellow: #eda100;
+  --s-magenta: #e87ba4;
+  --s-violet: #4a3aa7;
+
+  /* ---- 하위 호환 alias ---- */
+  --accent-orange: var(--s-orange);
+  --accent-green: var(--s-aqua);
+
+  /* ---- Status ---- */
+  --good: #0ca30c;
+  --good-soft: #e4f6e4;
+  --warn: #e39400;
+  --warn-soft: #fdf1d6;
+  --serious: #e0733f;
+  --critical: #d03b3b;
+  --critical-soft: #fbe4e4;
+
+  /* ---- Radius ---- */
+  --r-lg: 18px;
+  --r-md: 14px;
+  --r-sm: 9px;
+
+  /* ---- Shadow ---- */
+  --shadow: 0 1px 2px rgba(16, 15, 15, 0.04), 0 4px 14px rgba(16, 15, 15, 0.05);
+  --shadow-sm: 0 1px 2px rgba(16, 15, 15, 0.05);
+
+  /* ---- Sequential (차트용) ---- */
+  --seq-100: #cde2fb;
+  --seq-200: #9ec5f4;
+  --seq-300: #6da7ec;
+  --seq-400: #3987e5;
+  --seq-500: #256abf;
+  --seq-600: #184f95;
+
   --background: var(--plane);
   --foreground: var(--ink);
 }

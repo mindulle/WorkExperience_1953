@@ -12,13 +12,11 @@ export function Card({ children, className = "", elevation = 1 }: CardProps) {
   // Map elevation to shadow depth
   const shadowClass = 
     elevation === 0 ? "shadow-none" :
-    elevation === 1 ? "shadow-sm" :
-    elevation === 2 ? "shadow-md" :
-    elevation === 3 ? "shadow-lg" :
-    "shadow-xl";
+    elevation === 1 ? "[box-shadow:var(--shadow-sm)]" :
+    "[box-shadow:var(--shadow)]" ;
 
   return (
-    <div className={`bg-[var(--surface)] rounded-xl border border-gray-100 ${shadowClass} p-6 ${className}`}>
+    <div className={`bg-[var(--surface)] rounded-[var(--r-lg)] border border-[var(--hairline)] p-6 ${shadowClass} ${className}`}>
       {children}
     </div>
   );
