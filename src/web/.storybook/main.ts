@@ -14,7 +14,10 @@ const config: StorybookConfig = {
   ],
   "framework": "@storybook/nextjs-vite",
   "staticDirs": [
-    "../public"
+    "../public",
+    // 팀원 제공 프로토타입을 Storybook에서만 서빙한다.
+    // public/ 이 아닌 docs/design/ 에 두어 배포물(out/)에는 포함되지 않는다.
+    { "from": "../../../docs/design", "to": "/design" }
   ]
 };
 export default config;
