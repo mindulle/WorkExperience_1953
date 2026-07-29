@@ -7,13 +7,18 @@ import { Topbar } from "@/components/dashboard/Topbar";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import type { DashboardData } from "@/lib/types";
 
-export function DashboardClient({ initialData }: { initialData: DashboardData }) {
-  const updatedAt = new Date(initialData.fetchedAt).toLocaleString("ko-KR", {
-    timeZone: "Asia/Seoul",
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-
+export function DashboardClient({
+  initialData,
+  updatedAt,
+}: {
+  initialData: DashboardData;
+  /**
+   * 서버에서 포맷해 내려받는다. 클라이언트 컴포넌트에서 toLocaleString 을
+   * 부르면 Node 와 브라우저의 ICU 데이터가 달라("PM" vs "오후")
+   * 하이드레이션 불일치가 발생한다.
+   */
+  updatedAt: string;
+}) {
   return (
     <>
       <Topbar updatedAt={updatedAt} source={initialData.source} />
