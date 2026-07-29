@@ -1,4 +1,9 @@
-import type { DashboardData, VisitPurpose, MonthlyTrend } from "./types";
+import type { DashboardData, VisitPurpose, MonthlyTrend, MenuMention } from "./types";
+
+// 랭킹 집계 시 서로 다른 표기를 하나로 합친다(원본 값 자체는 건드리지 않음).
+// "국밥"은 국밥집 리뷰 대부분에 등장해 랭킹 변별력이 없어 제외한다.
+const MENU_ALIAS: Record<string, string> = { "섞어": "섞어국밥" };
+const MENU_EXCLUDE = new Set(["국밥"]);
 
 /**
  * 최소 CSV 파서. review_text 등에 콤마·줄바꿈·따옴표가 포함된 필드가 있어
@@ -123,6 +128,31 @@ function deriveMonthlyTrend(header: string[], rows: string[][]): MonthlyTrend[] 
   });
 }
 
+/** mentioned_menu(세미콜론 구분) + sentiment_final == 긍정 인 행만 세어 Top N 랭킹을 만든다. */
+function deriveMenuRanking(header: string[], rows: string[][], topN = 5): MenuMention[] | null {
+  const menuCol = header.indexOf("mentioned_menu");
+  const sentimentCol = header.indexOf("sentiment_final");
+  if (menuCol === -1 || sentimentCol === -1) return null;
+
+  const counts: Record<string, number> = {};
+  for (const row of rows) {
+    if (row[sentimentCol] !== "긍정") continue;
+    const raw = row[menuCol];
+    if (!raw) continue;
+    for (const term of raw.split(";").map((s) => s.trim()).filter(Boolean)) {
+      const canonical = MENU_ALIAS[term] ?? term;
+      if (MENU_EXCLUDE.has(canonical)) continue;
+      counts[canonical] = (counts[canonical] ?? 0) + 1;
+    }
+  }
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  if (total === 0) return null;
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, topN)
+    .map(([menu, count]) => ({ menu, count }));
+}
+
 export async function getDashboardData(): Promise<DashboardData> {
   // output:"export" 정적 익스포트라 이 함수는 빌드 시점에 한 번 실행된다.
   // 즉 화면에 표시되는 "마지막 조회"는 마지막 배포 시각과 같다.
@@ -139,7 +169,14 @@ export async function getDashboardData(): Promise<DashboardData> {
     positivePct: 80,
     negativePct: 20,
     topKeywords: [],
-    menuRanking: [],
+    // 이슈 #70: 긍정(sentiment_final=="긍정") 리뷰에서만 언급을 센 실측 Top5 (지어낸 값 아님).
+    menuRanking: [
+      { menu: "돼지국밥", count: 51 },
+      { menu: "수육", count: 18 },
+      { menu: "솥밥", count: 17 },
+      { menu: "순대", count: 17 },
+      { menu: "맑은국밥", count: 14 },
+    ],
     purposes: toRatios({ "외지/관광 방문": 11, "현지인/단골": 9, "정보없음": 574 }),
     // 594건 중 314건만 연-월을 알 수 있음(#68) — 나머지는 "N년 전"처럼 연 단위뿐이라 집계에서 제외.
     monthlyTrend: [
@@ -195,6 +232,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     const reviewSheet = await fetchReviewSheet(SHEET_ID);
     const purposes = reviewSheet ? derivePurposes(reviewSheet.header, reviewSheet.rows) : null;
     const monthlyTrend = reviewSheet ? deriveMonthlyTrend(reviewSheet.header, reviewSheet.rows) : null;
+    const menuRanking = reviewSheet ? deriveMenuRanking(reviewSheet.header, reviewSheet.rows) : null;
 
     return {
       ...FALLBACK,
@@ -204,6 +242,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       negativePct: negPct,
       purposes: purposes ?? FALLBACK.purposes,
       monthlyTrend: monthlyTrend ?? FALLBACK.monthlyTrend,
+      menuRanking: menuRanking ?? FALLBACK.menuRanking,
     };
   } catch (error) {
     console.error("[ERROR] Public Sheets fetch failed:", error);
