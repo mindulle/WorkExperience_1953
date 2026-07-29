@@ -5,8 +5,9 @@ import { MessageSquare, Star, ThumbsUp, ThumbsDown, Inbox } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { KpiCard } from "@/components/dashboard/KpiCard";
+import type { DashboardData } from "@/lib/types";
 
-export function DashboardClient({ initialData }: { initialData: any }) {
+export function DashboardClient({ initialData }: { initialData: DashboardData }) {
   const updatedAt = new Date(initialData.fetchedAt).toLocaleString("ko-KR", {
     timeZone: "Asia/Seoul",
     dateStyle: "medium",
@@ -15,7 +16,7 @@ export function DashboardClient({ initialData }: { initialData: any }) {
 
   return (
     <>
-      <Topbar updatedAt={updatedAt} />
+      <Topbar updatedAt={updatedAt} source={initialData.source} />
 
       {/* KPI 행. 데이터가 없는 지표는 값을 지어내지 않고 사유를 표시한다. */}
       <div className="grid grid-cols-5 gap-[18px]">
