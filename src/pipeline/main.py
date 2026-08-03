@@ -41,6 +41,7 @@ def main():
     run_script(PIPELINE_DIR / "collect" / "naver_datalab_trend.py", cwd=RAW_DATA_DIR)
     run_script(PIPELINE_DIR / "collect" / "catchtable_collector.py", cwd=RAW_DATA_DIR)
     run_script(PIPELINE_DIR / "collect" / "kakaomap_collector.py", cwd=RAW_DATA_DIR)
+    run_script(PIPELINE_DIR / "collect" / "naver_place_collector.py", cwd=RAW_DATA_DIR)
 
     # 2. 정제 스크립트 실행
     print("\n[2/4] 팀원 데이터 병합 및 데이터 정제 검증 시작...")
