@@ -1,4 +1,4 @@
-import type { DashboardData, VisitPurpose, MonthlyTrend, MenuMention, BranchStat, KeywordMention } from "./types";
+import type { DashboardData, VisitPurpose, MonthlyTrend, MenuMention, BranchStat, KeywordMention, ReviewItem } from "./types";
 
 // 랭킹 집계 시 서로 다른 표기를 하나로 합친다(원본 값 자체는 건드리지 않음).
 // "국밥"은 국밥집 리뷰 대부분에 등장해 랭킹 변별력이 없어 제외한다.
