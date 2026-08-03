@@ -16,7 +16,7 @@ export default async function BranchesPage() {
     <>
       <Topbar updatedAt={updatedAt} source={data.source} />
       <div className="flex flex-col gap-5 flex-1 h-full overflow-hidden">
-        <h2 className="text-lg font-bold">지점 비교 (경쟁우위 분석)</h2>
+        <h2 className="text-lg font-bold">지점 관리</h2>
         <Card className="flex-1 overflow-auto">
           {data.branchStats.length > 0 ? (
             <table className="w-full text-left text-sm border-collapse">
