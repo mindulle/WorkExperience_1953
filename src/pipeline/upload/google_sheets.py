@@ -33,9 +33,22 @@ GOOGLE_CREDENTIALS_PATH = os.environ.get("GOOGLE_CREDENTIALS_PATH")
 GOOGLE_SHEET_URL = os.environ.get("GOOGLE_SHEET_URL")
 
 # 분리하여 업로드할 시트 매핑 (파일명 -> 시트 탭 이름)
+# 각 탭(시트)별 삽입할 메모(안내문)
+SHEET_NOTES = {
+    "원천_네이버_리뷰": "[자동화 탭] 네이버 리뷰 원천 데이터입니다.\n⚠️ 파이프라인이 덮어쓰므로 직접 수정하지 마세요.",
+    "원천_카카오맵": "[자동화 탭] 카카오맵 리뷰 원천 데이터입니다.\n⚠️ 직접 수정하지 마세요.",
+    "네이버_검색트렌드": "[자동화 탭] 네이버 검색 트렌드 원천 데이터입니다.\n⚠️ 직접 수정하지 마세요.",
+    "유튜브_영상목록": "[자동화 탭] 유튜브 영상 수집 결과입니다.\n⚠️ 직접 수정하지 마세요.",
+    "제외_데이터_로그": "[자동화 탭] 정제 과정에서 제외된 데이터 로그입니다.\n⚠️ 직접 수정하지 마세요.",
+    "원천_네이버_영수증": "[자동화 탭] 네이버 플레이스 방문자 영수증 리뷰 데이터입니다.\n⚠️ 직접 수정하지 마세요.",
+    "정제_리뷰데이터": "[핵심 데이터 탭] 수집 및 AI 분석이 완료된 최종 정제 데이터입니다.\n✅ 대시보드와 직접 연결되어 있습니다.\n⚠️ 열(Header) 이름이나 순서를 임의로 변경하지 마세요.\n(데이터 정정이 필요한 경우 이 시트를 복사해서 사용 권장)",
+    "기획": "[마케터/기획자 전용 탭]\n✅ A2 셀에 AI 프롬프트를 작성해두면, 다음 파이프라인 가동 시 해당 룰이 AI 분석에 반영됩니다.\n마음껏 수정하셔도 됩니다!"
+}
+
 SHEET_MAPPING = {
     RAW_DATA_DIR / "naver_mentions_raw.csv": "원천_네이버_리뷰",
     RAW_DATA_DIR / "kakaomap_reviews.csv": "원천_카카오맵",
+    RAW_DATA_DIR / "naver_place_reviews.csv": "원천_네이버_영수증",
     CLEAN_DATA_DIR / "mentions_excluded.csv": "제외_데이터_로그",
     RAW_DATA_DIR / "datalab_trend.csv": "네이버_검색트렌드",
     RAW_DATA_DIR / "youtube_videos.csv": "유튜브_영상목록",
@@ -83,6 +96,15 @@ def upload_dataframe_to_sheet(sh, df, sheet_name):
     
     # 구글 시트 일괄 업데이트
     worksheet.update(values=data_to_upload, range_name='A1')
+    
+    # 마케터/기획자를 위한 안내 메모(Note) 삽입 (A1 셀)
+    if sheet_name in SHEET_NOTES:
+        try:
+            worksheet.insert_note('A1', SHEET_NOTES[sheet_name])
+            print(f"  └ 📝 시트 메모 추가 완료: '{sheet_name}' A1 셀")
+        except AttributeError:
+            pass # gspread 버전에 따라 지원 안 할 수도 있음
+            
     print(f"  └ ✅ 시트 갱신 완료: '{sheet_name}' ({len(df)}행)")
 
 def main():
@@ -127,6 +149,19 @@ def main():
         except Exception as e:
             print(f"  └ ❌ {sheet_name} 처리 중 오류 발생: {e}")
             has_error = True
+
+    # 기획 탭이 있는지 확인하고 없으면 생성 (메모 추가)
+    if sh != "MOCK_SHEET":
+        try:
+            sh.worksheet("기획")
+        except gspread.exceptions.WorksheetNotFound:
+            try:
+                plan_ws = sh.add_worksheet(title="기획", rows=100, cols=10)
+                plan_ws.update(values=[["[AI 프롬프트 설정 (이 아래 A2 셀에 작성)]"], [""]], range_name='A1')
+                plan_ws.insert_note('A1', SHEET_NOTES["기획"])
+                print("  └ ✅ '기획' 탭이 없어서 새로 생성하고 메모를 남겼습니다.")
+            except Exception as e:
+                print(f"  └ ⚠️ '기획' 탭 생성 실패: {e}")
 
     if writer:
         writer.close()

@@ -1,4 +1,4 @@
-import type { DashboardData, VisitPurpose, MonthlyTrend, MenuMention, BranchStat, KeywordMention } from "./types";
+import type { DashboardData, VisitPurpose, MonthlyTrend, MenuMention, BranchStat, KeywordMention, ReviewItem } from "./types";
 
 // 랭킹 집계 시 서로 다른 표기를 하나로 합친다(원본 값 자체는 건드리지 않음).
 // "국밥"은 국밥집 리뷰 대부분에 등장해 랭킹 변별력이 없어 제외한다.
@@ -318,5 +318,49 @@ export async function getDashboardData(): Promise<DashboardData> {
   } catch (error) {
     console.error("[ERROR] Public Sheets fetch failed:", error);
     return FALLBACK;
+  }
+}
+
+export async function getAllReviews(): Promise<ReviewItem[]> {
+  const SHEET_ID = process.env.GOOGLE_SHEET_ID || "13Z0VlvkblfBrT7BtNK1iw2dbVsLMkrAh1XgP1SfRnJg";
+  try {
+    const reviewSheet = await fetchReviewSheet(SHEET_ID);
+    if (!reviewSheet) return [];
+    
+    const h = reviewSheet.header;
+    const branchIdx = h.indexOf("지점");
+    const channelIdx = h.indexOf("채널");
+    const authorIdx = h.indexOf("작성자");
+    const dateIdx = h.indexOf("작성일");
+    const contentIdx = h.indexOf("review_text");
+    const sentimentIdx = h.indexOf("sentiment_final");
+    const ratingIdx = h.indexOf("rating");
+    const urlIdx = h.indexOf("URL");
+    const pKeyIdx = h.indexOf("positive_keywords");
+    const nKeyIdx = h.indexOf("negative_keywords");
+
+    return reviewSheet.rows.map((row, i) => {
+      const getStr = (idx: number) => (idx >= 0 && row[idx]) ? row[idx] : "";
+      
+      const pos = getStr(pKeyIdx).split(';').map(k => k.trim()).filter(Boolean);
+      const neg = getStr(nKeyIdx).split(';').map(k => k.trim()).filter(Boolean);
+      const ratingStr = getStr(ratingIdx);
+
+      return {
+        id: `rev-${i}`,
+        branch: getStr(branchIdx) || "본점",
+        channel: getStr(channelIdx) || "Unknown",
+        author: getStr(authorIdx) || "익명",
+        date: getStr(dateIdx),
+        content: getStr(contentIdx),
+        sentiment: getStr(sentimentIdx) || "분석 스킵",
+        rating: ratingStr ? parseFloat(ratingStr) : undefined,
+        url: getStr(urlIdx),
+        keywords: [...pos, ...neg],
+      };
+    }).filter(r => r.content.trim().length > 0);
+  } catch (e) {
+    console.error("Failed to fetch all reviews", e);
+    return [];
   }
 }

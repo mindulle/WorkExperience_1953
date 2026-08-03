@@ -84,3 +84,17 @@ export type DashboardData = {
   /** 응답 필요 리뷰 수. 오너 콘솔 데이터가 필요하다. */
   pendingReplies?: number;
 };
+
+/** 개별 리뷰 원문 (리뷰 탐색 페이지용) */
+export type ReviewItem = {
+  id: string;
+  branch: string;
+  channel: string;
+  author: string;
+  date: string;
+  content: string;
+  sentiment: "긍정" | "중립" | "부정" | "분석 불가" | string;
+  rating?: number;
+  url?: string;
+  keywords: string[];
+};

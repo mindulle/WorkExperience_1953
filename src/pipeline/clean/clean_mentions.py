@@ -114,7 +114,23 @@ def main() -> int:
 
     # ── 로드 ──
     네이버 = pd.read_csv(a.naver)
-    유튜브 = pd.read_excel(a.xlsx, sheet_name="원천_유튜브")
+    try:
+        유튜브 = pd.read_excel(a.xlsx, sheet_name="원천_유튜브")
+    except Exception as e:
+        print(f"엑셀 파일 로드 실패({e}), youtube_comments.csv를 시도합니다.")
+        yt_csv = Path(a.naver).parent / "youtube_comments.csv"
+        if yt_csv.exists():
+            유튜브 = pd.read_csv(yt_csv, encoding='utf-8-sig')
+            유튜브['1953관련'] = 'Y'
+            유튜브.rename(columns={'작성일': '댓글작성일'}, inplace=True)
+        else:
+            유튜브 = pd.DataFrame()
+    try:
+        네이버_영수증 = pd.read_csv(Path(a.naver).parent / "naver_place_reviews.csv")
+        print(f"입력: 네이버 영수증 {len(네이버_영수증):,}건")
+    except Exception:
+        네이버_영수증 = pd.DataFrame()
+        
     try:
         카카오 = pd.read_csv(Path(a.kakao))
         print(f"입력: 카카오 {len(카카오):,}건")
@@ -132,13 +148,27 @@ def main() -> int:
         "지점": "브랜드전체",
         "채널": "유튜브댓글",
         "작성자": None,
-        "작성일": yt_keep["댓글작성일"],
-        "제목": yt_keep["영상제목"],
-        "본문": yt_keep["댓글"],
-        "URL": yt_keep["영상URL"],
+        "작성일": yt_keep.get("댓글작성일", yt_keep.get("작성일", "")),
+        "제목": yt_keep.get("영상제목", ""),
+        "본문": yt_keep.get("댓글", ""),
+        "URL": "https://youtu.be/" + yt_keep.get("videoId", "").astype(str) if "videoId" in yt_keep else "",
         "검색키워드": "1953형제돼지국밥",
     })
     clean = pd.concat([nv_keep, yt_norm], ignore_index=True)
+    if not 네이버_영수증.empty:
+        nv_place_norm = pd.DataFrame({
+            "지점": 네이버_영수증.get("지점명", "본점"),
+            "채널": 네이버_영수증.get("출처", "NaverPlace"),
+            "작성자": 네이버_영수증.get("작성자", ""),
+            "작성일": 네이버_영수증.get("작성일자", ""),
+            "제목": "",
+            "본문": 네이버_영수증.get("본문", ""),
+            "URL": "",
+            "검색키워드": "",
+            "별점": 네이버_영수증.get("별점", 0.0)
+        })
+        clean = pd.concat([clean, nv_place_norm], ignore_index=True)
+        
     if not 카카오.empty:
         # 카카오 스키마 맞추기
         kakao_norm = pd.DataFrame({

@@ -1,17 +1,53 @@
-import { ViewPlaceholder } from "@/components/ViewPlaceholder";
+import { getDashboardData } from "@/lib/googleSheets";
+import { Topbar } from "@/components/dashboard/Topbar";
+import { Card } from "@/components/ui/Card";
 
-export default function Page() {
+export const revalidate = 60;
+
+export default async function BranchesPage() {
+  const data = await getDashboardData();
+  const updatedAt = new Date(data.fetchedAt).toLocaleString("ko-KR", {
+    timeZone: "Asia/Seoul",
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+
   return (
-    <ViewPlaceholder
-      title="지점 관리"
-      planned={[
-        "전사 평균 대비 성과",
-        "긍정률 추이 비교",
-        "개선 액션 체크리스트",
-        "지점 주요 키워드",
-        "방문 시간대 분포",
-        "최근 리뷰",
-      ]}
-    />
+    <>
+      <Topbar updatedAt={updatedAt} source={data.source} />
+      <div className="flex flex-col gap-5 flex-1 h-full overflow-hidden">
+        <h2 className="text-lg font-bold">지점 관리</h2>
+        <Card className="flex-1 overflow-auto">
+          {data.branchStats.length > 0 ? (
+            <table className="w-full text-left text-sm border-collapse">
+              <thead>
+                <tr className="border-b-2 border-[var(--hairline)]">
+                  <th className="py-3 font-semibold text-[var(--muted)]">지점명</th>
+                  <th className="py-3 font-semibold text-[var(--muted)] text-right">리뷰 수</th>
+                  <th className="py-3 font-semibold text-[var(--muted)] text-right">평균 평점</th>
+                  <th className="py-3 font-semibold text-[var(--muted)] text-right">긍정률</th>
+                  <th className="py-3 font-semibold text-[var(--muted)] text-right">부정률</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.branchStats.map((b) => (
+                  <tr key={b.branch} className="border-b border-[var(--hairline)]">
+                    <td className="py-4 font-bold">{b.branch}</td>
+                    <td className="py-4 text-right [font-variant-numeric:tabular-nums]">{b.reviewCount.toLocaleString()}건</td>
+                    <td className="py-4 text-right font-semibold text-[var(--brand)]">{b.avgRating || "-"}</td>
+                    <td className="py-4 text-right text-[var(--s-blue)] font-semibold">{b.positivePct}%</td>
+                    <td className="py-4 text-right text-[var(--critical)] font-semibold">{b.negativePct}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="flex-1 flex items-center justify-center h-full text-[var(--muted)] text-sm">
+              지점별 차원 분석 데이터가 없습니다. (파이프라인 연동 대기)
+            </div>
+          )}
+        </Card>
+      </div>
+    </>
   );
 }

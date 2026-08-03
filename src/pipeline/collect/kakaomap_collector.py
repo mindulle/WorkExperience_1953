@@ -8,10 +8,10 @@ try:
 except ImportError:
     HAS_SCRAPLING = False
 
-# 대시보드(types.ts) 요구사항에 맞춘 카카오맵 수집기
+# 대시보드(types.ts) 요구사항에 맞춘 카카오맵 수집기 (크롤링 방식 복구)
 async def collect_kakaomap(place_id: str, branch_name: str):
     url = f"https://place.map.kakao.com/{place_id}"
-    print(f"🚀 [{branch_name}] 카카오맵 리뷰 수집 시작: {url}")
+    print(f"🚀 [{branch_name}] 카카오맵 리뷰 수집(웹 스크래핑) 시작: {url}")
     
     reviews_data = []
     
@@ -71,17 +71,16 @@ async def main():
         all_reviews.extend(reviews)
         
     if not all_reviews:
-        print("UI 검증을 위해 임시 데이터를 생성합니다.")
+        print("⚠️ 리뷰 수집 실패 또는 데이터가 없습니다. 임시 데이터를 반환합니다.")
         dummy_data = [
-            {"작성자": "카카오유저1", "작성일자": "2026-08-01", "별점": 4.0, "본문": "국물은 진하고 좋은데 양이 조금 아쉽습니다.", "출처": "Kakao", "지점명": "본점"},
-            {"작성자": "카카오유저2", "작성일자": "2026-07-28", "별점": 2.0, "본문": "직원분이 너무 불친절해요. 다신 안갈듯", "출처": "Kakao", "지점명": "본점"}
+            {"작성자": "카카오유저1", "작성일자": "2026-08-01", "별점": 4.0, "본문": "국물은 진하고 좋은데 양이 조금 아쉽습니다.", "출처": "KakaoMap", "지점명": "본점"}
         ]
         all_reviews = dummy_data
 
     df = pd.DataFrame(all_reviews)
     
     # 저장 경로
-    output_dir = Path("data/raw")
+    output_dir = Path(__file__).resolve().parent.parent.parent.parent / "data" / "raw"
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / "kakaomap_reviews.csv"
     
