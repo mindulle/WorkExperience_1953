@@ -46,7 +46,10 @@ def get_gspread_client():
         print("⚠️ GOOGLE_CREDENTIALS_PATH 가 설정되지 않았습니다. (OpenCode 꼼수 모드: 로컬 엑셀 저장으로 대체)")
         return "MOCK_CLIENT"
     
-    cred_path = Path(GOOGLE_CREDENTIALS_PATH).expanduser()
+    cred_path = Path(GOOGLE_CREDENTIALS_PATH)
+    if not cred_path.is_absolute():
+        cred_path = PROJECT_ROOT / cred_path
+
 
     if not cred_path.exists():
         print(f"⚠️ 인증 파일을 찾을 수 없습니다: {cred_path} (업로드 스킵)")

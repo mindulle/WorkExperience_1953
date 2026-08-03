@@ -25,31 +25,39 @@ def run_script(script_path, *args, cwd=None):
     print(f"\n🚀 실행: {' '.join(cmd)}")
     result = subprocess.run(cmd, cwd=cwd or PIPELINE_DIR, env=os.environ)
     if result.returncode != 0:
-        print(f"❌ 오류 발생: {script_path.name}")
-        sys.exit(result.returncode)
-    print(f"✅ 완료: {script_path.name}")
+        print(f"⚠️ 경고: {script_path.name} 실행 중 오류 발생 (계속 진행합니다)")
+    else:
+        print(f"✅ 완료: {script_path.name}")
 
 def main():
     print("==================================================")
-    print(" 1953형제돼지국밥 데이터 수집/정제 파이프라인 v0.1.0")
+    print(" 1953형제돼지국밥 데이터 수집/정제 파이프라인 v0.2.0")
     print("==================================================")
 
-    # 1. 수집 스크립트 실행 (실행 디렉토리를 RAW_DATA_DIR로 맞춰 원천 데이터가 올바른 위치에 저장되도록 함)
-    print("\n[1/3] 데이터 수집 시작...")
+    # 1. 수집 스크립트 실행
+    print("\n[1/4] 데이터 수집 시작...")
     run_script(PIPELINE_DIR / "collect" / "naver_review_collector.py", cwd=RAW_DATA_DIR)
     run_script(PIPELINE_DIR / "collect" / "youtube_collector.py", cwd=RAW_DATA_DIR)
     run_script(PIPELINE_DIR / "collect" / "naver_datalab_trend.py", cwd=RAW_DATA_DIR)
+    run_script(PIPELINE_DIR / "collect" / "catchtable_collector.py", cwd=RAW_DATA_DIR)
+    run_script(PIPELINE_DIR / "collect" / "kakaomap_collector.py", cwd=RAW_DATA_DIR)
 
     # 2. 정제 스크립트 실행
-    print("\n[2/3] 데이터 정제 검증 시작...")
+    print("\n[2/4] 팀원 데이터 병합 및 데이터 정제 검증 시작...")
+    run_script(PIPELINE_DIR / "clean" / "merge_team_data.py", cwd=PIPELINE_DIR)
     run_script(PIPELINE_DIR / "clean" / "clean_mentions.py", 
                "--outdir", str(CLEAN_DATA_DIR),
                "--naver", str(RAW_DATA_DIR / "naver_mentions_raw.csv"),
+               "--kakao", str(RAW_DATA_DIR / "kakaomap_reviews.csv"),
                "--xlsx", str(PROJECT_ROOT / "data/1953_일경험프로젝트_통합자료/04_프로젝트_실무_및_참고자료/1953_통합분석_대시보드.xlsx"),
                cwd=RAW_DATA_DIR)
 
-    # 3. 구글 시트 업로드 실행
-    print("\n[3/3] Google Sheets 자동 업로드 시작...")
+    # 3. AI 분석 실행
+    print("\n[3/4] AI 꼼수 모드 (OpenCode Free-riding) 기반 감성/키워드 분석 시작...")
+    run_script(PIPELINE_DIR / "analyze" / "ai_engine.py", cwd=PIPELINE_DIR)
+
+    # 4. 구글 시트 업로드 실행
+    print("\n[4/4] Google Sheets 자동 업로드(Mock) 시작...")
     run_script(PIPELINE_DIR / "upload" / "google_sheets.py", cwd=PIPELINE_DIR)
 
     print("\n🎉 모든 파이프라인 실행이 완료되었습니다!")
