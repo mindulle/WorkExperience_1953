@@ -1,24 +1,15 @@
 import os
 import json
+import re
+import subprocess
 import pandas as pd
 from typing import Optional
 from pathlib import Path
-from pydantic import BaseModel, Field
-from openai import OpenAI
 
 # ---------------------------------------------------------
-# 팀원(선영, 상은, 주은) 프롬프트 기반 AI 감성 분석 엔진
+# 팀원(선영, 상은, 주은) 프롬프트 기반 AI 감성 분석 엔진 (OpenCode 꼼수 버전)
 # (Issue #15: 구글 시트 기반 AI 감성 분석 백엔드 스크립트)
 # ---------------------------------------------------------
-
-class ReviewAnalysis(BaseModel):
-    sentiment: str = Field(description="'긍정', '중립', '부정', '분석 불가' 중 하나")
-    sentiment_confidence: str = Field(description="'HIGH', 'MEDIUM', 'LOW' 중 하나")
-    positive_keywords: Optional[str] = Field(description="긍정 키워드 (여러 개는 '|'로 구분). 없으면 빈 문자열")
-    negative_keywords: Optional[str] = Field(description="부정 키워드 (여러 개는 '|'로 구분). 없으면 빈 문자열")
-    mentioned_menu: Optional[str] = Field(description="언급된 메뉴 (여러 개는 '|'로 구분). 없으면 빈 문자열")
-    customer_type: Optional[str] = Field(description="'직장인', '가족', '학생', '관광객', '혼밥', '기타' 중 하나. 판단 불가시 빈 문자열")
-    needs_response: str = Field(description="'Y' 또는 'N' (1~2점이거나 불만/개선 요청 포함 시 'Y')")
 
 SYSTEM_PROMPT = """
 당신은 음식점 온라인 리뷰를 분석하는 10년 차 데이터 엔지니어이자 분석가입니다.
@@ -35,9 +26,20 @@ SYSTEM_PROMPT = """
 - 중립: 단순 방문 기록이거나 긍정/부정이 혼재되어 방향 판단이 어려운 경우
 - 분석 불가: 텍스트가 없거나 이모티콘만 있는 경우
 주의: 별점이 높다고 무조건 긍정이 아니며, 리뷰 문장 자체를 근거로 판별하세요.
+
+아래 JSON 형식에 맞추어 오직 유효한 JSON 포맷 하나만 출력하세요. 어떠한 부가 설명이나 Markdown 태그(```json 등)도 포함하지 마세요.
+{
+  "sentiment": "'긍정', '중립', '부정', '분석 불가' 중 하나",
+  "sentiment_confidence": "'HIGH', 'MEDIUM', 'LOW' 중 하나",
+  "positive_keywords": "긍정 키워드 (여러 개는 '|'로 구분). 없으면 빈 문자열",
+  "negative_keywords": "부정 키워드 (여러 개는 '|'로 구분). 없으면 빈 문자열",
+  "mentioned_menu": "언급된 메뉴 (여러 개는 '|'로 구분). 없으면 빈 문자열",
+  "customer_type": "'직장인', '가족', '학생', '관광객', '혼밥', '기타' 중 하나. 판단 불가시 빈 문자열",
+  "needs_response": "'Y' 또는 'N' (1~2점이거나 불만/개선 요청 포함 시 'Y')"
+}
 """
 
-def analyze_review(client: OpenAI, review_text: str, rating: float) -> dict:
+def analyze_review(review_text: str, rating: float) -> dict:
     if pd.isna(review_text) or str(review_text).strip() == "":
         return {
             "sentiment": "분석 불가",
@@ -46,48 +48,55 @@ def analyze_review(client: OpenAI, review_text: str, rating: float) -> dict:
             "negative_keywords": "",
             "mentioned_menu": "",
             "customer_type": "",
-            "needs_response": "Y" if rating <= 2.0 else "N"
+            "needs_response": "Y" if float(rating) <= 2.0 else "N"
         }
 
     try:
-        completion = client.beta.chat.completions.parse(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": f"다음 리뷰를 분석하세요.\n별점: {rating}\n리뷰 내용: {review_text}"}
-            ],
-            response_format=ReviewAnalysis,
+        prompt = f"{SYSTEM_PROMPT}\n\n[분석할 리뷰]\n별점: {rating}\n리뷰 내용: {review_text}"
+        
+        # OpenCode CLI를 이용해 터미널 환경의 무료 AI 모델 호출 (꼼수)
+        result = subprocess.check_output(
+            ["opencode", "run", prompt], 
+            text=True, 
+            stderr=subprocess.STDOUT
         )
-        return completion.choices[0].message.parsed.model_dump()
+        
+        # ANSI Escape 코드 및 불필요한 로그 제거 후 첫 번째 '{' 부터 마지막 '}' 까지 파싱
+        match = re.search(r'\{.*\}', result.replace('\n', ' '), re.DOTALL)
+        if match:
+            json_str = match.group(0)
+            return json.loads(json_str)
+        else:
+            print(f"❌ JSON 파싱 실패 (원본 응답): {result}")
+            return None
+
     except Exception as e:
-        print(f"API Error: {e}")
+        print(f"API(Subprocess) Error: {e}")
         return None
 
 def main():
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        print("⚠️ OPENAI_API_KEY가 설정되지 않아 분석을 건너뜁니다.")
-        return
-
-    client = OpenAI(api_key=api_key)
-    
     # 처리할 원본 파일 경로
     input_csv = Path("data/clean/mentions_clean.csv")
     output_csv = Path("data/clean/reviews_merged.csv")
     
+    # 더미 데이터 생성 (원본 파일이 없을 경우 테스트용)
     if not input_csv.exists():
-        print(f"⚠️ 원본 데이터를 찾을 수 없습니다: {input_csv}")
-        return
+        print(f"⚠️ {input_csv} 가 없어서 임시 테스트 데이터를 생성합니다.")
+        input_csv.parent.mkdir(parents=True, exist_ok=True)
+        pd.DataFrame([
+            {"작성자": "테스트1", "별점": 5, "본문": "국밥이 진짜 맛있어요! 직원들도 친절합니다.", "출처": "Naver"},
+            {"작성자": "테스트2", "별점": 1, "본문": "머리카락이 나왔어요 최악입니다 다신 안가요", "출처": "Kakao"},
+        ]).to_csv(input_csv, index=False, encoding="utf-8-sig")
 
     df = pd.read_csv(input_csv, encoding="utf-8-sig")
     
-    print(f"총 {len(df)}건의 리뷰 분석을 시작합니다...")
+    print(f"총 {len(df)}건의 리뷰 분석을 시작합니다... (OpenCode Free-riding 모드 🚀)")
     
     # 결과를 담을 리스트
     results = []
     for idx, row in df.iterrows():
         print(f"[{idx+1}/{len(df)}] 리뷰 분석 중...")
-        analysis = analyze_review(client, row.get("본문", ""), row.get("별점", 0))
+        analysis = analyze_review(row.get("본문", ""), row.get("별점", 0))
         if analysis:
             row_data = row.to_dict()
             row_data.update(analysis)
