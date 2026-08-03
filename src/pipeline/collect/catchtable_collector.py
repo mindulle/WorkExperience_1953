@@ -78,5 +78,5 @@ if __name__ == "__main__":
         print("\n[수집된 샘플 데이터]")
         print(df.head())
         # csv 저장 테스트
-        df.to_csv("data/raw/catchtable_sample.csv", index=False, encoding="utf-8-sig")
+        df.to_csv("catchtable_sample.csv", index=False, encoding="utf-8-sig")
 

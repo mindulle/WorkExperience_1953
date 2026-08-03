@@ -27,13 +27,13 @@ async def collect_naver_place(place_id: str, branch_name: str):
             page = await session.fetch(url, network_idle=True)
             
             # 차단 여부 확인
-            page_text = page.css('body')[0].text if page.css('body') else ""
+            page_text = page.css('body')[0].get_all_text() if page.css('body') else ""
             if "서비스 이용이 제한되었습니다" in page_text:
                 print("❌ 네이버 플레이스 봇 차단(또는 IP 차단) 발생. 로컬 환경에서 실행해주세요.")
                 return pd.DataFrame()
 
             print("✅ 봇 차단 우회 및 페이지 렌더링 성공 (HTTP 200)")
-            await asyncio.sleep(4)
+            await asyncio.sleep(5)
             
             # [휴리스틱 파싱 전략] 
             # 네이버 플레이스 리뷰는 난독화된 클래스명을 사용하므로, 
@@ -42,7 +42,7 @@ async def collect_naver_place(place_id: str, branch_name: str):
             print(f"🔍 1차 탐색: {len(review_elements)}개의 항목 발견")
             
             for el in review_elements:
-                text = el.text
+                text = el.get_all_text()
                 if not text: continue
                 
                 # '방문일' 키워드가 포함된 긴 문자열이면 리뷰 항목으로 간주
@@ -52,9 +52,14 @@ async def collect_naver_place(place_id: str, branch_name: str):
                         author = lines[0]
                         date = ""
                         for line in lines:
-                            if "방문일" in line or ("년" in line and "월" in line):
+                            if "년" in line and "월" in line and "일" in line:
                                 date = line
                                 break
+                        if not date:
+                            for line in lines:
+                                if "방문일" in line:
+                                    date = line
+                                    break
                                 
                         # 불필요한 메타데이터를 제외한 가장 긴 줄을 본문으로 추출
                         candidates = [l for l in lines if "방문일" not in l and "번째 방문" not in l and l != author and "이전" not in l]
@@ -82,9 +87,8 @@ async def main():
     print(" 📍 네이버 지도(플레이스) 방문자 영수증 리뷰 수집기")
     print("==================================================")
     
-    # 1953형제돼지국밥 대연본점 플레이스 ID (실제 ID 확인 시 교체)
     target_places = [
-        {"id": "1165152062", "branch": "경성대본점"} 
+        {"id": "19542599", "branch": "경성대본점"}
     ]
     
     all_df = []

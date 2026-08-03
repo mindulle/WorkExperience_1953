@@ -90,6 +90,8 @@ def 네이버_정제(df: pd.DataFrame):
 def 유튜브_정제(yt: pd.DataFrame):
     """유튜브 데이터에 R3·R4 적용. (유지분, 제외분) 반환."""
     d = yt.copy()
+    if "댓글" not in d.columns or "1953관련" not in d.columns:
+        return d.iloc[0:0], d.iloc[0:0].assign(제외사유="")
     has_댓글 = d["댓글"].notna() & (d["댓글"].astype(str).str.strip() != "")
     is_관련 = d["1953관련"] == "Y"
 

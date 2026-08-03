@@ -1,4 +1,5 @@
 import asyncio
+import re
 import pandas as pd
 from pathlib import Path
 
@@ -22,24 +23,27 @@ async def collect_kakaomap(place_id: str, branch_name: str):
                 print("✅ 카카오맵 페이지 렌더링 성공 (HTTP 200)")
                 
                 await asyncio.sleep(3)
-                
-                review_elements = page.css('.list_evaluation > li')
+
+                review_elements = page.css('ul.list_review > li')
                 print(f"🔍 발견된 리뷰 요소: {len(review_elements)}개")
-                
+
                 for idx, r in enumerate(review_elements):
-                    author_el = r.css('.txt_username')
-                    author = author_el[0].text.strip() if author_el else f"익명_{idx}"
-                    
-                    rating_el = r.css('.num_rate')
+                    author_el = r.css('.name_user')
+                    if author_el:
+                        author = re.sub(r'<[^>]+>', '', author_el[0].html_content).replace("리뷰어 이름,", "").strip()
+                    else:
+                        author = f"익명_{idx}"
+
+                    rating_el = r.css('.starred_grade .screen_out')
                     try:
-                        rating = float(rating_el[0].text.strip().replace('점', '')) if rating_el else 0.0
+                        rating = float(rating_el[1].text.strip()) if len(rating_el) >= 2 else 0.0
                     except:
                         rating = 0.0
-                    
-                    content_el = r.css('.txt_comment > span')
+
+                    content_el = r.css('.desc_review')
                     content = content_el[0].text.strip() if content_el else ""
-                    
-                    date_el = r.css('.time_write')
+
+                    date_el = r.css('.txt_date')
                     date = date_el[0].text.strip() if date_el else ""
                     
                     if not content:
@@ -62,7 +66,7 @@ async def collect_kakaomap(place_id: str, branch_name: str):
 
 async def main():
     target_places = [
-        {"id": "1896791221", "branch": "본점"}
+        {"id": "16894037", "branch": "본점"}
     ]
     
     all_reviews = []
