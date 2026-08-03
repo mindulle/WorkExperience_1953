@@ -34,11 +34,12 @@ GOOGLE_SHEET_URL = os.environ.get("GOOGLE_SHEET_URL")
 
 # 분리하여 업로드할 시트 매핑 (파일명 -> 시트 탭 이름)
 SHEET_MAPPING = {
-    CLEAN_DATA_DIR / "mentions_clean.csv": "정제_언급데이터",
+    RAW_DATA_DIR / "naver_mentions_raw.csv": "원천_네이버_리뷰",
+    RAW_DATA_DIR / "kakaomap_reviews.csv": "원천_카카오맵",
     CLEAN_DATA_DIR / "mentions_excluded.csv": "제외_데이터_로그",
     RAW_DATA_DIR / "datalab_trend.csv": "네이버_검색트렌드",
     RAW_DATA_DIR / "youtube_videos.csv": "유튜브_영상목록",
-    CLEAN_DATA_DIR / "reviews_merged.csv": "정제_리뷰데이터",  # 이슈 #66~68 산출물 (구글맵·캐치테이블 리뷰 병합)
+    CLEAN_DATA_DIR / "reviews_merged.csv": "정제_리뷰데이터",
 }
 
 def get_gspread_client():
