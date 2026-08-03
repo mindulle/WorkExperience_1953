@@ -43,10 +43,11 @@ SHEET_MAPPING = {
 
 def get_gspread_client():
     if not GOOGLE_CREDENTIALS_PATH:
-        print("⚠️ GOOGLE_CREDENTIALS_PATH 가 설정되지 않았습니다. (업로드 스킵)")
-        return None
+        print("⚠️ GOOGLE_CREDENTIALS_PATH 가 설정되지 않았습니다. (OpenCode 꼼수 모드: 로컬 엑셀 저장으로 대체)")
+        return "MOCK_CLIENT"
     
     cred_path = Path(GOOGLE_CREDENTIALS_PATH).expanduser()
+
     if not cred_path.exists():
         print(f"⚠️ 인증 파일을 찾을 수 없습니다: {cred_path} (업로드 스킵)")
         return None
@@ -83,22 +84,29 @@ def upload_dataframe_to_sheet(sh, df, sheet_name):
 def main():
     print("--- 3. Google Sheets 업로드 시작 ---")
     
-    if not GOOGLE_SHEET_URL:
-        print("⚠️ GOOGLE_SHEET_URL 환경변수가 없어 업로드를 건너뜁니다.")
-        return 0
-
     client = get_gspread_client()
     if not client:
         return 0
 
-    try:
-        sh = client.open_by_url(GOOGLE_SHEET_URL)
-        print(f"📊 대상 스프레드시트 연결됨: {sh.title}")
-    except Exception as e:
-        print(f"❌ 구글 시트 연결 실패: {e}")
-        return 1
+    if client == "MOCK_CLIENT":
+        print("📊 [Mock] 대상 스프레드시트 대신 로컬 엑셀 파일(dashboard_final_mock.xlsx)에 저장합니다.")
+        sh = "MOCK_SHEET"
+    else:
+        try:
+            sh = client.open_by_url(GOOGLE_SHEET_URL)
+            print(f"📊 대상 스프레드시트 연결됨: {sh.title}")
+        except Exception as e:
+            print(f"❌ 구글 시트 연결 실패: {e}")
+            return 1
 
     has_error = False
+    
+    # 엑셀 Writer 객체 (Mock 모드 전용)
+    writer = None
+    if sh == "MOCK_SHEET":
+        mock_out = CLEAN_DATA_DIR / "dashboard_final_mock.xlsx"
+        writer = pd.ExcelWriter(mock_out, engine='openpyxl')
+
     for file_path, sheet_name in SHEET_MAPPING.items():
         if not file_path.exists():
             print(f"  └ ⚠️ 파일 없음 스킵: {file_path.name}")
@@ -107,10 +115,19 @@ def main():
         print(f"  └ 📤 업로드 중: {file_path.name} -> 탭[{sheet_name}]")
         try:
             df = pd.read_csv(file_path, encoding='utf-8-sig')
-            upload_dataframe_to_sheet(sh, df, sheet_name)
+            if sh == "MOCK_SHEET":
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+                print(f"  └ ✅ [Mock] 로컬 시트 갱신 완료: '{sheet_name}' ({len(df)}행)")
+            else:
+                upload_dataframe_to_sheet(sh, df, sheet_name)
         except Exception as e:
-            print(f"  └ ❌ {sheet_name} 업로드 중 오류 발생: {e}")
+            print(f"  └ ❌ {sheet_name} 처리 중 오류 발생: {e}")
             has_error = True
+
+    if writer:
+        writer.close()
+        print(f"\n🎉 [Mock 모드] 모든 데이터가 {mock_out} 파일로 성공적으로 전송(저장)되었습니다!")
+        return 0
 
     if has_error:
         print("\n⚠️ 일부 데이터 업로드 중 오류가 발생했습니다.")

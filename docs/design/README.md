@@ -7,11 +7,6 @@
 | 파일 | 내용 |
 |---|---|
 | `wave-and-vibe-console.html` | **기준 문서.** 6개 뷰 전체 (대시보드 · 리뷰 탐색 · 트렌드 분석 · 지점 관리 · 고객 세그먼트 · AI 추천), 카드 26장 |
-| `dashboard.html` | 매장 리뷰 현황 단독 |
-| `customer-segment.html` | 고객 세그먼트 단독 |
-| `ai-recommendations.html` | AI 추천 액션 단독 |
-
-아래 3종은 콘솔의 개별 화면을 따로 뽑아둔 것으로, 콘솔과 세부가 다를 수 있습니다. **충돌 시 `wave-and-vibe-console.html`을 따릅니다.**
 
 ## 열람 방법
 

@@ -36,24 +36,3 @@ export const Console: Story = {
   },
 };
 
-// 아래 3종은 콘솔의 개별 화면을 따로 뽑아둔 것으로, 콘솔과 세부가 다를 수 있다.
-export const Dashboard: Story = {
-  args: {
-    src: 'design/dashboard.html',
-    title: '매장 리뷰 현황 (단독)',
-  },
-};
-
-export const CustomerSegment: Story = {
-  args: {
-    src: 'design/customer-segment.html',
-    title: '고객 세그먼트 (단독)',
-  },
-};
-
-export const AiRecommendations: Story = {
-  args: {
-    src: 'design/ai-recommendations.html',
-    title: 'AI 추천 액션 (단독)',
-  },
-};
