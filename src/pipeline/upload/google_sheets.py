@@ -34,11 +34,12 @@ GOOGLE_SHEET_URL = os.environ.get("GOOGLE_SHEET_URL")
 
 # 분리하여 업로드할 시트 매핑 (파일명 -> 시트 탭 이름)
 SHEET_MAPPING = {
-    CLEAN_DATA_DIR / "mentions_clean.csv": "정제_언급데이터",
+    RAW_DATA_DIR / "naver_mentions_raw.csv": "원천_네이버_리뷰",
+    RAW_DATA_DIR / "kakaomap_reviews.csv": "원천_카카오맵",
     CLEAN_DATA_DIR / "mentions_excluded.csv": "제외_데이터_로그",
     RAW_DATA_DIR / "datalab_trend.csv": "네이버_검색트렌드",
     RAW_DATA_DIR / "youtube_videos.csv": "유튜브_영상목록",
-    CLEAN_DATA_DIR / "reviews_merged.csv": "정제_리뷰데이터",  # 이슈 #66~68 산출물 (구글맵·캐치테이블 리뷰 병합)
+    CLEAN_DATA_DIR / "reviews_merged.csv": "정제_리뷰데이터",
 }
 
 def get_gspread_client():
@@ -46,7 +47,10 @@ def get_gspread_client():
         print("⚠️ GOOGLE_CREDENTIALS_PATH 가 설정되지 않았습니다. (OpenCode 꼼수 모드: 로컬 엑셀 저장으로 대체)")
         return "MOCK_CLIENT"
     
-    cred_path = Path(GOOGLE_CREDENTIALS_PATH).expanduser()
+    cred_path = Path(GOOGLE_CREDENTIALS_PATH)
+    if not cred_path.is_absolute():
+        cred_path = PROJECT_ROOT / cred_path
+
 
     if not cred_path.exists():
         print(f"⚠️ 인증 파일을 찾을 수 없습니다: {cred_path} (업로드 스킵)")

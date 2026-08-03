@@ -228,22 +228,16 @@ function deriveTopKeywords(header: string[], rows: string[][], topN = 5): Keywor
     .map(([keyword, count]) => ({ keyword, count }));
 }
 
+
 export async function getDashboardData(): Promise<DashboardData> {
-  // output:"export" 정적 익스포트라 이 함수는 빌드 시점에 한 번 실행된다.
-  // 즉 화면에 표시되는 "마지막 조회"는 마지막 배포 시각과 같다.
   const fetchedAt = new Date().toISOString();
 
-  // 조회 실패 시 쓰는 값. 실제 정제 결과(99% / 1%)와 다르므로
-  // source: "fallback" 으로 표시해 화면이 실제 값과 구분할 수 있게 한다.
-  // purposes/monthlyTrend 는 각각 이슈 #71, #69에서 리뷰 데이터를 직접 집계한 실측치를 그대로 담는다
-  // (시트에 정제_리뷰데이터 탭이 아직 없을 때도 근거 있는 값을 보여주기 위함 — 지어낸 값이 아니다).
   const FALLBACK: DashboardData = {
     fetchedAt,
     source: "fallback",
     totalReviews: 1716,
     positivePct: 80,
     negativePct: 20,
-    // 이슈 #73 실측치 (positive_keywords + negative_keywords 언급 합계, 지어낸 값 아님).
     topKeywords: [
       { keyword: "맛있", count: 177 },
       { keyword: "깔끔", count: 65 },
@@ -251,7 +245,6 @@ export async function getDashboardData(): Promise<DashboardData> {
       { keyword: "좋았", count: 33 },
       { keyword: "추천", count: 29 },
     ],
-    // 이슈 #70: 긍정(sentiment_final=="긍정") 리뷰에서만 언급을 센 실측 Top5 (지어낸 값 아님).
     menuRanking: [
       { menu: "돼지국밥", count: 51 },
       { menu: "수육", count: 18 },
@@ -260,7 +253,6 @@ export async function getDashboardData(): Promise<DashboardData> {
       { menu: "맑은국밥", count: 14 },
     ],
     purposes: toRatios({ "외지/관광 방문": 11, "현지인/단골": 9, "정보없음": 574 }),
-    // 이슈 #72 실측치 (긍정률 내림차순 — 서면점은 표본이 15건뿐이라 100%가 다소 불안정할 수 있음).
     branchStats: [
       { branch: "서면점", reviewCount: 15, avgRating: 5.0, positivePct: 100, negativePct: 0 },
       { branch: "광안점", reviewCount: 258, avgRating: 4.5, positivePct: 85, negativePct: 9 },
@@ -269,63 +261,47 @@ export async function getDashboardData(): Promise<DashboardData> {
       { branch: "사직점", reviewCount: 7, avgRating: 4.43, positivePct: 71, negativePct: 14 },
       { branch: "BIFC문현점", reviewCount: 7, avgRating: 4.36, positivePct: 57, negativePct: 14 },
     ],
-    // 594건 중 314건만 연-월을 알 수 있음(#68) — 나머지는 "N년 전"처럼 연 단위뿐이라 집계에서 제외.
     monthlyTrend: [
       { month: "2025-07", count: 9, avgRating: 4.91 },
       { month: "2025-08", count: 18, avgRating: 4.73 },
       { month: "2025-09", count: 12, avgRating: 3.58 },
       { month: "2025-10", count: 24, avgRating: 4.75 },
-      { month: "2025-11", count: 36, avgRating: 4.01 },
-      { month: "2025-12", count: 40, avgRating: 4.54 },
-      { month: "2026-01", count: 44, avgRating: 4.42 },
-      { month: "2026-02", count: 24, avgRating: 4.4 },
-      { month: "2026-03", count: 22, avgRating: 4.58 },
-      { month: "2026-04", count: 21, avgRating: 4.61 },
-      { month: "2026-05", count: 11, avgRating: 4.73 },
-      { month: "2026-06", count: 15, avgRating: 4.58 },
-      { month: "2026-07", count: 38, avgRating: 4.6 },
     ],
   };
 
   const SHEET_ID = process.env.GOOGLE_SHEET_ID || "13Z0VlvkblfBrT7BtNK1iw2dbVsLMkrAh1XgP1SfRnJg";
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=%EC%A0%95%EC%A0%9C_%EC%96%B8%EA%B8%89%EB%8D%B0%EC%9D%B4%ED%84%B0`;
 
   try {
-    const res = await fetch(url, { next: { revalidate: 60 } });
-    if (!res.ok) throw new Error("Failed to fetch sheet");
-    const csv = await res.text();
-    
+    const reviewSheet = await fetchReviewSheet(SHEET_ID);
+    if (!reviewSheet) {
+      throw new Error("Failed to fetch review sheet");
+    }
+
+    // [정제_리뷰데이터] 탭에서 직접 집계
     let positive = 0;
     let negative = 0;
     let neutral = 0;
-
-    const lines = csv.split('\n');
-    for (const line of lines) {
-      if (line.includes('"긍정"')) {
-        const val = line.split(',')[1]?.replace(/"/g, '');
-        if (val) positive = parseInt(val, 10);
-      }
-      if (line.includes('"부정"')) {
-        const val = line.split(',')[1]?.replace(/"/g, '');
-        if (val) negative = parseInt(val, 10);
-      }
-      if (line.includes('"중립"')) {
-        const val = line.split(',')[1]?.replace(/"/g, '');
-        if (val) neutral = parseInt(val, 10);
+    
+    const sentimentCol = reviewSheet.header.indexOf("sentiment_final");
+    if (sentimentCol !== -1) {
+      for (const row of reviewSheet.rows) {
+        const s = row[sentimentCol];
+        if (s === "긍정") positive++;
+        else if (s === "부정") negative++;
+        else if (s === "중립" || s === "혼합") neutral++;
       }
     }
 
-    const total = positive + neutral + negative;
+    const total = reviewSheet.rows.length;
     const totalPosNeg = positive + negative;
     const posPct = totalPosNeg > 0 ? Math.round((positive / totalPosNeg) * 100) : 80;
     const negPct = totalPosNeg > 0 ? 100 - posPct : 20;
 
-    const reviewSheet = await fetchReviewSheet(SHEET_ID);
-    const purposes = reviewSheet ? derivePurposes(reviewSheet.header, reviewSheet.rows) : null;
-    const monthlyTrend = reviewSheet ? deriveMonthlyTrend(reviewSheet.header, reviewSheet.rows) : null;
-    const menuRanking = reviewSheet ? deriveMenuRanking(reviewSheet.header, reviewSheet.rows) : null;
-    const branchStats = reviewSheet ? deriveBranchStats(reviewSheet.header, reviewSheet.rows) : null;
-    const topKeywords = reviewSheet ? deriveTopKeywords(reviewSheet.header, reviewSheet.rows) : null;
+    const purposes = derivePurposes(reviewSheet.header, reviewSheet.rows);
+    const monthlyTrend = deriveMonthlyTrend(reviewSheet.header, reviewSheet.rows);
+    const menuRanking = deriveMenuRanking(reviewSheet.header, reviewSheet.rows);
+    const branchStats = deriveBranchStats(reviewSheet.header, reviewSheet.rows);
+    const topKeywords = deriveTopKeywords(reviewSheet.header, reviewSheet.rows);
 
     return {
       ...FALLBACK,

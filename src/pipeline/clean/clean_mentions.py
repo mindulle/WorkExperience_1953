@@ -104,6 +104,7 @@ def 유튜브_정제(yt: pd.DataFrame):
 def main() -> int:
     ap = argparse.ArgumentParser(description="1953 온라인 언급 데이터 정제")
     ap.add_argument("--naver", default="naver_mentions_raw.csv")
+    ap.add_argument("--kakao", default="kakaomap_reviews.csv")
     ap.add_argument("--xlsx", default="1953_통합분석_대시보드.xlsx")
     ap.add_argument("--outdir", default=".")
     a = ap.parse_args()
@@ -114,6 +115,12 @@ def main() -> int:
     # ── 로드 ──
     네이버 = pd.read_csv(a.naver)
     유튜브 = pd.read_excel(a.xlsx, sheet_name="원천_유튜브")
+    try:
+        카카오 = pd.read_csv(Path(a.kakao))
+        print(f"입력: 카카오 {len(카카오):,}건")
+    except Exception as e:
+        print(f"카카오맵 데이터 로드 실패 (무시됨): {e}")
+        카카오 = pd.DataFrame()
     print(f"입력: 네이버 {len(네이버):,}건 / 유튜브 {len(유튜브):,}행")
 
     # ── 정제 ──
@@ -132,6 +139,20 @@ def main() -> int:
         "검색키워드": "1953형제돼지국밥",
     })
     clean = pd.concat([nv_keep, yt_norm], ignore_index=True)
+    if not 카카오.empty:
+        # 카카오 스키마 맞추기
+        kakao_norm = pd.DataFrame({
+            "지점": 카카오.get("지점명", "본점"),
+            "채널": 카카오.get("출처", "KakaoMap"),
+            "작성자": 카카오.get("작성자", ""),
+            "작성일": 카카오.get("작성일자", ""),
+            "제목": "",
+            "본문": 카카오.get("본문", ""),
+            "URL": "",
+            "검색키워드": "",
+            "별점": 카카오.get("별점", 0.0)
+        })
+        clean = pd.concat([clean, kakao_norm], ignore_index=True)
     excluded = pd.concat([nv_drop, yt_drop], ignore_index=True)
 
     clean.to_csv(outdir / "mentions_clean.csv", index=False, encoding="utf-8-sig")
