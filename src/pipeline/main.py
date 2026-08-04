@@ -37,6 +37,8 @@ def main():
     # 1. 수집 스크립트 실행
     print("\n[1/4] 데이터 수집 시작...")
     run_script(PIPELINE_DIR / "collect" / "naver_review_collector.py", cwd=RAW_DATA_DIR)
+    print("--- [1-1] 네이버 블로그 작성 시간(Time) 스크래핑 복원 ---")
+    run_script(PIPELINE_DIR / "collect" / "naver_blog_time_scraper.py", cwd=RAW_DATA_DIR)
     run_script(PIPELINE_DIR / "collect" / "youtube_collector.py", cwd=RAW_DATA_DIR)
     run_script(PIPELINE_DIR / "collect" / "naver_datalab_trend.py", cwd=RAW_DATA_DIR)
     run_script(PIPELINE_DIR / "collect" / "catchtable_collector.py", cwd=RAW_DATA_DIR)
