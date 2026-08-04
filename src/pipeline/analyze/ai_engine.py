@@ -18,11 +18,17 @@ JSON_FORMAT = """
 {
   "sentiment_final": "'긍정', '중립', '부정', '분석 불가' 중 하나",
   "sentiment_confidence": "'HIGH', 'MEDIUM', 'LOW' 중 하나",
-  "positive_keywords": "긍정 키워드 (여러 개는 ';'로 구분). 없으면 빈 문자열",
-  "negative_keywords": "부정 키워드 (여러 개는 ';'로 구분). 없으면 빈 문자열",
   "mentioned_menu": "언급된 메뉴 (여러 개는 ';'로 구분). 없으면 빈 문자열",
   "visit_origin": "'직장인', '가족', '학생', '관광객', '혼밥', '기타' 중 하나. 판단 불가시 빈 문자열",
-  "needs_response": "'Y' 또는 'N' (1~2점이거나 불만/개선 요청 포함 시 'Y')"
+  "needs_response": "'Y' 또는 'N' (1~2점이거나 불만/개선 요청 포함 시 'Y')",
+  "word_level_keywords": ["단순 명사 키워드 (예: 국물, 주차, 웨이팅) 배열. 없으면 빈 배열"],
+  "aspect_analysis": [
+    {
+      "category": "'맛', '주차/시설', '서비스', '위생', '가격/가성비', '기타' 중 하나",
+      "sentiment": "'긍정', '중립', '부정' 중 하나",
+      "context": "해당 평가의 구체적인 이유 (예: '주차장이 좁아서 갓길에 대야 함'). 없으면 빈 배열"
+    }
+  ]
 }
 """
 
@@ -95,7 +101,7 @@ def analyze_review(review_text: str, rating: float, system_prompt: str) -> dict:
         }
 
     try:
-        prompt = f"{system_prompt}\n\n[분석할 리뷰]\n별점: {rating}\n리뷰 내용: {review_text}"
+        prompt = f"{system_prompt}\\n\\n[분석할 리뷰]\\n별점: {rating}\\n리뷰 내용: {review_text}"
         
         # OpenCode CLI를 이용해 터미널 환경의 무료 AI 모델 호출 (꼼수)
         # Timeout 방지를 위해 subprocess의 timeout 설정 적용
