@@ -332,6 +332,7 @@ export async function getAllReviews(): Promise<ReviewItem[]> {
     const channelIdx = h.indexOf("채널");
     const authorIdx = h.indexOf("작성자");
     const dateIdx = h.indexOf("작성일");
+    const ymIdx = h.indexOf("approx_ym");
     const contentIdx = h.indexOf("review_text");
     const sentimentIdx = h.indexOf("sentiment_final");
     const ratingIdx = h.indexOf("rating");
@@ -352,6 +353,7 @@ export async function getAllReviews(): Promise<ReviewItem[]> {
         channel: getStr(channelIdx) || "Unknown",
         author: getStr(authorIdx) || "익명",
         date: getStr(dateIdx),
+        ym: getStr(ymIdx),
         content: getStr(contentIdx),
         sentiment: getStr(sentimentIdx) || "분석 스킵",
         rating: ratingStr ? parseFloat(ratingStr) : undefined,
