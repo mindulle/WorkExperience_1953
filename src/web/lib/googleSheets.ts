@@ -66,14 +66,15 @@ function toRatios(counts: Record<string, number>): VisitPurpose[] {
 
 /** "정제_리뷰데이터" 탭(이슈 #66~71 산출물)을 읽어 헤더+행으로 반환한다. 탭이 없으면 null. */
 async function fetchReviewSheet(sheetId: string): Promise<{ header: string[]; rows: string[][] } | null> {
-  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&headers=1&sheet=%EC%A0%95%EC%A0%9C_%EB%A6%AC%EB%B7%B0%EB%8D%B0%EC%9D%B4%ED%84%B0`;
+  // gviz/tq는 컬럼이 많은 시트를 전치(transpose)해 반환하는 버그가 있어
+  // export?format=csv 엔드포인트를 사용한다 (시트가 공개 공유돼 있어야 함).
+  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=992557608`;
   try {
     const res = await fetch(url, { next: { revalidate: 60 } });
     if (!res.ok) return null;
     const parsed = parseCsv(await res.text());
     if (parsed.length < 2) return null;
     const header = parsed[0];
-    // 탭이 없으면 gviz가 조용히 기본(첫) 탭으로 폴백하므로, 이 탭 고유 컬럼으로 실존 여부를 확인한다.
     if (header.indexOf("visit_origin") === -1) return null;
     return { header, rows: parsed.slice(1) };
   } catch {
