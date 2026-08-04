@@ -152,11 +152,11 @@ def main():
     # 결과를 담을 리스트
     results = []
     
-    # ⚠️ 테스트 시 Timeout 방지를 위해 상위 3건만 실제 AI 분석(꼼수 모드) 진행, 나머지는 더미값 삽입
+    # ⚠️ 테스트 시 Timeout 방지를 위해 상위 100건만 실제 AI 분석(꼼수 모드) 진행, 나머지는 더미값 삽입
     # 실 서비스 시에는 전체 데이터(df)로 루프를 돌리면 됩니다.
     for idx, row in df.iterrows():
         print(f"[{idx+1}/{len(df)}] 리뷰 분석 중...")
-        if idx < 3:
+        if idx < 100:
             analysis = analyze_review(row.get("본문", ""), row.get("별점", 0), system_prompt)
         else:
             # 4번째부터는 가라 데이터 (시간 절약)
