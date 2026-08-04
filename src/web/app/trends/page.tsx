@@ -1,16 +1,14 @@
-import { ViewPlaceholder } from "@/components/ViewPlaceholder";
+import { getAllReviews } from "@/lib/googleSheets";
+import { TrendExplorer } from "@/components/trends/TrendExplorer";
 
-export default function Page() {
+export const revalidate = 60;
+
+export default async function TrendsPage() {
+  const reviews = await getAllReviews();
+
   return (
-    <ViewPlaceholder
-      title="트렌드 분석"
-      planned={[
-        "감성 비율 추이",
-        "평균 평점 추이",
-        "지점별 리뷰량 추이",
-        "키워드 트렌드",
-        "요일 × 시간대 히트맵",
-      ]}
-    />
+    <div className="flex-1 h-full -mx-6 px-6 -mt-6 pt-6 overflow-y-auto">
+      <TrendExplorer reviews={reviews} />
+    </div>
   );
 }
