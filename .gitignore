@@ -2,6 +2,7 @@ venv/
 __pycache__/
 *.pyc
 .env
+service_account.json
 data/
 
 # wrangler 실행 시 생성되는 로컬 캐시

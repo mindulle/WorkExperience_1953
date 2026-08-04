@@ -1,6 +1,7 @@
 import pandas as pd
 from pathlib import Path
 import time
+import re
 
 try:
     from camoufox.sync_api import Camoufox
@@ -38,8 +39,7 @@ def collect_kakaomap(place_id: str, branch_name: str):
             except Exception:
                 pass
             
-            # '더보기' 버튼을 눌러 리뷰를 모두 전개 (원하는 페이지 수만큼)
-            # 카카오맵은 보통 "후기 더보기" 버튼이 있음 (.link_more)
+            # '더보기' 버튼을 눌러 리뷰를 모두 전개
             for _ in range(3):
                 try:
                     more_btn = page.locator(".evaluation_review .link_more")
@@ -51,24 +51,31 @@ def collect_kakaomap(place_id: str, branch_name: str):
                 except Exception:
                     break
 
-            review_elements = page.locator('.list_evaluation > li').all()
+            review_elements = page.locator('ul.list_review > li').all()
             print(f"🔍 발견된 리뷰 요소: {len(review_elements)}개")
             
             for idx, r in enumerate(review_elements):
                 try:
-                    author_loc = r.locator('.txt_username')
-                    author = author_loc.inner_text().strip() if author_loc.is_visible() else f"익명_{idx}"
+                    author_loc = r.locator('.name_user')
+                    if author_loc.is_visible():
+                        # author = re.sub(r'<[^>]+>', '', author_el[0].html_content).replace("리뷰어 이름,", "").strip()
+                        author = author_loc.inner_text().replace("리뷰어 이름,", "").strip()
+                    else:
+                        author = f"익명_{idx}"
                     
-                    rating_loc = r.locator('.num_rate')
+                    rating_loc = r.locator('.starred_grade .screen_out')
                     try:
-                        rating = float(rating_loc.inner_text().strip().replace('점', '')) if rating_loc.is_visible() else 0.0
+                        if rating_loc.count() >= 2:
+                            rating = float(rating_loc.nth(1).inner_text().strip())
+                        else:
+                            rating = 0.0
                     except:
                         rating = 0.0
                     
-                    content_loc = r.locator('.txt_comment > span')
+                    content_loc = r.locator('.desc_review')
                     content = content_loc.inner_text().strip() if content_loc.is_visible() else ""
                     
-                    date_loc = r.locator('.time_write')
+                    date_loc = r.locator('.txt_date')
                     date = date_loc.inner_text().strip() if date_loc.is_visible() else ""
                     
                     if not content:
@@ -92,7 +99,7 @@ def collect_kakaomap(place_id: str, branch_name: str):
 
 def main():
     target_places = [
-        {"id": "1896791221", "branch": "광안리본점"}
+        {"id": "16894037", "branch": "본점"}
     ]
     
     all_reviews = []

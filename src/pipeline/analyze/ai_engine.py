@@ -126,8 +126,9 @@ def main():
     system_prompt = get_dynamic_prompt()
 
     # 처리할 원본 파일 경로
-    input_csv = Path("data/clean/mentions_clean.csv")
-    output_csv = Path("data/clean/reviews_merged.csv")
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
+    input_csv = project_root / "data" / "clean" / "mentions_clean.csv"
+    output_csv = project_root / "data" / "clean" / "reviews_merged.csv"
     
     # 더미 데이터 생성 (원본 파일이 없을 경우 테스트용)
     if not input_csv.exists():

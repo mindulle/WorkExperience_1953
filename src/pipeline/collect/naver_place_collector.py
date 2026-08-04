@@ -129,7 +129,7 @@ def main():
     
     target_places = [
         {"id": "1959901593", "branch": "광안리본점"},
-        {"id": "1165152062", "branch": "경성대본점"}
+        {"id": "19542599", "branch": "경성대본점"}
     ]
     
     all_reviews_df = []
