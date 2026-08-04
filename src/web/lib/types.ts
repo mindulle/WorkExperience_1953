@@ -92,6 +92,7 @@ export type ReviewItem = {
   channel: string;
   author: string;
   date: string;
+  ym: string;
   content: string;
   sentiment: "긍정" | "중립" | "부정" | "분석 불가" | string;
   rating?: number;
