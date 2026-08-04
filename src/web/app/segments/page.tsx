@@ -1,17 +1,14 @@
-import { ViewPlaceholder } from "@/components/ViewPlaceholder";
+import { getDashboardData } from "@/lib/googleSheets";
+import { SegmentExplorer } from "@/components/segments/SegmentExplorer";
 
-export default function Page() {
+export const revalidate = 60;
+
+export default async function SegmentsPage() {
+  const data = await getDashboardData();
+
   return (
-    <ViewPlaceholder
-      title="고객 세그먼트"
-      planned={[
-        "세그먼트 개요",
-        "세그먼트 비교",
-        "세그먼트 인사이트",
-        "세그먼트별 주요 키워드",
-        "세그먼트별 방문 시간대",
-        "세그먼트 × 지점 분포",
-      ]}
-    />
+    <div className="flex-1 h-full -mx-6 px-6 -mt-6 pt-6 overflow-y-auto">
+      <SegmentExplorer purposes={data.purposes} />
+    </div>
   );
 }
