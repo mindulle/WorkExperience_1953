@@ -66,7 +66,7 @@ function toRatios(counts: Record<string, number>): VisitPurpose[] {
 
 /** "정제_리뷰데이터" 탭(이슈 #66~71 산출물)을 읽어 헤더+행으로 반환한다. 탭이 없으면 null. */
 async function fetchReviewSheet(sheetId: string): Promise<{ header: string[]; rows: string[][] } | null> {
-  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=%EC%A0%95%EC%A0%9C_%EB%A6%AC%EB%B7%B0%EB%8D%B0%EC%9D%B4%ED%84%B0`;
+  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&headers=1&sheet=%EC%A0%95%EC%A0%9C_%EB%A6%AC%EB%B7%B0%EB%8D%B0%EC%9D%B4%ED%84%B0`;
   try {
     const res = await fetch(url, { next: { revalidate: 60 } });
     if (!res.ok) return null;
@@ -368,7 +368,7 @@ export async function getAllReviews(): Promise<ReviewItem[]> {
 /** "AI_주간리포트" 탭 읽기 */
 export async function getAiInsightsData(): Promise<AiInsightItem[]> {
   const SHEET_ID = process.env.GOOGLE_SHEET_ID || "13Z0VlvkblfBrT7BtNK1iw2dbVsLMkrAh1XgP1SfRnJg";
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=AI_%EC%A3%BC%EA%B0%84%EB%A6%AC%ED%8F%AC%ED%8A%B8`;
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&headers=1&sheet=AI_%EC%A3%BC%EA%B0%84%EB%A6%AC%ED%8F%AC%ED%8A%B8`;
   
   try {
     const res = await fetch(url, { next: { revalidate: 60 } });
