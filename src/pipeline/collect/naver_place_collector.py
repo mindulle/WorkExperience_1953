@@ -20,7 +20,7 @@ def collect_naver_place(place_id: str, branch_name: str, max_pages=3):
     
     if not HAS_CAMOUFOX:
         print("⚠️ camoufox 모듈이 설치되어 있지 않아 빈 데이터를 반환합니다.")
-        return pd.DataFrame()
+        return pd.DataFrame(), pd.DataFrame()
         
     if USE_PROXY:
         print(f"   - 스텔스 브라우저 시작 중... (Proxy: {PROXY_URL} 경유)")
@@ -30,6 +30,7 @@ def collect_naver_place(place_id: str, branch_name: str, max_pages=3):
         browser_kwargs = {"headless": True, "os": "windows", "geoip": True}
         
     collected_reviews = []
+    collected_keywords = []
     seen_review_ids = set()
 
     def add_review(item, state_dict=None):
@@ -38,7 +39,7 @@ def collect_naver_place(place_id: str, branch_name: str, max_pages=3):
         if item["id"] not in seen_review_ids:
             seen_review_ids.add(item["id"])
             
-            # 작성자 닉네임 파싱 (Apollo State의 참조 구조 처리)
+            # 작성자 닉네임 파싱
             nickname = "알 수 없음"
             author_data = item.get("author", {})
             if isinstance(author_data, dict):
@@ -83,12 +84,28 @@ def collect_naver_place(place_id: str, branch_name: str, max_pages=3):
             page.goto(url, wait_until="networkidle")
             time.sleep(3)
             
-            print("   - 초기 리뷰 데이터(Apollo State) 추출 중...")
+            print("   - 초기 리뷰 및 키워드 통계 추출 중...")
             state = page.evaluate("window.__APOLLO_STATE__")
             if state:
+                # 1. 텍스트 리뷰 추출
                 for key, value in state.items():
                     if key.startswith("VisitorReview:"):
                         add_review(value, state_dict=state)
+                
+                # 2. 키워드 투표(이런 점이 좋았어요) 통계 추출
+                stats_node = state.get(f"VisitorReviewStatsResult:{place_id}", {})
+                keyword_details = stats_node.get("analysis", {}).get("votedKeyword", {}).get("details", [])
+                
+                for kw in keyword_details:
+                    display_name = kw.get("displayName")
+                    count = kw.get("count", 0)
+                    if display_name:
+                        collected_keywords.append({
+                            "지점명": branch_name,
+                            "키워드": display_name,
+                            "선택인원": count,
+                            "출처": "NaverPlace"
+                        })
             
             print(f"   - '더보기' 버튼 클릭하여 추가 리뷰 수집 중... (최대 {max_pages}페이지 분량)")
             for _ in range(max_pages - 1):
@@ -102,8 +119,8 @@ def collect_naver_place(place_id: str, branch_name: str, max_pages=3):
     except Exception as e:
         print(f"❌ 네이버 플레이스 수집 오류: {e}")
         
-    print(f"✅ 파싱 완료: [{branch_name}] 유효한 방문자 리뷰 {len(collected_reviews)}건 추출 완료")
-    return pd.DataFrame(collected_reviews)
+    print(f"✅ 파싱 완료: [{branch_name}] 리뷰 {len(collected_reviews)}건, 키워드 통계 {len(collected_keywords)}건 추출")
+    return pd.DataFrame(collected_reviews), pd.DataFrame(collected_keywords)
 
 def main():
     print("==================================================")
@@ -111,28 +128,41 @@ def main():
     print("==================================================")
     
     target_places = [
-        {"id": "1959901593", "branch": "광안리본점"}, # 새로 추가한 광안리점
-        {"id": "1165152062", "branch": "경성대본점"}  # 기존 타겟 지점
+        {"id": "1959901593", "branch": "광안리본점"},
+        {"id": "1165152062", "branch": "경성대본점"}
     ]
     
-    all_df = []
+    all_reviews_df = []
+    all_keywords_df = []
+    
     for p in target_places:
-        df = collect_naver_place(p["id"], p["branch"], max_pages=3)
-        if not df.empty:
-            all_df.append(df)
+        r_df, k_df = collect_naver_place(p["id"], p["branch"], max_pages=3)
+        if not r_df.empty:
+            all_reviews_df.append(r_df)
+        if not k_df.empty:
+            all_keywords_df.append(k_df)
             
-    if all_df:
-        final_df = pd.concat(all_df, ignore_index=True)
-        
-        project_root = Path(__file__).resolve().parent.parent.parent
-        output_dir = project_root / "data" / "raw"
-        output_dir.mkdir(parents=True, exist_ok=True)
-        
-        out_path = output_dir / "naver_place_reviews.csv"
-        final_df.to_csv(out_path, index=False, encoding="utf-8-sig")
-        print(f"\n🎉 총 {len(final_df)}건의 영수증 리뷰가 저장되었습니다: {out_path.name}")
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
+    output_dir = project_root / "data" / "raw"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # 리뷰 데이터 저장
+    if all_reviews_df:
+        final_reviews = pd.concat(all_reviews_df, ignore_index=True)
+        reviews_path = output_dir / "naver_place_reviews.csv"
+        final_reviews.to_csv(reviews_path, index=False, encoding="utf-8-sig")
+        print(f"\n🎉 총 {len(final_reviews)}건의 영수증 리뷰가 저장되었습니다: {reviews_path.name}")
     else:
-        print("\n⚠️ 수집된 데이터가 없습니다.")
+        print("\n⚠️ 수집된 리뷰 데이터가 없습니다.")
+
+    # 키워드 데이터 저장
+    if all_keywords_df:
+        final_keywords = pd.concat(all_keywords_df, ignore_index=True)
+        keywords_path = output_dir / "naver_place_keywords.csv"
+        final_keywords.to_csv(keywords_path, index=False, encoding="utf-8-sig")
+        print(f"🎉 총 {len(final_keywords)}건의 키워드 통계가 저장되었습니다: {keywords_path.name}")
+    else:
+        print("⚠️ 수집된 키워드 통계 데이터가 없습니다.")
 
 if __name__ == "__main__":
     main()
