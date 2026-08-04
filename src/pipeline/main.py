@@ -56,11 +56,15 @@ def main():
                cwd=RAW_DATA_DIR)
 
     # 3. AI 분석 실행
-    print("\n[3/4] AI 꼼수 모드 (OpenCode Free-riding) 기반 감성/키워드 분석 시작...")
+    print("\n[3/5] AI 꼼수 모드 (OpenCode Free-riding) 기반 감성/키워드 분석 시작...")
     run_script(PIPELINE_DIR / "analyze" / "ai_engine.py", cwd=PIPELINE_DIR)
 
-    # 4. 구글 시트 업로드 실행
-    print("\n[4/4] Google Sheets 자동 업로드(Mock) 시작...")
+    # 4. 거시적(Macro) AI 인사이트 추출
+    print("\n[4/5] 비용 최적화를 위한 거시적(Macro) 지점별 AI 리포트 생성 시작...")
+    run_script(PIPELINE_DIR / "analyze" / "macro_insight.py", cwd=PIPELINE_DIR)
+
+    # 5. 구글 시트 업로드 실행
+    print("\n[5/5] Google Sheets 자동 업로드(Mock) 시작...")
     run_script(PIPELINE_DIR / "upload" / "google_sheets.py", cwd=PIPELINE_DIR)
 
     print("\n🎉 모든 파이프라인 실행이 완료되었습니다!")
