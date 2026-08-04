@@ -70,3 +70,89 @@ body {
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
   font-size: 1rem;
 }
+/* --- AI Recommendation Cards (Prototype styles) --- */
+.aicard {
+  background: var(--surface);
+  border: 1.5px solid var(--hairline);
+  border-radius: var(--r-md);
+  padding: 17px 19px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+}
+.aicard.crit {
+  background: linear-gradient(180deg,#fdf3f3,#fff);
+}
+.ai-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.ai-sev {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+.pip {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.status-tag {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 6px;
+}
+.status-tag.new {
+  background: var(--surface-2);
+  color: var(--ink-2);
+  border: 1px solid var(--hairline);
+}
+.ai-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  margin-bottom: 6px;
+  line-height: 1.3;
+}
+.ai-body {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  line-height: 1.6;
+  flex-grow: 1;
+}
+.ai-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--hairline);
+}
+.ai-tags {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.tag {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 7px;
+  background: var(--plane);
+  color: var(--ink-2);
+  border-radius: 5px;
+  font-size: 10.5px;
+  font-weight: 500;
+}
+.ai-metric {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
