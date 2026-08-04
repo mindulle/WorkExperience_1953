@@ -1,114 +1,168 @@
-import asyncio
 import pandas as pd
 from pathlib import Path
-import re
+import time
 
 try:
-    from scrapling.fetchers import AsyncDynamicSession
-    HAS_SCRAPLING = True
+    from camoufox.sync_api import Camoufox
+    HAS_CAMOUFOX = True
 except ImportError:
-    HAS_SCRAPLING = False
+    HAS_CAMOUFOX = False
 
-async def collect_naver_place(place_id: str, branch_name: str):
-    # 네이버 플레이스 방문자(영수증) 리뷰 탭 URL
+# [설정] 프록시 사용 여부
+USE_PROXY = False
+PROXY_HOST = "100.82.184.115"
+PROXY_PORT = "8888"
+PROXY_URL = f"http://{PROXY_HOST}:{PROXY_PORT}"
+
+def collect_naver_place(place_id: str, branch_name: str, max_pages=3):
     url = f"https://m.place.naver.com/restaurant/{place_id}/review/visitor"
-    print(f"🚀 [{branch_name}] 네이버 지도 영수증 리뷰 수집 시작: {url}")
+    print(f"\n🚀 [{branch_name}] 네이버 지도 영수증 리뷰 수집 시작: {url}")
     
-    reviews_data = []
-    
-    if not HAS_SCRAPLING:
-        print("⚠️ scrapling 모듈이 설치되어 있지 않아 시뮬레이션 모드로 작동합니다.")
-        return pd.DataFrame([{"작성자": "네이버테스터", "작성일자": "2026-08-01", "별점": 0, "본문": "임시 스크래핑 데이터", "출처": "NaverPlace", "지점명": branch_name}])
+    if not HAS_CAMOUFOX:
+        print("⚠️ camoufox 모듈이 설치되어 있지 않아 빈 데이터를 반환합니다.")
+        return pd.DataFrame(), pd.DataFrame()
         
-    try:
-        # Scrapling(Patchright 기반)을 통해 네이버 봇 탐지 우회
-        # 참고: 클라우드/데이터센터 IP에서는 Naver가 "서비스 이용이 제한되었습니다" 라며 IP 블록을 할 수 있으므로 로컬 PC 실행 권장
-        async with AsyncDynamicSession(headless=True) as session:
-            page = await session.fetch(url, network_idle=True)
-            
-            # 차단 여부 확인
-            page_text = page.css('body')[0].get_all_text() if page.css('body') else ""
-            if "서비스 이용이 제한되었습니다" in page_text:
-                print("❌ 네이버 플레이스 봇 차단(또는 IP 차단) 발생. 로컬 환경에서 실행해주세요.")
-                return pd.DataFrame()
+    if USE_PROXY:
+        print(f"   - 스텔스 브라우저 시작 중... (Proxy: {PROXY_URL} 경유)")
+        browser_kwargs = {"headless": True, "os": "windows", "proxy": {"server": PROXY_URL}, "geoip": True}
+    else:
+        print(f"   - 스텔스 브라우저 시작 중... (로컬 IP 직접 연결)")
+        browser_kwargs = {"headless": True, "os": "windows", "geoip": True}
+        
+    collected_reviews = []
+    collected_keywords = []
+    seen_review_ids = set()
 
-            print("✅ 봇 차단 우회 및 페이지 렌더링 성공 (HTTP 200)")
-            await asyncio.sleep(5)
+    def add_review(item, state_dict=None):
+        if not item or "id" not in item:
+            return
+        if item["id"] not in seen_review_ids:
+            seen_review_ids.add(item["id"])
             
-            # [휴리스틱 파싱 전략] 
-            # 네이버 플레이스 리뷰는 난독화된 클래스명을 사용하므로, 
-            # DOM 구조 중 텍스트('방문일', '리뷰')를 포함하는 덩어리를 추출
-            review_elements = page.css('li')
-            print(f"🔍 1차 탐색: {len(review_elements)}개의 항목 발견")
+            # 작성자 닉네임 파싱
+            nickname = "알 수 없음"
+            author_data = item.get("author", {})
+            if isinstance(author_data, dict):
+                if "__ref" in author_data and state_dict:
+                    ref_id = author_data["__ref"]
+                    nickname = state_dict.get(ref_id, {}).get("nickname", "알 수 없음")
+                else:
+                    nickname = author_data.get("nickname", "알 수 없음")
+
+            body = item.get("body", "")
+            if body:
+                body = body.replace("\n", " ").strip()
             
-            for el in review_elements:
-                text = el.get_all_text()
-                if not text: continue
+            collected_reviews.append({
+                "작성자": nickname,
+                "작성일자": item.get("created", ""),
+                "별점": item.get("rating", 0.0) if item.get("rating") else 0.0,
+                "본문": body,
+                "출처": "NaverPlace",
+                "지점명": branch_name
+            })
+
+    try:
+        with Camoufox(**browser_kwargs) as browser:
+            page = browser.new_page()
+            
+            # GraphQL 응답 인터셉터
+            def handle_response(response):
+                if "graphql" in response.url and response.status == 200:
+                    try:
+                        data = response.json()
+                        if isinstance(data, list):
+                            data = data[0]
+                        if "visitorReviews" in data.get("data", {}):
+                            items = data["data"]["visitorReviews"]["items"]
+                            for item in items:
+                                add_review(item)
+                    except Exception:
+                        pass
+
+            page.on("response", handle_response)
+            page.goto(url, wait_until="networkidle")
+            time.sleep(3)
+            
+            print("   - 초기 리뷰 및 키워드 통계 추출 중...")
+            state = page.evaluate("window.__APOLLO_STATE__")
+            if state:
+                # 1. 텍스트 리뷰 추출
+                for key, value in state.items():
+                    if key.startswith("VisitorReview:"):
+                        add_review(value, state_dict=state)
                 
-                # '방문일' 키워드가 포함된 긴 문자열이면 리뷰 항목으로 간주
-                if '방문일' in text and len(text.strip()) > 15:
-                    lines = [line.strip() for line in text.split('\n') if line.strip()]
-                    if len(lines) >= 3:
-                        author = lines[0]
-                        date = ""
-                        for line in lines:
-                            if "년" in line and "월" in line and "일" in line:
-                                date = line
-                                break
-                        if not date:
-                            for line in lines:
-                                if "방문일" in line:
-                                    date = line
-                                    break
-                                
-                        # 불필요한 메타데이터를 제외한 가장 긴 줄을 본문으로 추출
-                        candidates = [l for l in lines if "방문일" not in l and "번째 방문" not in l and l != author and "이전" not in l]
-                        content = max(candidates, key=len) if candidates else ""
-                        
-                        if content and len(content) > 3:
-                            reviews_data.append({
-                                "작성자": author[:15],
-                                "작성일자": date.replace("방문일", "").strip(),
-                                "별점": 0.0, # 최근 네이버 리뷰는 별점 대신 키워드 사용
-                                "본문": content,
-                                "출처": "NaverPlace",
-                                "지점명": branch_name
-                            })
-                            
-            print(f"✅ 파싱 성공: 유효한 방문자 리뷰 {len(reviews_data)}건 추출 완료")
+                # 2. 키워드 투표(이런 점이 좋았어요) 통계 추출
+                stats_node = state.get(f"VisitorReviewStatsResult:{place_id}", {})
+                keyword_details = stats_node.get("analysis", {}).get("votedKeyword", {}).get("details", [])
+                
+                for kw in keyword_details:
+                    display_name = kw.get("displayName")
+                    count = kw.get("count", 0)
+                    if display_name:
+                        collected_keywords.append({
+                            "지점명": branch_name,
+                            "키워드": display_name,
+                            "선택인원": count,
+                            "출처": "NaverPlace"
+                        })
             
+            print(f"   - '더보기' 버튼 클릭하여 추가 리뷰 수집 중... (최대 {max_pages}페이지 분량)")
+            for _ in range(max_pages - 1):
+                more_button = page.locator("a:has-text('더보기')").last
+                if more_button.is_visible():
+                    more_button.click()
+                    time.sleep(2)
+                else:
+                    break
+                    
     except Exception as e:
         print(f"❌ 네이버 플레이스 수집 오류: {e}")
         
-    return pd.DataFrame(reviews_data)
+    print(f"✅ 파싱 완료: [{branch_name}] 리뷰 {len(collected_reviews)}건, 키워드 통계 {len(collected_keywords)}건 추출")
+    return pd.DataFrame(collected_reviews), pd.DataFrame(collected_keywords)
 
-async def main():
+def main():
     print("==================================================")
     print(" 📍 네이버 지도(플레이스) 방문자 영수증 리뷰 수집기")
     print("==================================================")
     
     target_places = [
+        {"id": "1959901593", "branch": "광안리본점"},
         {"id": "19542599", "branch": "경성대본점"}
     ]
     
-    all_df = []
+    all_reviews_df = []
+    all_keywords_df = []
+    
     for p in target_places:
-        df = await collect_naver_place(p["id"], p["branch"])
-        if not df.empty:
-            all_df.append(df)
+        r_df, k_df = collect_naver_place(p["id"], p["branch"], max_pages=3)
+        if not r_df.empty:
+            all_reviews_df.append(r_df)
+        if not k_df.empty:
+            all_keywords_df.append(k_df)
             
-    if all_df:
-        final_df = pd.concat(all_df, ignore_index=True)
-        
-        project_root = Path(__file__).resolve().parent.parent.parent.parent
-        output_dir = project_root / "data" / "raw"
-        output_dir.mkdir(parents=True, exist_ok=True)
-        
-        out_path = output_dir / "naver_place_reviews.csv"
-        final_df.to_csv(out_path, index=False, encoding="utf-8-sig")
-        print(f"\n🎉 총 {len(final_df)}건의 영수증 리뷰가 저장되었습니다: {out_path.name}")
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
+    output_dir = project_root / "data" / "raw"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # 리뷰 데이터 저장
+    if all_reviews_df:
+        final_reviews = pd.concat(all_reviews_df, ignore_index=True)
+        reviews_path = output_dir / "naver_place_reviews.csv"
+        final_reviews.to_csv(reviews_path, index=False, encoding="utf-8-sig")
+        print(f"\n🎉 총 {len(final_reviews)}건의 영수증 리뷰가 저장되었습니다: {reviews_path.name}")
     else:
-        print("\n⚠️ 수집된 데이터가 없습니다.")
+        print("\n⚠️ 수집된 리뷰 데이터가 없습니다.")
+
+    # 키워드 데이터 저장
+    if all_keywords_df:
+        final_keywords = pd.concat(all_keywords_df, ignore_index=True)
+        keywords_path = output_dir / "naver_place_keywords.csv"
+        final_keywords.to_csv(keywords_path, index=False, encoding="utf-8-sig")
+        print(f"🎉 총 {len(final_keywords)}건의 키워드 통계가 저장되었습니다: {keywords_path.name}")
+    else:
+        print("⚠️ 수집된 키워드 통계 데이터가 없습니다.")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
