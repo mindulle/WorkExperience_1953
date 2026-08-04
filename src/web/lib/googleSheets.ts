@@ -1,4 +1,4 @@
-import type { DashboardData, VisitPurpose, MonthlyTrend, MenuMention, BranchStat, KeywordMention, ReviewItem } from "./types";
+import type { DashboardData, VisitPurpose, MonthlyTrend, MenuMention, BranchStat, KeywordMention, ReviewItem, AiInsightItem } from "./types";
 
 // 랭킹 집계 시 서로 다른 표기를 하나로 합친다(원본 값 자체는 건드리지 않음).
 // "국밥"은 국밥집 리뷰 대부분에 등장해 랭킹 변별력이 없어 제외한다.
@@ -361,6 +361,42 @@ export async function getAllReviews(): Promise<ReviewItem[]> {
     }).filter(r => r.content.trim().length > 0);
   } catch (e) {
     console.error("Failed to fetch all reviews", e);
+    return [];
+  }
+}
+
+/** "AI_주간리포트" 탭 읽기 */
+export async function getAiInsightsData(): Promise<AiInsightItem[]> {
+  const SHEET_ID = process.env.GOOGLE_SHEET_ID || "13Z0VlvkblfBrT7BtNK1iw2dbVsLMkrAh1XgP1SfRnJg";
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=AI_%EC%A3%BC%EA%B0%84%EB%A6%AC%ED%8F%AC%ED%8A%B8`;
+  
+  try {
+    const res = await fetch(url, { next: { revalidate: 60 } });
+    if (!res.ok) return [];
+    
+    const text = await res.text();
+    const parsed = parseCsv(text);
+    if (parsed.length < 2) return [];
+    
+    const header = parsed[0];
+    const branchIdx = header.indexOf("지점");
+    const summaryIdx = header.indexOf("리뷰요약");
+    const issuesIdx = header.indexOf("주요이슈");
+    const actionIdx = header.indexOf("추천액션");
+    
+    if (branchIdx === -1) return []; // wrong tab
+
+    return parsed.slice(1).map(row => {
+      const getStr = (idx: number) => (idx >= 0 && row[idx]) ? row[idx] : "";
+      return {
+        branch: getStr(branchIdx),
+        summary: getStr(summaryIdx),
+        keyIssues: getStr(issuesIdx),
+        recommendedAction: getStr(actionIdx),
+      };
+    }).filter(item => item.branch.length > 0);
+  } catch (error) {
+    console.error("[ERROR] AI Insights fetch failed:", error);
     return [];
   }
 }

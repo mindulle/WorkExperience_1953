@@ -98,3 +98,11 @@ export type ReviewItem = {
   url?: string;
   keywords: string[];
 };
+
+/** AI 주간리포트 지점별 인사이트 */
+export type AiInsightItem = {
+  branch: string;
+  summary: string;
+  keyIssues: string;
+  recommendedAction: string;
+};
