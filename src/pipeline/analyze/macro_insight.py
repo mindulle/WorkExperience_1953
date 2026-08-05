@@ -14,7 +14,8 @@ from pathlib import Path
 
 # 출력될 JSON 포맷
 MACRO_JSON_FORMAT = """
-아래 JSON 형식에 맞추어 오직 유효한 JSON 포맷 하나만 출력하세요. Markdown 태그는 제외하세요.
+아래 JSON 형식에 맞추어 반드시 ```json 과 ``` 로 감싼 JSON 코드 블록만 출력하세요. 다른 인사말이나 설명은 절대 포함하지 마세요.
+```json
 {
   "summary": "해당 지점의 전반적인 리뷰 분위기 1줄 요약",
   "issues": ["주요 불만 사항이나 개선점 1", "주요 불만 사항 2"],
@@ -22,6 +23,7 @@ MACRO_JSON_FORMAT = """
   "severity": "'긴급', '주의', '기회', '모니터링' 중 하나",
   "metrics": "가장 핵심적인 지표 요약 (예: '긍정률 66%', '부정 214건' 등)"
 }
+```
 """
 
 MACRO_PROMPT_TEMPLATE = """
@@ -104,23 +106,27 @@ def main():
     
     print(f"총 {len(branches)}개 지점에 대한 매크로(Macro) AI 분석을 시작합니다... (비용 최적화 모드 🚀)")
     
-    for branch in branches:
+    import concurrent.futures
+    
+    def process_branch(branch):
         print(f"[{branch}] 인사이트 분석 중...")
         branch_reviews = df[df['지점'] == branch][text_col].astype(str).tolist()
-        
-        # 최대 50건 정도의 텍스트만 이어 붙임 (토큰 최적화)
-        combined_text = "\n---\n".join(branch_reviews[:50])
-        
+        combined_text = "\n---\n".join(branch_reviews[:30])
         analysis = get_macro_insight(branch, combined_text)
-        
-        results.append({
+        print(f"[{branch}] 완료!")
+        return {
             "지점": branch,
             "리뷰요약": analysis.get("summary", ""),
             "주요이슈": " / ".join(analysis.get("issues", [])),
             "추천액션": " / ".join(analysis.get("action_plans", [])),
             "중요도": analysis.get("severity", "모니터링"),
             "핵심지표": analysis.get("metrics", "")
-        })
+        }
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        futures = [executor.submit(process_branch, b) for b in branches]
+        for future in concurrent.futures.as_completed(futures):
+            results.append(future.result())
         
     result_df = pd.DataFrame(results)
     
