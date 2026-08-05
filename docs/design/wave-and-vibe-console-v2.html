@@ -1301,11 +1301,11 @@
         </div>
       </div>
 
-      <!-- 방문 목적 (도넛) -->
+<!-- 방문 목적 (도넛) -->
       <div class="card col-5">
         <div class="c-head">
           <div class="c-title">방문 목적</div>
-          <span class="c-tag">리뷰 맥락 기반</span>
+          <span class="c-tag">리뷰 맥락 기반 1,480건</span>
         </div>
         <div class="donut-wrap">
           <div class="donut-center">
@@ -1316,6 +1316,14 @@
               <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--s-violet)" stroke-width="5" stroke-dasharray="20 80" stroke-dashoffset="-55" stroke-linecap="round"/>
             </svg>
             <div class="dc-txt"><div class="dc-big">45%</div><div class="dc-small">데이트</div></div>
+          </div>
+          <div style="flex:1">
+            <div class="stat-line"><span class="sl-l"><span class="sw" style="background:var(--s-magenta)"></span>데이트</span><span class="sl-v tnum">45% · 666</span></div>
+            <div class="stat-line"><span class="sl-l"><span class="sw" style="background:var(--s-yellow)"></span>친목/모임</span><span class="sl-v tnum">35% · 518</span></div>
+            <div class="stat-line"><span class="sl-l"><span class="sw" style="background:var(--s-violet)"></span>회식</span><span class="sl-v tnum">20% · 296</span></div>
+          </div>
+        </div>
+      </div>
           </div>
           <div style="flex:1">
             <div class="stat-line"><span class="sl-l"><span class="sw" style="background:var(--s-magenta)"></span>데이트</span><span class="sl-v tnum">45%</span></div>
@@ -1465,21 +1473,40 @@
       <span class="pill"><span class="dot" style="background:var(--muted)"></span>모니터링 1</span>
     </div>
     <div class="grid">
-      <!-- 주요 키워드 및 네이버 리뷰 문장 분석 -->
-      <div class="card col-7">
-        <div class="c-head"><div class="c-title">주요 키워드 및 네이버 리뷰 문장 분석</div></div>
-        <div style="padding:15px; background:var(--surface-2); border-radius:8px; margin-top:10px; flex-grow:1;">
-          <p style="font-size:13.5px; margin-bottom:12px;"><b>추출된 핵심 키워드:</b> <span class="tag">#솥밥</span> <span class="tag">#맑은국물</span> <span class="tag">#웨이팅</span></p>
-          <blockquote style="border-left:3px solid var(--brand); padding-left:12px; font-size:13px; color:var(--ink-2); line-height:1.6;">
-            "국물은 깔끔하고 <b>솥밥</b>이 같이 나와서 든든했어요. 주말 점심이라 <b>웨이팅</b>이 40분이나 걸려서 조금 아쉬웠지만 뷰가 좋아서 용서가 됩니다."<br>
-            <span style="font-size:11px; color:var(--muted); margin-top:5px; display:block;">- 네이버 영수증 리뷰 (광안리점) 발췌</span>
-          </blockquote>
+<!-- 통합된 AI 제어 및 분석 패널 -->
+      <div class="card col-12">
+        <div class="c-head">
+          <div>
+            <div class="c-title">AI 리뷰 분석 파이프라인 (Admin)</div>
+            <div class="c-sub">프롬프트 설정 및 발췌 결과 실시간 모니터링</div>
+          </div>
+          <span class="status-tag" style="background:var(--good-soft); color:var(--good);">✅ n8n 워크플로우 Active</span>
+        </div>
+        <div style="display:flex; gap:24px; margin-top:10px;">
+          <!-- 왼쪽: 프롬프트 설정 -->
+          <div style="flex:1; border-right:1px dashed var(--hairline); padding-right:24px; display:flex; flex-direction:column;">
+            <b style="font-size:13px; margin-bottom:8px; display:block; color:var(--foreground);">키워드 분류 기준 (Prompting)</b>
+            <textarea style="flex:1; width:100%; min-height:80px; font-size:12.5px; padding:10px; border:1px solid var(--hairline); border-radius:6px; resize:none; color:var(--ink-2);" readonly>- 긍정: 맛, 서비스 등 명확한 만족 표현
+- 부정: 불친절, 냄새, 대기 지연 등 불만
+- 혼합: 긍정/부정이 섞인 복합 리뷰</textarea>
+            <div style="text-align:right; margin-top:10px;">
+              <button class="btn ghost" style="font-size:12px; padding:6px 12px;">✏️ 프롬프트 수정</button>
+            </div>
+          </div>
+          
+          <!-- 오른쪽: 문장 발췌 결과 -->
+          <div style="flex:1.5; display:flex; flex-direction:column;">
+            <b style="font-size:13px; margin-bottom:8px; display:block; color:var(--foreground);">최신 발췌 문장 (Live Preview)</b>
+            <div style="background:var(--surface-2); padding:16px; border-radius:8px; flex:1;">
+              <p style="font-size:13px; margin-bottom:10px;"><b>추출된 핵심 키워드:</b> <span class="tag" style="background:#fff;">#솥밥</span> <span class="tag" style="background:#fff;">#맑은국물</span> <span class="tag" style="background:#fff;">#웨이팅</span></p>
+              <blockquote style="border-left:3px solid var(--brand); padding-left:14px; font-size:13.5px; color:var(--ink-2); line-height:1.6; margin:0;">
+                "국물은 깔끔하고 <b>솥밥</b>이 같이 나와서 든든했어요. 주말 점심이라 <b>웨이팅</b>이 40분이나 걸려서 조금 아쉬웠지만 뷰가 좋아서 용서가 됩니다."
+                <span style="font-size:11.5px; color:var(--muted); margin-top:8px; display:block;">- 광안리점 리뷰 원문 (2026.07.26)</span>
+              </blockquote>
+            </div>
+          </div>
         </div>
       </div>
-
-      <!-- AI 제어 및 연동 (Admin) -->
-      <div class="card col-5">
-        <div class="c-head"><div class="c-title">AI 제어 및 연동 (Admin)</div></div>
         <div style="padding:15px; background:var(--surface-2); border-radius:8px; margin-top:10px; flex-grow:1; display:flex; flex-direction:column; justify-content:space-between;">
           <div style="font-size:13px; margin-bottom:12px;">
             <b style="display:block; margin-bottom:5px;">키워드 분류 기준 (Prompting)</b>
