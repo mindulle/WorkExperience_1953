@@ -1101,6 +1101,61 @@
     </div>
 
     
+    <div class="grid" style="margin-bottom: 24px;">
+<!-- 지점별 강점 (경쟁 우위) (table) -->
+      <div class="card col-12">
+        <div class="c-head">
+          <div>
+            <div class="c-title">지점별 강점 (경쟁 우위)</div>
+            <div class="c-sub">리뷰 수 기준 정렬 · 긍정률과 평점 함께 확인</div>
+          </div>
+          <div class="seg"><button class="on">리뷰 수</button><button>평점</button><button>긍정률</button></div>
+        </div>
+        <table>
+          <thead><tr>
+            <th style="width:22%">지점</th><th style="width:26%">리뷰 수</th><th style="width:12%" class="r">평점</th>
+            <th style="width:28%">감성 구성 (긍정·중립·부정)</th><th style="width:12%" class="r">긍정률</th>
+          </tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="b-name"><span class="b-rank">1</span>서면본점</span></td>
+              <td><span class="mini-track"><span class="mini-fill" style="width:100%"></span></span> <span class="tnum" style="margin-left:8px">1,024</span></td>
+              <td class="r tnum">4.5</td>
+              <td><span class="msent"><span style="width:84%;background:var(--good)"></span><span style="width:7%;background:#cfcec8"></span><span style="width:9%;background:var(--critical)"></span></span></td>
+              <td class="r"><span class="badge g">84%</span></td>
+            </tr>
+            <tr>
+              <td><span class="b-name"><span class="b-rank">2</span>부산대점</span></td>
+              <td><span class="mini-track"><span class="mini-fill" style="width:87%"></span></span> <span class="tnum" style="margin-left:8px">892</span></td>
+              <td class="r tnum">4.2</td>
+              <td><span class="msent"><span style="width:76%;background:var(--good)"></span><span style="width:9%;background:#cfcec8"></span><span style="width:15%;background:var(--critical)"></span></span></td>
+              <td class="r"><span class="badge g">76%</span></td>
+            </tr>
+            <tr>
+              <td><span class="b-name"><span class="b-rank">3</span>해운대점</span></td>
+              <td><span class="mini-track"><span class="mini-fill" style="width:65%"></span></span> <span class="tnum" style="margin-left:8px">664</span></td>
+              <td class="r tnum">4.4</td>
+              <td><span class="msent"><span style="width:81%;background:var(--good)"></span><span style="width:8%;background:#cfcec8"></span><span style="width:11%;background:var(--critical)"></span></span></td>
+              <td class="r"><span class="badge g">81%</span></td>
+            </tr>
+            <tr>
+              <td><span class="b-name"><span class="b-rank">4</span>센텀점</span></td>
+              <td><span class="mini-track"><span class="mini-fill" style="width:52%"></span></span> <span class="tnum" style="margin-left:8px">528</span></td>
+              <td class="r tnum">4.1</td>
+              <td><span class="msent"><span style="width:72%;background:var(--good)"></span><span style="width:10%;background:#cfcec8"></span><span style="width:18%;background:var(--critical)"></span></span></td>
+              <td class="r"><span class="badge w">72%</span></td>
+            </tr>
+            <tr>
+              <td><span class="b-name"><span class="b-rank">5</span>광안리점</span></td>
+              <td><span class="mini-track"><span class="mini-fill" style="width:31%;background:var(--serious)"></span></span> <span class="tnum" style="margin-left:8px">320</span></td>
+              <td class="r tnum">3.9</td>
+              <td><span class="msent"><span style="width:66%;background:var(--good)"></span><span style="width:11%;background:#cfcec8"></span><span style="width:23%;background:var(--critical)"></span></span></td>
+              <td class="r"><span class="badge c">66%</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
     <!-- selected branch detail header -->
     <div class="detail-header">
       <div class="dh-left">
@@ -1233,15 +1288,42 @@
       </div>
 
       
-      <div class="card col-12" style="margin-top:20px; display:flex; gap:20px;">
-        <div style="flex:1;">
-          <div class="c-head"><div class="c-title">방문자 고객 유형 (네이버 리뷰)</div></div>
-          <div style="padding:20px; border-left:4px solid var(--s-blue); background:var(--surface-2); margin-top:10px;">
-            <div style="margin-bottom:10px;">직장인 <span style="display:inline-block;width:60%;height:10px;background:var(--s-blue);margin-left:10px;"></span> 60%</div>
-            <div style="margin-bottom:10px;">가족 <span style="display:inline-block;width:25%;height:10px;background:var(--s-aqua);margin-left:10px;"></span> 25%</div>
-            <div>학생 <span style="display:inline-block;width:15%;height:10px;background:var(--muted);margin-left:10px;"></span> 15%</div>
+<!-- 방문자 고객 유형 -->
+      <div class="card col-7">
+        <div class="c-head">
+          <div class="c-title">방문자 고객 유형</div>
+          <span class="c-tag">네이버 리뷰 추정</span>
+        </div>
+        <div class="kw">
+          <div class="kw-row"><span class="kw-name">직장인</span><span class="kw-track"><span class="kw-fill" style="width:100%;background:var(--s-blue)"></span></span><span class="kw-val tnum">60%</span></div>
+          <div class="kw-row"><span class="kw-name">가족</span><span class="kw-track"><span class="kw-fill" style="width:42%;background:var(--s-aqua)"></span></span><span class="kw-val tnum">25%</span></div>
+          <div class="kw-row"><span class="kw-name">학생</span><span class="kw-track"><span class="kw-fill" style="width:25%;background:var(--muted)"></span></span><span class="kw-val tnum">15%</span></div>
+        </div>
+      </div>
+
+      <!-- 방문 목적 (도넛) -->
+      <div class="card col-5">
+        <div class="c-head">
+          <div class="c-title">방문 목적</div>
+          <span class="c-tag">리뷰 맥락 기반</span>
+        </div>
+        <div class="donut-wrap">
+          <div class="donut-center">
+            <svg width="130" height="130" viewBox="0 0 42 42">
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke="#eee" stroke-width="5"/>
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--s-magenta)" stroke-width="5" stroke-dasharray="45 55" stroke-dashoffset="25" stroke-linecap="round"/>
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--s-yellow)" stroke-width="5" stroke-dasharray="35 65" stroke-dashoffset="-20" />
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--s-violet)" stroke-width="5" stroke-dasharray="20 80" stroke-dashoffset="-55" stroke-linecap="round"/>
+            </svg>
+            <div class="dc-txt"><div class="dc-big">45%</div><div class="dc-small">데이트</div></div>
+          </div>
+          <div style="flex:1">
+            <div class="stat-line"><span class="sl-l"><span class="sw" style="background:var(--s-magenta)"></span>데이트</span><span class="sl-v tnum">45%</span></div>
+            <div class="stat-line"><span class="sl-l"><span class="sw" style="background:var(--s-yellow)"></span>친목/모임</span><span class="sl-v tnum">35%</span></div>
+            <div class="stat-line"><span class="sl-l"><span class="sw" style="background:var(--s-violet)"></span>회식</span><span class="sl-v tnum">20%</span></div>
           </div>
         </div>
+      </div>
         <div style="flex:1;">
           <div class="c-head"><div class="c-title">방문 목적 (도넛 차트)</div></div>
           <div style="display:flex; align-items:center; justify-content:center; height:120px;">
