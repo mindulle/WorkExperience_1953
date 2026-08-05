@@ -737,7 +737,8 @@
 
     <!-- ---------- GRID ---------- -->
     <div class="grid">
-<div class="card col-6">
+      <!-- 긍정/부정 비율 (donut) -->
+      <div class="card col-6">
         <div class="c-head">
           <div class="c-title">긍정 / 부정 비율</div>
           <span class="c-tag">3,428건</span>
@@ -757,7 +758,16 @@
                 stroke-dasharray="14 86" stroke-dashoffset="-61" stroke-linecap="round"/>
             </svg>
             <div class="dc-txt"><div class="dc-big">78%</div><div class="dc-small">긍정</div></div>
-<div class="card col-6">
+          </div>
+          <div style="flex:1">
+            <div class="stat-line"><span class="sl-l"><span class="sw" style="background:var(--good)"></span>긍정</span><span class="sl-v tnum">78% · 2,674</span></div>
+            <div class="stat-line"><span class="sl-l"><span class="sw" style="background:#cfcec8"></span>중립</span><span class="sl-v tnum">8% · 274</span></div>
+            <div class="stat-line"><span class="sl-l"><span class="sw" style="background:var(--critical)"></span>부정</span><span class="sl-v tnum">14% · 480</span></div>
+          </div>
+        </div>
+      </div>
+      <!-- 긍정 추천 메뉴 -->
+      <div class="card col-6">
         <div class="c-head"><div class="c-title">긍정 추천 메뉴</div><span class="c-tag">상위 6</span></div>
         <div class="kw">
           <div class="kw-row" style="grid-template-columns:96px 1fr auto"><span class="kw-name">돼지국밥</span><span class="kw-track"><span class="kw-fill" style="width:100%;background:var(--s-blue)"></span></span><span class="kw-val tnum">1,180</span></div>
@@ -767,12 +777,42 @@
           <div class="kw-row" style="grid-template-columns:96px 1fr auto"><span class="kw-name">내장국밥</span><span class="kw-track"><span class="kw-fill" style="width:23%;background:var(--s-blue)"></span></span><span class="kw-val tnum">274</span></div>
           <div class="kw-row" style="grid-template-columns:96px 1fr auto"><span class="kw-name">모듬국밥</span><span class="kw-track"><span class="kw-fill" style="width:18%;background:var(--s-blue)"></span></span><span class="kw-val tnum">210</span></div>
         </div>
+      </div>
+      <!-- 리뷰 키워드 (positive) -->
+      <div class="card col-6">
+        <div class="c-head">
+          <div class="c-title">주요 언급 키워드 <span style="color:var(--good);font-size:12px;font-weight:600">· 긍정</span></div>
+          <span class="c-tag">언급 상위 6</span>
+        </div>
+        <div class="kw">
+          <div class="kw-row"><span class="kw-name">국물이 진해요</span><span class="kw-track"><span class="kw-fill" style="width:100%;background:var(--good)"></span></span><span class="kw-val tnum">642</span></div>
+          <div class="kw-row"><span class="kw-name">직원이 친절해요</span><span class="kw-track"><span class="kw-fill" style="width:81%;background:var(--good)"></span></span><span class="kw-val tnum">518</span></div>
+          <div class="kw-row"><span class="kw-name">양이 많아요</span><span class="kw-track"><span class="kw-fill" style="width:73%;background:var(--good)"></span></span><span class="kw-val tnum">470</span></div>
+          <div class="kw-row"><span class="kw-name">가성비 좋아요</span><span class="kw-track"><span class="kw-fill" style="width:63%;background:var(--good)"></span></span><span class="kw-val tnum">402</span></div>
+          <div class="kw-row"><span class="kw-name">깍두기 맛집</span><span class="kw-track"><span class="kw-fill" style="width:55%;background:var(--good)"></span></span><span class="kw-val tnum">356</span></div>
+          <div class="kw-row"><span class="kw-name">재방문 의사</span><span class="kw-track"><span class="kw-fill" style="width:47%;background:var(--good)"></span></span><span class="kw-val tnum">300</span></div>
+        </div>
+      </div>
+      <!-- 개선 필요 키워드 (negative) -->
+      <div class="card col-6">
+        <div class="c-head">
+          <div class="c-title">개선이 필요한 키워드 <span style="color:var(--critical);font-size:12px;font-weight:600">· 부정</span></div>
+          <span class="c-tag">최근 2주 추세</span>
+        </div>
+        <div class="kw">
+          <div class="kw-row"><span class="kw-name">대기시간 길어요</span><span class="kw-track"><span class="kw-fill" style="width:100%;background:var(--critical)"></span></span><span class="kw-val tnum">214<span class="kw-trend" style="color:var(--critical)">▲18%</span></span></div>
+          <div class="kw-row"><span class="kw-name">주차 불편해요</span><span class="kw-track"><span class="kw-fill" style="width:82%;background:var(--critical)"></span></span><span class="kw-val tnum">176<span class="kw-trend" style="color:var(--critical)">▲11%</span></span></div>
+          <div class="kw-row"><span class="kw-name">국물이 짜요</span><span class="kw-track"><span class="kw-fill" style="width:69%;background:var(--serious)"></span></span><span class="kw-val tnum">148<span class="kw-trend" style="color:var(--muted)">─ 0%</span></span></div>
+          <div class="kw-row"><span class="kw-name">위생·청결</span><span class="kw-track"><span class="kw-fill" style="width:45%;background:var(--critical)"></span></span><span class="kw-val tnum">96<span class="kw-trend" style="color:var(--critical)">▲38%</span></span></div>
+          <div class="kw-row"><span class="kw-name">매장이 시끄러워요</span><span class="kw-track"><span class="kw-fill" style="width:38%;background:var(--serious)"></span></span><span class="kw-val tnum">82<span class="kw-trend" style="color:var(--good)">▼7%</span></span></div>
+          <div class="kw-row"><span class="kw-name">반찬 리필 아쉬움</span><span class="kw-track"><span class="kw-fill" style="width:30%;background:var(--serious)"></span></span><span class="kw-val tnum">64<span class="kw-trend" style="color:var(--muted)">─ 2%</span></span></div>
+        </div>
+      </div>
 
-
-
-      <div class="card col-12" style="display:flex; gap:20px; flex-wrap:wrap;">
+      <!-- 누락 사항 반영: 키워드/문장 분석 & 프롬프트 설정 -->
+      <div class="card col-12" style="margin-top:20px; display:flex; gap:20px; flex-wrap:wrap;">
         <div style="flex:2; min-width:300px;">
-          <div class="c-head"><div class="c-title">네이버 리뷰 문장 분석</div></div>
+          <div class="c-head"><div class="c-title">주요 키워드 및 네이버 리뷰 문장 분석</div></div>
           <div style="padding:15px; background:var(--surface-2); border-radius:8px; margin-top:10px;">
             <p style="font-size:13.5px; margin-bottom:12px;"><b>추출된 핵심 키워드:</b> <span class="tag">#솥밥</span> <span class="tag">#맑은국물</span> <span class="tag">#웨이팅</span></p>
             <blockquote style="border-left:3px solid var(--brand); padding-left:12px; font-size:13px; color:var(--ink-2); line-height:1.6;">
@@ -800,6 +840,7 @@
         </div>
       </div>
 
+    </div><!-- /grid -->
     </div><!-- /grid -->
 
     <div class="foot-note">웨이브앤바이브 리뷰 인텔리전스 · 데모 데이터 · 네이버·카카오·구글·배달앱 리뷰 통합 분석</div>
@@ -1279,6 +1320,7 @@
       </div>
     </div>
 
+    
     <!-- selected branch detail header -->
     <div class="detail-header">
       <div class="dh-left">
