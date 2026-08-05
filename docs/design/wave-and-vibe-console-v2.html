@@ -766,6 +766,51 @@
           </div>
         </div>
       </div>
+
+      <!-- 월별 리뷰 추이 (막대) -->
+      <div class="card col-6">
+        <div class="c-head"><div><div class="c-title">월별 리뷰 추이</div><div class="c-sub">시즌 비교 (최근 6개월)</div></div></div>
+        <div style="display:flex; align-items:flex-end; gap:8px; height:150px; padding-top:20px; width:100%;">
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:4px;">
+            <span style="font-size:10px; color:var(--muted)">124</span>
+            <div style="width:100%; background:var(--brand); height:40%; border-radius:4px 4px 0 0;"></div>
+            <span style="font-size:10px; color:var(--muted)">03월</span>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:4px;">
+            <span style="font-size:10px; color:var(--muted)">180</span>
+            <div style="width:100%; background:var(--brand); height:60%; border-radius:4px 4px 0 0;"></div>
+            <span style="font-size:10px; color:var(--muted)">04월</span>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:4px;">
+            <span style="font-size:10px; color:var(--muted)">210</span>
+            <div style="width:100%; background:var(--brand); height:70%; border-radius:4px 4px 0 0;"></div>
+            <span style="font-size:10px; color:var(--muted)">05월</span>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:4px;">
+            <span style="font-size:10px; color:var(--muted)">250</span>
+            <div style="width:100%; background:var(--brand); height:85%; border-radius:4px 4px 0 0;"></div>
+            <span style="font-size:10px; color:var(--muted)">06월</span>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:4px;">
+            <span style="font-size:10px; color:var(--muted)">290</span>
+            <div style="width:100%; background:var(--brand); height:100%; border-radius:4px 4px 0 0;"></div>
+            <span style="font-size:10px; color:var(--muted)">07월</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 평균 평점 line -->
+      <div class="card col-6">
+        <div class="c-head"><div><div class="c-title">평균 평점 추이</div><div class="c-sub">일간 · 최근 30일</div></div></div>
+        <svg viewBox="0 0 500 180" width="100%" height="170" font-family="system-ui" font-size="10.5">
+          <g stroke="var(--grid)" stroke-width="1"><line x1="30" y1="20" x2="490" y2="20"/><line x1="30" y1="60" x2="490" y2="60"/><line x1="30" y1="100" x2="490" y2="100"/><line x1="30" y1="140" x2="490" y2="140" stroke="var(--hairline)"/></g>
+          <g fill="var(--muted)" text-anchor="end"><text x="24" y="24">5.0</text><text x="24" y="64">4.0</text><text x="24" y="104">3.0</text><text x="24" y="144">2.0</text></g>
+          <path d="M30,58 60,55 90,60 120,52 150,50 180,54 210,45 240,42 270,48 300,38 330,35 360,40 390,32 420,30 450,34 480,28 L480,140 L30,140 Z" fill="var(--warn)" opacity="0.08"/>
+          <polyline fill="none" stroke="var(--warn)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" points="30,58 60,55 90,60 120,52 150,50 180,54 210,45 240,42 270,48 300,38 330,35 360,40 390,32 420,30 450,34 480,28"/>
+          <circle cx="480" cy="28" r="3.5" fill="var(--warn)"/>
+          <g fill="var(--muted)" text-anchor="middle"><text x="30" y="158">6/28</text><text x="210" y="158">7/10</text><text x="480" y="158">7/27</text></g>
+        </svg>
+      </div>
       <!-- 긍정 추천 메뉴 -->
       <div class="card col-6">
         <div class="c-head"><div class="c-title">긍정 추천 메뉴</div><span class="c-tag">상위 6</span></div>
@@ -778,21 +823,19 @@
           <div class="kw-row" style="grid-template-columns:96px 1fr auto"><span class="kw-name">모듬국밥</span><span class="kw-track"><span class="kw-fill" style="width:18%;background:var(--s-blue)"></span></span><span class="kw-val tnum">210</span></div>
         </div>
       </div>
-      <!-- 리뷰 키워드 (positive) -->
+
+      <!-- Top 5 핵심 키워드 (Word cloud) -->
       <div class="card col-6">
-        <div class="c-head">
-          <div class="c-title">주요 언급 키워드 <span style="color:var(--good);font-size:12px;font-weight:600">· 긍정</span></div>
-          <span class="c-tag">언급 상위 6</span>
-        </div>
-        <div class="kw">
-          <div class="kw-row"><span class="kw-name">국물이 진해요</span><span class="kw-track"><span class="kw-fill" style="width:100%;background:var(--good)"></span></span><span class="kw-val tnum">642</span></div>
-          <div class="kw-row"><span class="kw-name">직원이 친절해요</span><span class="kw-track"><span class="kw-fill" style="width:81%;background:var(--good)"></span></span><span class="kw-val tnum">518</span></div>
-          <div class="kw-row"><span class="kw-name">양이 많아요</span><span class="kw-track"><span class="kw-fill" style="width:73%;background:var(--good)"></span></span><span class="kw-val tnum">470</span></div>
-          <div class="kw-row"><span class="kw-name">가성비 좋아요</span><span class="kw-track"><span class="kw-fill" style="width:63%;background:var(--good)"></span></span><span class="kw-val tnum">402</span></div>
-          <div class="kw-row"><span class="kw-name">깍두기 맛집</span><span class="kw-track"><span class="kw-fill" style="width:55%;background:var(--good)"></span></span><span class="kw-val tnum">356</span></div>
-          <div class="kw-row"><span class="kw-name">재방문 의사</span><span class="kw-track"><span class="kw-fill" style="width:47%;background:var(--good)"></span></span><span class="kw-val tnum">300</span></div>
+        <div class="c-head"><div><div class="c-title">Top 5 핵심 키워드</div><div class="c-sub">언급량 비례</div></div></div>
+        <div style="display:flex; flex-wrap:wrap; align-content:center; justify-content:center; align-items:center; gap:12px; height:150px;">
+          <span style="background:var(--s-blue-soft); color:var(--brand); font-weight:600; padding:6px 12px; border-radius:20px; font-size:24px;">국물 <span style="font-size:12px; font-weight:400; color:var(--muted)">642</span></span>
+          <span style="background:var(--s-blue-soft); color:var(--brand); font-weight:600; padding:4px 10px; border-radius:20px; font-size:20px;">직원 <span style="font-size:11px; font-weight:400; color:var(--muted)">518</span></span>
+          <span style="background:var(--s-blue-soft); color:var(--brand); font-weight:600; padding:4px 10px; border-radius:20px; font-size:18px;">양 <span style="font-size:11px; font-weight:400; color:var(--muted)">470</span></span>
+          <span style="background:var(--s-blue-soft); color:var(--brand); font-weight:600; padding:3px 8px; border-radius:20px; font-size:16px;">가성비 <span style="font-size:10px; font-weight:400; color:var(--muted)">402</span></span>
+          <span style="background:var(--s-blue-soft); color:var(--brand); font-weight:600; padding:2px 6px; border-radius:20px; font-size:14px;">깍두기 <span style="font-size:9px; font-weight:400; color:var(--muted)">356</span></span>
         </div>
       </div>
+
       <!-- 개선 필요 키워드 (negative) -->
       <div class="card col-6">
         <div class="c-head">
@@ -808,7 +851,6 @@
           <div class="kw-row"><span class="kw-name">반찬 리필 아쉬움</span><span class="kw-track"><span class="kw-fill" style="width:30%;background:var(--serious)"></span></span><span class="kw-val tnum">64<span class="kw-trend" style="color:var(--muted)">─ 2%</span></span></div>
         </div>
       </div>
-
       <!-- 누락 사항 반영: 키워드/문장 분석 & 프롬프트 설정 -->
       <div class="card col-12" style="margin-top:20px; display:flex; gap:20px; flex-wrap:wrap;">
         <div style="flex:2; min-width:300px;">
@@ -839,7 +881,6 @@
           </div>
         </div>
       </div>
-
     </div><!-- /grid -->
     </div><!-- /grid -->
 
