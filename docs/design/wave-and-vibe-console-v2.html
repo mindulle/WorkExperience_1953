@@ -1432,40 +1432,63 @@
 <main class="main">
     <div class="topbar">
       <div class="tb-row">
-        <div class="tb-title"><h1>AI 리뷰 탐색</h1><p>AI가 분류한 토픽별 핵심 인사이트와 관련 원본 리뷰를 함께 탐색합니다.</p></div>
+        <div class="tb-title">
+          <h1>AI 리뷰 탐색</h1>
+          <p>AI가 분류한 토픽별 핵심 인사이트와 관련 원본 리뷰를 함께 탐색합니다.</p>
+        </div>
         <div class="filters">
           <div class="chip">지점 <strong>전체 5개</strong><svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg></div>
-          <div class="chip">정렬 <strong>우선순위 순</strong><svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg></div>
+          <div class="chip"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><strong>최근 30일</strong><svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg></div>
+          <div class="chip">평점 <strong>전체</strong><svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg></div>
+          <div class="chip">정렬 <strong>최신순</strong><svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg></div>
         </div>
+      </div>
+      <div class="filter-row" style="margin-bottom:12px; display:flex; gap:8px;">
+        <span class="pill" style="border-color:var(--brand); color:var(--brand); background:var(--surface)">✨ AI 토픽 필터:</span>
+        <span class="pill on">전체</span>
+        <span class="pill">청결</span>
+        <span class="pill">서비스</span>
+        <span class="pill">맛</span>
+        <span class="pill">주차</span>
+      </div>
+      <div class="search-row">
+        <div class="search-box">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input placeholder="키워드, 고객 표현, 지점명으로 검색 (예: 대기시간, 국물, 위생)">
+        </div>
+        <div class="pill-group">
+          <span class="pill on good"><span class="dot" style="background:var(--good)"></span>긍정 264</span>
+          <span class="pill"><span class="dot" style="background:#cfcec8"></span>중립 34</span>
+          <span class="pill on critical"><span class="dot" style="background:var(--critical)"></span>부정 114</span>
+        </div>
+        <div class="chip">채널 전체<svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg></div>
       </div>
     </div>
 
     <!-- summary strip -->
     <div class="strip">
-      <div class="strip-card"><div class="strip-ic" style="background:var(--surface-2)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2"><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg></div><div><div class="strip-val tnum">8</div><div class="strip-lbl">전체 추천</div></div></div>
-      <div class="strip-card"><div class="strip-ic" style="background:var(--critical-soft)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--critical)" stroke-width="2"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></div><div><div class="strip-val tnum" style="color:var(--critical)">2</div><div class="strip-lbl">긴급</div></div></div>
-      <div class="strip-card"><div class="strip-ic" style="background:var(--warn-soft)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div><div class="strip-val tnum" style="color:var(--warn)">3</div><div class="strip-lbl">진행중</div></div></div>
-      <div class="strip-card"><div class="strip-ic" style="background:var(--good-soft)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--good)" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></div><div><div class="strip-val tnum" style="color:var(--good)">3</div><div class="strip-lbl">완료</div></div></div>
+      <div class="strip-item"><span class="strip-label">검색 결과</span><span class="strip-val tnum">412건</span></div>
+      <div class="strip-sep"></div>
+      <div class="strip-item"><span class="strip-label">평균 평점</span><span class="strip-val tnum">4.1</span></div>
+      <div class="strip-sep"></div>
+      <div class="strip-item"><span class="strip-label">미답변</span><span class="strip-val tnum" style="color:var(--serious)">28건</span></div>
+      <div class="strip-sep"></div>
+      <div class="strip-bar">
+        <div class="sentbar">
+          <span style="width:64%;background:var(--good)"></span>
+          <span style="width:8%;background:#cfcec8"></span>
+          <span style="width:28%;background:var(--critical)"></span>
+        </div>
+        <div class="strip-legend">
+          <span><span class="sw" style="background:var(--good)"></span>긍정 64%</span>
+          <span><span class="sw" style="background:#cfcec8"></span>중립 8%</span>
+          <span><span class="sw" style="background:var(--critical)"></span>부정 28%</span>
+        </div>
+      </div>
     </div>
 
-    <!-- filter pills -->
-    <div class="filter-row" style="margin-bottom:10px;">
-      <span class="pill" style="border-color:var(--brand); color:var(--brand); background:var(--surface)">✨ AI 토픽 필터:</span>
-      <span class="pill on">전체</span>
-      <span class="pill">청결</span>
-      <span class="pill">서비스</span>
-      <span class="pill">맛</span>
-      <span class="pill">주차</span>
-    </div>
-    <div class="filter-row">
-      <span class="pill on">전체 8</span>
-      <span class="pill"><span class="dot" style="background:var(--critical)"></span>긴급 2</span>
-      <span class="pill"><span class="dot" style="background:var(--warn)"></span>주의 3</span>
-      <span class="pill"><span class="dot" style="background:var(--good)"></span>기회 2</span>
-      <span class="pill"><span class="dot" style="background:var(--muted)"></span>모니터링 1</span>
-    </div>
+
     <div class="grid">
-      <!-- 통합된 AI 제어 및 분석 패널 -->
       <div class="card col-12">
         <div class="c-head">
           <div>
@@ -1499,163 +1522,176 @@
           </div>
         </div>
       </div>
-        <div style="padding:15px; background:var(--surface-2); border-radius:8px; margin-top:10px; flex-grow:1; display:flex; flex-direction:column; justify-content:space-between;">
-          <div style="font-size:13px; margin-bottom:12px;">
-            <b style="display:block; margin-bottom:5px;">키워드 분류 기준 (Prompting)</b>
-            <textarea style="width:100%; height:55px; font-size:12px; padding:6px; border:1px solid var(--hairline); border-radius:4px; resize:none;" readonly>- 긍정: 맛, 서비스 명확한 만족
-- 부정: 불친절, 냄새 등 불만</textarea>
-            <div style="text-align:right; margin-top:5px;">
-              <button style="font-size:11.5px; padding:4px 8px; border:1px solid var(--hairline); background:var(--surface); border-radius:4px; cursor:pointer;">프롬프트 수정</button>
-            </div>
-          </div>
-          <div style="font-size:13px; display:flex; justify-content:space-between; align-items:center; border-top:1px dashed var(--hairline); padding-top:12px;">
-            <span><b>클로드 n8n 워크플로우</b></span>
-            <span class="status-tag" style="background:var(--good-soft); color:var(--good);">✅ Active</span>
-          </div>
-        </div>
-      </div>
     </div>
 
-
+    <!-- two pane: list + detail -->
     <div class="pane-grid">
       <div class="list">
 
-        <div class="aicard selected crit">
-          <div class="ai-top">
-            <span class="ai-sev" style="color:var(--critical)"><span class="pip" style="background:var(--critical)"></span>긴급</span>
-            <span class="status-tag new">신규</span>
+        <div class="rcard selected">
+          <div class="rcard-top">
+            <div class="rcard-meta">
+              <span class="branch-badge">광안리점</span>
+              <svg class="ch-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12h8M12 8v8"/></svg>
+              <span class="stars-sm">
+                <svg viewBox="0 0 24 24" fill="var(--critical)"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+                <svg viewBox="0 0 24 24" fill="var(--critical)"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+              </span>
+              <span class="rdate">2026.07.26 · 배달앱</span>
+            </div>
+            <span class="sent-badge c">부정</span>
           </div>
-          <div class="ai-title">광안리점 위생·대기 집중 관리</div>
-          <div class="ai-body">긍정률 66%로 전 지점 최저. '위생·청결' 언급이 최근 2주 <b>+38%</b> 급증했습니다. 현장 점검과 응대 매뉴얼 재교육을 권장합니다.</div>
-          <div class="ai-meta-row"><div class="ai-tags"><span class="tag">광안리점</span><span class="tag">위생</span></div><span class="ai-metric">긍정률 66%</span></div>
+          <div class="rtext">주말 저녁에 방문했는데 <mark>위생 상태</mark>가 너무 안 좋았어요. 테이블도 안 닦여있고 그릇에 얼룩이... 국물 맛은 좋은데 이건 좀 아니었습니다.</div>
+          <div class="rtags"><span class="tag">위생·청결</span><span class="tag">국물</span><span class="tag customer">가족</span></div>
+          <div class="rfoot"><span class="status-badge pending">미답변</span><span class="rlink">전체 보기 →</span></div>
         </div>
 
-        <div class="aicard">
-          <div class="ai-top">
-            <span class="ai-sev" style="color:var(--warn)"><span class="pip" style="background:var(--warn)"></span>주의</span>
-            <span class="status-tag progress">진행중</span>
+        <div class="rcard">
+          <div class="rcard-top">
+            <div class="rcard-meta">
+              <span class="branch-badge">서면본점</span>
+              <svg class="ch-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6 2 2 7 2 12s4 10 10 10 10-5 10-10S18 2 12 2z"/></svg>
+              <span class="stars-sm">
+                <svg viewBox="0 0 24 24" fill="var(--warn)"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+                <svg viewBox="0 0 24 24" fill="var(--warn)"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+                <svg viewBox="0 0 24 24" fill="var(--warn)"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+                <svg viewBox="0 0 24 24" fill="var(--warn)"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+                <svg viewBox="0 0 24 24" fill="var(--warn)"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+              </span>
+              <span class="rdate">2026.07.26 · 네이버</span>
+            </div>
+            <span class="sent-badge g">긍정</span>
           </div>
-          <div class="ai-title">점심 피크 대기시간 개선</div>
-          <div class="ai-body">'대기시간' 부정 언급 214건 중 71%가 12–13시에 집중. 예약·포장 라인 분리와 회전율 관리 검토가 필요합니다.</div>
-          <div class="ai-meta-row"><div class="ai-tags"><span class="tag">전 지점</span><span class="tag">대기시간</span></div><span class="ai-metric">부정 214건</span></div>
+          <div class="rtext">점심시간에 갔는데도 자리 안내가 빠르고 <mark>직원분이 친절</mark>했어요. <mark>국물이 진해서</mark> 해장하기 딱 좋았습니다. 재방문 의사 100%!</div>
+          <div class="rtags"><span class="tag">직원 친절</span><span class="tag">국물</span><span class="tag customer">직장인</span></div>
+          <div class="rfoot"><span class="status-badge done">답변완료</span><span class="rlink">전체 보기 →</span></div>
         </div>
 
-        <div class="aicard">
-          <div class="ai-top">
-            <span class="ai-sev" style="color:var(--good)"><span class="pip" style="background:var(--good)"></span>기회</span>
-            <span class="status-tag new">신규</span>
+        <div class="rcard">
+          <div class="rcard-top">
+            <div class="rcard-meta">
+              <span class="branch-badge">센텀점</span>
+              <svg class="ch-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12h8M12 8v8"/></svg>
+              <span class="stars-sm">
+                <svg viewBox="0 0 24 24" fill="var(--critical)"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+                <svg viewBox="0 0 24 24" fill="var(--critical)"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+                <svg viewBox="0 0 24 24" fill="var(--critical)"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+              </span>
+              <span class="rdate">2026.07.25 · 카카오맵</span>
+            </div>
+            <span class="sent-badge c">부정</span>
           </div>
-          <div class="ai-title">'진한 국물' 강점 마케팅 활용</div>
-          <div class="ai-body">최다 긍정 키워드(642건). 시그니처 메시지로 SNS·메뉴판 전면 배치 시 신규 유입과 재방문 전환이 기대됩니다.</div>
-          <div class="ai-meta-row"><div class="ai-tags"><span class="tag">전 지점</span><span class="tag">마케팅</span></div><span class="ai-metric">긍정 642건</span></div>
+          <div class="rtext">국물이 평소보다 많이 <mark>짰습니다</mark>. 지점마다 맛이 다른 것 같아요. 레시피 통일이 필요해 보여요.</div>
+          <div class="rtags"><span class="tag">국물 간</span><span class="tag">맛 일관성</span><span class="tag customer">혼밥</span></div>
+          <div class="rfoot"><span class="status-badge pending">미답변</span><span class="rlink">전체 보기 →</span></div>
         </div>
 
-        <div class="aicard">
-          <div class="ai-top">
-            <span class="ai-sev" style="color:var(--muted)"><span class="pip" style="background:var(--muted)"></span>모니터링</span>
-            <span class="status-tag progress">진행중</span>
+        <div class="rcard">
+          <div class="rcard-top">
+            <div class="rcard-meta">
+              <span class="branch-badge">해운대점</span>
+              <svg class="ch-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6 2 2 7 2 12s4 10 10 10 10-5 10-10S18 2 12 2z"/></svg>
+              <span class="stars-sm">
+                <svg viewBox="0 0 24 24" fill="var(--warn)"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+                <svg viewBox="0 0 24 24" fill="var(--warn)"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+                <svg viewBox="0 0 24 24" fill="var(--warn)"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+                <svg viewBox="0 0 24 24" fill="var(--warn)"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+                <svg viewBox="0 0 24 24" fill="var(--warn)"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+              </span>
+              <span class="rdate">2026.07.25 · 구글</span>
+            </div>
+            <span class="sent-badge g">긍정</span>
           </div>
-          <div class="ai-title">센텀점 평점 하락 추세</div>
-          <div class="ai-body">최근 30일 평점 -0.2, '짜다' 언급 증가. 국물 간 표준화 레시피 점검으로 조기 대응을 제안합니다.</div>
-          <div class="ai-meta-row"><div class="ai-tags"><span class="tag">센텀점</span><span class="tag">맛 일관성</span></div><span class="ai-metric">평점 4.1</span></div>
+          <div class="rtext">가족 모임으로 방문했는데 <mark>양도 많고</mark> <mark>가성비</mark>가 정말 좋네요. 아이들도 잘 먹었어요. 주차는 조금 불편했습니다.</div>
+          <div class="rtags"><span class="tag">양·가성비</span><span class="tag">주차</span><span class="tag customer">가족</span></div>
+          <div class="rfoot"><span class="status-badge done">답변완료</span><span class="rlink">전체 보기 →</span></div>
         </div>
 
-        <div class="aicard">
-          <div class="ai-top">
-            <span class="ai-sev" style="color:var(--warn)"><span class="pip" style="background:var(--warn)"></span>주의</span>
-            <span class="status-tag progress">진행중</span>
+        <div class="rcard">
+          <div class="rcard-top">
+            <div class="rcard-meta">
+              <span class="branch-badge">부산대점</span>
+              <svg class="ch-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12h8M12 8v8"/></svg>
+              <span class="stars-sm">
+                <svg viewBox="0 0 24 24" fill="var(--warn)"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+                <svg viewBox="0 0 24 24" fill="var(--warn)"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+                <svg viewBox="0 0 24 24" fill="var(--warn)"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+                <svg viewBox="0 0 24 24" fill="var(--warn)"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+              </span>
+              <span class="rdate">2026.07.24 · 배달앱</span>
+            </div>
+            <span class="sent-badge n">중립</span>
           </div>
-          <div class="ai-title">주차 공간 불편 해소 방안 검토</div>
-          <div class="ai-body">'주차 불편' 언급 176건, 전기 대비 +11%. 특히 가족 단위 고객 불만이 집중되어 있어 인근 제휴 주차장 검토를 권장합니다.</div>
-          <div class="ai-meta-row"><div class="ai-tags"><span class="tag">서면·해운대</span><span class="tag">주차</span></div><span class="ai-metric">부정 176건</span></div>
+          <div class="rtext">맛은 무난하고 좋았는데 <mark>대기시간</mark>이 좀 길었어요. 20분 정도 기다린 것 같아요. 그래도 다시 갈 것 같습니다.</div>
+          <div class="rtags"><span class="tag">대기시간</span><span class="tag customer">학생</span></div>
+          <div class="rfoot"><span class="status-badge pending">미답변</span><span class="rlink">전체 보기 →</span></div>
         </div>
 
-        <div class="aicard">
-          <div class="ai-top">
-            <span class="ai-sev" style="color:var(--good)"><span class="pip" style="background:var(--good)"></span>기회</span>
-            <span class="status-tag done">완료</span>
-          </div>
-          <div class="ai-title">직장인 세그먼트 포장 옵션 강화</div>
-          <div class="ai-body">직장인 방문 38%가 평일 점심 집중. 포장 전용 빠른 픽업 라인 도입 후 해당 세그먼트 긍정률이 <b>+4%p</b> 상승했습니다.</div>
-          <div class="ai-meta-row"><div class="ai-tags"><span class="tag">서면본점</span><span class="tag">세그먼트</span></div><span class="ai-metric">긍정률 81%</span></div>
+        <div class="pagination">
+          <div class="pg-btn">‹</div>
+          <div class="pg-btn on">1</div>
+          <div class="pg-btn">2</div>
+          <div class="pg-btn">3</div>
+          <div class="pg-btn">…</div>
+          <div class="pg-btn">42</div>
+          <div class="pg-btn">›</div>
         </div>
-
-        <div class="aicard">
-          <div class="ai-top">
-            <span class="ai-sev" style="color:var(--critical)"><span class="pip" style="background:var(--critical)"></span>긴급</span>
-            <span class="status-tag done">완료</span>
-          </div>
-          <div class="ai-title">배달앱 채널 응답률 저조 개선</div>
-          <div class="ai-body">배달앱 리뷰 미답변율이 타 채널 대비 3배 높았습니다. 담당자 알림 자동화 도입 후 응답률이 정상화되었습니다.</div>
-          <div class="ai-meta-row"><div class="ai-tags"><span class="tag">전 지점</span><span class="tag">응답률</span></div><span class="ai-metric">완료 7/15</span></div>
-        </div>
-
-        <div class="aicard">
-          <div class="ai-top">
-            <span class="ai-sev" style="color:var(--good)"><span class="pip" style="background:var(--good)"></span>기회</span>
-            <span class="status-tag done">완료</span>
-          </div>
-          <div class="ai-title">학생 세그먼트 가격 접근성 개선</div>
-          <div class="ai-body">학생 세그먼트 긍정률 최저(69%). 소용량 메뉴 출시 후 관련 언급이 개선되는 추세입니다. 지속 모니터링 권장.</div>
-          <div class="ai-meta-row"><div class="ai-tags"><span class="tag">전 지점</span><span class="tag">메뉴</span></div><span class="ai-metric">긍정률 69%→74%</span></div>
-        </div>
-
       </div>
 
       <!-- detail panel -->
       <div class="detail">
-        <span class="d-sev"><span class="pip"></span>긴급 · 신규</span>
-        <div class="d-title">광안리점 위생·대기 집중 관리</div>
-        <div class="d-tags"><span class="tag">광안리점</span><span class="tag">위생·청결</span><span class="tag">긍정률 66%</span></div>
+        <div class="d-head">
+          <div class="d-title">리뷰 상세</div>
+          <div class="d-close">✕</div>
+        </div>
+        <div class="d-meta-row">
+          <span class="branch-badge">광안리점</span>
+          <span class="d-stars">
+            <svg viewBox="0 0 24 24" fill="var(--critical)"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+            <svg viewBox="0 0 24 24" fill="var(--critical)"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+            <svg viewBox="0 0 24 24" fill="#e6e5e0"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+            <svg viewBox="0 0 24 24" fill="#e6e5e0"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+            <svg viewBox="0 0 24 24" fill="#e6e5e0"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.8L12 17.3 5.8 20.7l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+          </span>
+          <span class="rdate">2026.07.26 · 배달앱 · 가족 고객</span>
+        </div>
+        <div class="d-body">
+          주말 저녁에 방문했는데 위생 상태가 너무 안 좋았어요. 테이블도 안 닦여있고 그릇에 얼룩이 있어서 놀랐습니다. 국물 맛 자체는 좋았고 양도 넉넉했는데, 매장 청결 관리가 잘 안 되는 느낌이라 재방문은 고민되네요. 특히 아이들과 함께 갔던 터라 더 신경 쓰였습니다.
+        </div>
 
         <div class="d-section">
-          <div class="d-label">근거 데이터</div>
-          <div class="evidence">
-            <div class="evidence-stat"><span>긍정률 (전사 평균 78%)</span><b>66%</b></div>
-            <div class="evidence-stat"><span>위생·청결 언급 (최근 2주)</span><b>+38%</b></div>
-            <div class="evidence-stat"><span>미답변 부정 리뷰</span><b>11건</b></div>
+          <div class="d-label">키워드</div>
+          <div class="rtags"><span class="tag">위생·청결</span><span class="tag">국물</span><span class="tag">양 많음</span><span class="tag customer">가족</span></div>
+        </div>
+
+        <div class="d-section">
+          <div class="d-label">AI 감성 분석 신뢰도</div>
+          <div class="conf-row">
+            <span style="font-size:11.5px;color:var(--ink-2);width:50px">부정</span>
+            <div class="conf-track"><span class="conf-fill" style="width:91%;background:var(--critical)"></span></div>
+            <span class="conf-val">91%</span>
           </div>
         </div>
 
         <div class="d-section">
-          <div class="d-label">AI 분석 근거</div>
-          <p style="font-size:12.5px;color:var(--ink-2);line-height:1.65">
-            광안리점은 최근 30일간 긍정률이 전 지점 중 가장 낮고, 특히 '위생·청결' 관련 부정 언급이 다른 지점 대비 3배 이상 높은 빈도로 발생하고 있습니다. 주말 저녁 시간대에 언급이 집중되는 패턴으로 보아 마감 준비 및 회전 청소 프로세스 점검이 필요할 것으로 판단됩니다.
-          </p>
-        </div>
-
-        <div class="d-section">
-          <div class="d-label">추천 조치 단계</div>
-          <div class="steps">
-            <div class="step"><span class="step-num">1</span>현장 위생 점검 및 체크리스트 재정비 (이번 주 내)</div>
-            <div class="step"><span class="step-num">2</span>미답변 부정 리뷰 11건 우선 응대</div>
-            <div class="step"><span class="step-num">3</span>2주 후 위생 관련 언급 추이 재확인</div>
+          <div class="d-label">AI 추천 답글</div>
+          <div class="ai-box">
+            <div class="ai-box-head">✦ 초안 생성됨</div>
+            안녕하세요, 고객님. 소중한 시간 내어 남겨주신 의견 감사드립니다. 매장 위생 관리에 미흡함이 있었던 점 진심으로 사과드리며, 즉시 현장 점검 및 재교육을 진행하겠습니다. 다시 한번 믿고 찾아주실 수 있도록 개선하겠습니다.
           </div>
-        </div>
-
-        <div class="d-section">
-          <div class="d-label">담당자 배정</div>
-          <div class="assignee-row">
-            <div class="assignee-av">김</div>
-            <div style="flex:1"><div style="font-size:12.5px;font-weight:600">김○○ 매니저</div><div style="font-size:11px;color:var(--muted)">광안리점 담당</div></div>
-            <span class="status-tag new">알림 발송됨</span>
+          <div class="btn-row">
+            <button class="btn ghost">✎ 수정하기</button>
+            <button class="btn primary">답글 등록</button>
           </div>
         </div>
 
         <div class="d-section" style="margin-bottom:0">
-          <div class="d-label">관련 리뷰</div>
-          <div class="related-link"><span class="rl-title">"위생 상태가 너무 안 좋았어요…"</span><span>07.26</span></div>
-          <div class="related-link"><span class="rl-title">"그릇에 얼룩이 있었습니다…"</span><span>07.22</span></div>
-        </div>
-
-        <div class="btn-row">
-          <button class="btn ghost">보류</button>
-          <button class="btn primary">진행중으로 표시</button>
+          <div class="d-label">이 지점 최근 이력</div>
+          <div class="history-row"><span>위생·청결 언급 (최근 14일)</span><span class="tnum" style="color:var(--critical);font-weight:600">6건</span></div>
+          <div class="history-row"><span>동일 고객 이전 리뷰</span><span class="tnum">없음</span></div>
         </div>
       </div>
     </div>
-
-    <div class="foot-note">웨이브앤바이브 리뷰 인텔리전스 · 데모 데이터 · 담당자 실명은 마스킹 처리됩니다</div>
   </main>
 </div>
 <script>
