@@ -281,7 +281,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     // [정제_리뷰데이터] 탭에서 직접 집계
     let positive = 0;
     let negative = 0;
-    let neutral = 0;
+    
     let ratingSum = 0;
     let ratingCount = 0;
     let pendingReplies = 0;
@@ -294,7 +294,7 @@ export async function getDashboardData(): Promise<DashboardData> {
         const s = row[sentimentCol];
         if (s === "긍정") positive++;
         else if (s === "부정") negative++;
-        else if (s === "중립" || s === "혼합") neutral++;
+        else if (s === "중립" || s === "혼합") {}
         
         let r = NaN;
         if (ratingCol !== -1 && row[ratingCol]) {
@@ -363,12 +363,15 @@ export async function getAllReviews(): Promise<ReviewItem[]> {
     const urlIdx = h.indexOf("URL");
     const pKeyIdx = h.indexOf("positive_keywords");
     const nKeyIdx = h.indexOf("negative_keywords");
+    const menuIdx = h.indexOf("mentioned_menu");
+    const purposeIdx = h.indexOf("visit_origin");
 
     return reviewSheet.rows.map((row, i) => {
       const getStr = (idx: number) => (idx >= 0 && row[idx]) ? row[idx] : "";
       
       const pos = getStr(pKeyIdx).split(';').map(k => k.trim()).filter(Boolean);
       const neg = getStr(nKeyIdx).split(';').map(k => k.trim()).filter(Boolean);
+      const menus = getStr(menuIdx).split(';').map(k => k.trim()).filter(Boolean);
       const ratingStr = getStr(ratingIdx);
 
       return {
@@ -383,6 +386,8 @@ export async function getAllReviews(): Promise<ReviewItem[]> {
         rating: ratingStr ? parseFloat(ratingStr) : undefined,
         url: getStr(urlIdx),
         keywords: [...pos, ...neg],
+        menus,
+        purpose: getStr(purposeIdx),
       };
     }).filter(r => r.content.trim().length > 0);
   } catch (e) {

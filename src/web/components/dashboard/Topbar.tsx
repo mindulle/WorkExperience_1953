@@ -37,6 +37,9 @@ export function Topbar({
   branchFilter,
   onBranchChange,
   branchOptions = ["전체"],
+  periodFilter,
+  onPeriodChange,
+  periodOptions = ["전체"],
 }: {
   title?: string;
   subtitle?: string;
@@ -45,6 +48,9 @@ export function Topbar({
   branchFilter?: string;
   onBranchChange?: (val: string) => void;
   branchOptions?: string[];
+  periodFilter?: string;
+  onPeriodChange?: (val: string) => void;
+  periodOptions?: string[];
 }) {
   const isFallback = source === "fallback";
 
@@ -80,7 +86,7 @@ export function Topbar({
 
         <div className="flex items-center gap-[9px] flex-wrap">
           <ScopeChip icon={Building2} label="지점" value={branchFilter || "전체"} options={branchOptions} onChange={onBranchChange} />
-          <ScopeChip icon={CalendarRange} label="기간" value="전체" />
+          <ScopeChip icon={CalendarRange} label="기간" value={periodFilter || "전체"} options={periodOptions} onChange={onPeriodChange} />
           <ScopeChip icon={Radio} label="채널" value="카카오맵 외" />
           <button
             type="button"
