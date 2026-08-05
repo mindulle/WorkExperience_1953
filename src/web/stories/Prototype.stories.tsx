@@ -36,3 +36,10 @@ export const Console: Story = {
   },
 };
 
+
+export const ConsoleV2: Story = {
+  args: {
+    src: 'design/wave-and-vibe-console-v2.html',
+    title: '웨이브앤바이브 콘솔 프로토타입 V2 (6주차 회의 수정안)',
+  },
+};
