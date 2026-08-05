@@ -1390,37 +1390,6 @@
       <span class="pill"><span class="dot" style="background:var(--good)"></span>기회 2</span>
       <span class="pill"><span class="dot" style="background:var(--muted)"></span>모니터링 1</span>
     </div>
-    <div class="grid">
-      <!-- 누락 사항 반영: 키워드/문장 분석 & 프롬프트 설정 -->
-      <div class="card col-12" style="margin-top:20px; display:flex; gap:20px; flex-wrap:wrap;">
-        <div style="flex:2; min-width:300px;">
-          <div class="c-head"><div class="c-title">주요 키워드 및 네이버 리뷰 문장 분석</div></div>
-          <div style="padding:15px; background:var(--surface-2); border-radius:8px; margin-top:10px;">
-            <p style="font-size:13.5px; margin-bottom:12px;"><b>추출된 핵심 키워드:</b> <span class="tag">#솥밥</span> <span class="tag">#맑은국물</span> <span class="tag">#웨이팅</span></p>
-            <blockquote style="border-left:3px solid var(--brand); padding-left:12px; font-size:13px; color:var(--ink-2); line-height:1.6;">
-              "국물은 깔끔하고 <b>솥밥</b>이 같이 나와서 든든했어요. 주말 점심이라 <b>웨이팅</b>이 40분이나 걸려서 조금 아쉬웠지만 뷰가 좋아서 용서가 됩니다."<br>
-              <span style="font-size:11px; color:var(--muted); margin-top:5px; display:block;">- 네이버 영수증 리뷰 (광안리점) 발췌</span>
-            </blockquote>
-          </div>
-        </div>
-        <div style="flex:1; min-width:250px;">
-          <div class="c-head"><div class="c-title">AI 제어 및 연동 (Admin)</div></div>
-          <div style="padding:15px; background:var(--surface-2); border-radius:8px; margin-top:10px;">
-            <div style="font-size:13px; margin-bottom:12px;">
-              <b style="display:block; margin-bottom:5px;">키워드 분류 기준 (Prompting)</b>
-              <textarea style="width:100%; height:55px; font-size:12px; padding:6px; border:1px solid var(--hairline); border-radius:4px; resize:none;" readonly>- 긍정: 맛, 서비스 명확한 만족
-- 부정: 불친절, 냄새 등 불만</textarea>
-              <div style="text-align:right; margin-top:5px;">
-                <button style="font-size:11.5px; padding:4px 8px; border:1px solid var(--hairline); background:var(--surface); border-radius:4px; cursor:pointer;">프롬프트 수정</button>
-              </div>
-            </div>
-            <div style="font-size:13px; display:flex; justify-content:space-between; align-items:center; border-top:1px dashed var(--hairline); padding-top:12px;">
-              <span><b>클로드 n8n 워크플로우</b></span>
-              <span class="status-tag" style="background:var(--good-soft); color:var(--good);">✅ Active</span>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
 
 
@@ -1562,6 +1531,37 @@
       </div>
     </div>
 
+    <div class="grid">
+      <!-- 누락 사항 반영: 키워드/문장 분석 & 프롬프트 설정 -->
+      <div class="card col-12" style="margin-top:20px; display:flex; gap:20px; flex-wrap:wrap;">
+        <div style="flex:2; min-width:300px;">
+          <div class="c-head"><div class="c-title">주요 키워드 및 네이버 리뷰 문장 분석</div></div>
+          <div style="padding:15px; background:var(--surface-2); border-radius:8px; margin-top:10px;">
+            <p style="font-size:13.5px; margin-bottom:12px;"><b>추출된 핵심 키워드:</b> <span class="tag">#솥밥</span> <span class="tag">#맑은국물</span> <span class="tag">#웨이팅</span></p>
+            <blockquote style="border-left:3px solid var(--brand); padding-left:12px; font-size:13px; color:var(--ink-2); line-height:1.6;">
+              "국물은 깔끔하고 <b>솥밥</b>이 같이 나와서 든든했어요. 주말 점심이라 <b>웨이팅</b>이 40분이나 걸려서 조금 아쉬웠지만 뷰가 좋아서 용서가 됩니다."<br>
+              <span style="font-size:11px; color:var(--muted); margin-top:5px; display:block;">- 네이버 영수증 리뷰 (광안리점) 발췌</span>
+            </blockquote>
+          </div>
+        </div>
+        <div style="flex:1; min-width:250px;">
+          <div class="c-head"><div class="c-title">AI 제어 및 연동 (Admin)</div></div>
+          <div style="padding:15px; background:var(--surface-2); border-radius:8px; margin-top:10px;">
+            <div style="font-size:13px; margin-bottom:12px;">
+              <b style="display:block; margin-bottom:5px;">키워드 분류 기준 (Prompting)</b>
+              <textarea style="width:100%; height:55px; font-size:12px; padding:6px; border:1px solid var(--hairline); border-radius:4px; resize:none;" readonly>- 긍정: 맛, 서비스 명확한 만족
+- 부정: 불친절, 냄새 등 불만</textarea>
+              <div style="text-align:right; margin-top:5px;">
+                <button style="font-size:11.5px; padding:4px 8px; border:1px solid var(--hairline); background:var(--surface); border-radius:4px; cursor:pointer;">프롬프트 수정</button>
+              </div>
+            </div>
+            <div style="font-size:13px; display:flex; justify-content:space-between; align-items:center; border-top:1px dashed var(--hairline); padding-top:12px;">
+              <span><b>클로드 n8n 워크플로우</b></span>
+              <span class="status-tag" style="background:var(--good-soft); color:var(--good);">✅ Active</span>
+            </div>
+          </div>
+        </div>
+      </div>
     <div class="foot-note">웨이브앤바이브 리뷰 인텔리전스 · 데모 데이터 · 담당자 실명은 마스킹 처리됩니다</div>
   </main>
 </div>
