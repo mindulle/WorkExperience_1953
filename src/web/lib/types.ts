@@ -106,4 +106,6 @@ export type AiInsightItem = {
   summary: string;
   keyIssues: string;
   recommendedAction: string;
+  severity: string;
+  metrics: string;
 };

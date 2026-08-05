@@ -386,6 +386,8 @@ export async function getAiInsightsData(): Promise<AiInsightItem[]> {
     const summaryIdx = header.indexOf("리뷰요약");
     const issuesIdx = header.indexOf("주요이슈");
     const actionIdx = header.indexOf("추천액션");
+    const severityIdx = header.indexOf("중요도");
+    const metricsIdx = header.indexOf("핵심지표");
     
     if (branchIdx === -1) return []; // wrong tab
 
@@ -396,6 +398,8 @@ export async function getAiInsightsData(): Promise<AiInsightItem[]> {
         summary: getStr(summaryIdx),
         keyIssues: getStr(issuesIdx),
         recommendedAction: getStr(actionIdx),
+        severity: getStr(severityIdx),
+        metrics: getStr(metricsIdx),
       };
     }).filter(item => item.branch.length > 0);
   } catch (error) {

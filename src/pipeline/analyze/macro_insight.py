@@ -18,7 +18,9 @@ MACRO_JSON_FORMAT = """
 {
   "summary": "해당 지점의 전반적인 리뷰 분위기 1줄 요약",
   "issues": ["주요 불만 사항이나 개선점 1", "주요 불만 사항 2"],
-  "action_plans": ["즉시 실행 가능한 추천 액션 1", "추천 액션 2"]
+  "action_plans": ["즉시 실행 가능한 추천 액션 1", "추천 액션 2"],
+  "severity": "'긴급', '주의', '기회', '모니터링' 중 하나",
+  "metrics": "가장 핵심적인 지표 요약 (예: '긍정률 66%', '부정 214건' 등)"
 }
 """
 
@@ -40,27 +42,46 @@ def get_macro_insight(branch_name: str, reviews_text: str) -> dict:
     prompt += "\n\n" + MACRO_JSON_FORMAT
 
     try:
-        # 실제 opencode run 실행 전, 시간 지연 방지를 위해 테스트 환경에서는 Mock 데이터를 뱉거나 실제를 돌릴 수 있게 구성
-        # 비용을 위해 텍스트 길이는 적절히 자릅니다 (최대 5000자)
+        # 텍스트 길이는 적절히 자릅니다 (최대 5000자)
         prompt = prompt[:5000] 
         
         # --- [실제 구동 코드] ---
-        # result = subprocess.check_output(["opencode", "run", prompt], text=True, stderr=subprocess.STDOUT)
-        # import re
-        # match = re.search(r'\{.*\}', result.replace('\n', ' '), re.DOTALL)
-        # if match: return json.loads(match.group(0))
-        # ------------------------
+        import json, subprocess, re
+        result = subprocess.check_output(
+            ["opencode", "run", "--attach", "http://localhost:8082", "--format", "json", prompt],
+            text=True,
+            stderr=subprocess.STDOUT,
+            timeout=180
+        )
         
-        # 테스트를 위한 Mock (파이프라인 Timeout 방지)
-        return {
-            "summary": f"[{branch_name}] 리뷰 전반적으로 긍정적이나 특정 시간대 대기열 불만이 존재함",
-            "issues": ["점심시간 웨이팅 안내 부족", "주차 공간 협소"],
-            "action_plans": ["대기표 시스템 도입 또는 안내판 설치", "인근 유료 주차장 제휴 및 안내"]
-        }
+        text_parts = []
+        for line in result.splitlines():
+            line = line.strip()
+            if not line: continue
+            try:
+                event = json.loads(line)
+                if event.get("type") == "text" and "part" in event:
+                    text_parts.append(event["part"].get("text", ""))
+            except Exception:
+                continue
+        full_text = " ".join(text_parts)
 
+        match = re.search(r'```json\s*(\{.*?\})\s*```', full_text, re.DOTALL)
+        if not match:
+            match = re.search(r'\{.*\}', full_text, re.DOTALL)
+        if match:
+            json_str = match.group(1) if match.lastindex else match.group(0)
+            return json.loads(json_str)
+        else:
+            print(f"❌ JSON 파싱 실패 (원본 응답): {full_text[:200]}")
+            return {"summary": "분석 오류", "issues": [], "action_plans": [], "severity": "모니터링", "metrics": "오류"}
+
+    except subprocess.TimeoutExpired:
+        print(f"⏱️ 타임아웃 발생")
+        return {"summary": "타임아웃", "issues": [], "action_plans": [], "severity": "모니터링", "metrics": "오류"}
     except Exception as e:
         print(f"API Error for {branch_name}: {e}")
-        return {"summary": "분석 오류", "issues": [], "action_plans": []}
+        return {"summary": "분석 오류", "issues": [], "action_plans": [], "severity": "모니터링", "metrics": "오류"}
 
 def main():
     project_root = Path(__file__).resolve().parent.parent.parent.parent
@@ -96,7 +117,9 @@ def main():
             "지점": branch,
             "리뷰요약": analysis.get("summary", ""),
             "주요이슈": " / ".join(analysis.get("issues", [])),
-            "추천액션": " / ".join(analysis.get("action_plans", []))
+            "추천액션": " / ".join(analysis.get("action_plans", [])),
+            "중요도": analysis.get("severity", "모니터링"),
+            "핵심지표": analysis.get("metrics", "")
         })
         
     result_df = pd.DataFrame(results)
