@@ -17,6 +17,7 @@ const PURPOSE_COLORS: Record<string, string> = {
 export function DashboardClient({
   initialData,
   updatedAt,
+  branchFilter,
 }: {
   initialData: DashboardData;
   /**
@@ -25,42 +26,87 @@ export function DashboardClient({
    * 하이드레이션 불일치가 발생한다.
    */
   updatedAt: string;
+  branchFilter?: string;
 }) {
+  const [selectedBranch, setSelectedBranch] = React.useState("전체");
+  
+  const handleBranchChange = (branch: string) => {
+    setSelectedBranch(branch);
+  };
+  
+  const branchOptions = ["전체", ...(initialData.branchStats?.map(b => b.branch) || [])];
+
+  // 파생 KPI 계산
+  let displayReviews = initialData.totalReviews;
+  let displayPosPct = initialData.positivePct;
+  let displayNegPct = initialData.negativePct;
+  let displayAvgRating = initialData.averageRating;
+  let displayPending = initialData.pendingReplies;
+
+  if (selectedBranch !== "전체") {
+    const stat = initialData.branchStats?.find(b => b.branch === selectedBranch);
+    if (stat) {
+      displayReviews = stat.reviewCount;
+      displayPosPct = stat.positivePct;
+      displayNegPct = stat.negativePct;
+      displayAvgRating = stat.avgRating;
+      displayPending = undefined; // 지점별 미답변 리뷰 수는 현재 API에 없음
+    } else {
+      displayReviews = 0;
+      displayPosPct = 0;
+      displayNegPct = 0;
+      displayAvgRating = undefined;
+      displayPending = undefined;
+    }
+  }
+
+
   return (
     <>
-      <Topbar updatedAt={updatedAt} source={initialData.source} />
+      <Topbar 
+        updatedAt={updatedAt} 
+        source={initialData.source} 
+        branchFilter={selectedBranch}
+        onBranchChange={handleBranchChange}
+        branchOptions={branchOptions}
+      />
 
       {/* KPI 행. 데이터가 없는 지표는 값을 지어내지 않고 사유를 표시한다. */}
       <div className="grid grid-cols-5 gap-[18px]">
         <KpiCard
           label="전체 리뷰 수"
           icon={MessageSquare}
-          value={initialData.totalReviews.toLocaleString()}
+          value={displayReviews.toLocaleString()}
           meta="정제 완료 기준 (RULES §2.3)"
         />
         <KpiCard
           label="평균 평점"
           icon={Star}
-          pending="평점 수집 미구현"
+          value={displayAvgRating !== undefined ? String(displayAvgRating) : undefined}
+          pending={displayAvgRating === undefined ? (selectedBranch === "전체" ? "평점 수집 미구현" : "데이터 없음") : undefined}
+          meta={displayAvgRating !== undefined ? "전체 평점 합산" : undefined}
         />
         <KpiCard
           label="긍정률"
           icon={ThumbsUp}
-          value={String(initialData.positivePct)}
+          value={String(displayPosPct)}
           unit="%"
-          meta={`${Math.round(initialData.totalReviews * initialData.positivePct / 100).toLocaleString()}건`}
+          meta={`${Math.round(displayReviews * displayPosPct / 100).toLocaleString()}건`}
         />
         <KpiCard
           label="부정률"
           icon={ThumbsDown}
-          value={String(initialData.negativePct)}
+          value={String(displayNegPct)}
           unit="%"
-          meta={`${Math.round(initialData.totalReviews * initialData.negativePct / 100).toLocaleString()}건`}
+          meta={`${Math.round(displayReviews * displayNegPct / 100).toLocaleString()}건`}
         />
         <KpiCard
           label="응답 필요 리뷰"
           icon={Inbox}
-          pending="오너 콘솔 연동 필요"
+          value={displayPending !== undefined ? String(displayPending) : undefined}
+          pending={displayPending === undefined ? (selectedBranch === "전체" ? "오너 콘솔 연동 필요" : "데이터 없음") : undefined}
+          meta={initialData.pendingReplies !== undefined ? "1~2점 및 부정 감성" : undefined}
+          valueColor={displayPending && displayPending > 0 ? "var(--critical)" : "var(--good)"}
         />
       </div>
 

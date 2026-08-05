@@ -1,7 +1,25 @@
 import { Building2, CalendarRange, Download, Radio, type LucideIcon } from "lucide-react";
 import type { DashboardSource } from "@/lib/types";
 
-function ScopeChip({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
+function ScopeChip({ icon: Icon, label, value, options, onChange }: { icon: LucideIcon; label: string; value: string; options?: string[]; onChange?: (val: string) => void }) {
+  if (options && onChange) {
+    return (
+      <label className="flex items-center gap-2 h-[38px] px-[13px] bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] whitespace-nowrap [box-shadow:var(--shadow-sm)] cursor-pointer hover:bg-[var(--surface-2)] transition-colors">
+        <Icon className="w-[14px] h-[14px] text-[var(--muted)]" aria-hidden />
+        <span className="text-[var(--muted)]">{label}</span>
+        <select 
+          className="font-medium bg-transparent outline-none cursor-pointer"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        >
+          {options.map(opt => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+      </label>
+    );
+  }
+
   return (
     <div className="flex items-center gap-2 h-[38px] px-[13px] bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] whitespace-nowrap [box-shadow:var(--shadow-sm)]">
       <Icon className="w-[14px] h-[14px] text-[var(--muted)]" aria-hidden />
@@ -16,11 +34,17 @@ export function Topbar({
   subtitle,
   updatedAt,
   source,
+  branchFilter,
+  onBranchChange,
+  branchOptions = ["전체"],
 }: {
   title?: string;
   subtitle?: string;
   updatedAt: string;
   source: DashboardSource;
+  branchFilter?: string;
+  onBranchChange?: (val: string) => void;
+  branchOptions?: string[];
 }) {
   const isFallback = source === "fallback";
 
@@ -55,7 +79,7 @@ export function Topbar({
         </div>
 
         <div className="flex items-center gap-[9px] flex-wrap">
-          <ScopeChip icon={Building2} label="지점" value="전체 5개" />
+          <ScopeChip icon={Building2} label="지점" value={branchFilter || "전체"} options={branchOptions} onChange={onBranchChange} />
           <ScopeChip icon={CalendarRange} label="기간" value="전체" />
           <ScopeChip icon={Radio} label="채널" value="카카오맵 외" />
           <button
