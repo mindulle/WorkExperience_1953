@@ -45,13 +45,14 @@ export default async function InsightsPage() {
         {insights.length > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {insights.map((insight, idx) => {
-              // 임시로 severity를 부여 (실제 데이터에 없으므로)
-              // 브랜치 이름에 특정 키워드가 있거나, idx에 따라 가짜로 분배해 UI를 풍성하게 함.
-              const isCrit = insight.branch.includes("광안리") || idx === 0;
-              const isWarn = insight.branch.includes("서면") || idx === 1;
+              // 실제 severity 데이터 적용
+              const sev = insight.severity || "모니터링";
+              const isCrit = sev.includes("긴급");
+              const isWarn = sev.includes("주의");
+              const isGood = sev.includes("기회");
               
-              const sevColor = isCrit ? "var(--critical)" : isWarn ? "var(--warn)" : "var(--good)";
-              const sevText = isCrit ? "긴급" : isWarn ? "주의" : "기회";
+              const sevColor = isCrit ? "var(--critical)" : isWarn ? "var(--warn)" : isGood ? "var(--good)" : "var(--muted)";
+              const sevText = isCrit ? "긴급" : isWarn ? "주의" : isGood ? "기회" : "모니터링";
               const sevBgClass = isCrit ? "bg-gradient-to-b from-[#fdf3f3] to-white" : "bg-[var(--surface)]";
 
               // 키워드 태그 분리
@@ -89,6 +90,11 @@ export default async function InsightsPage() {
                         </span>
                       ))}
                     </div>
+                    {insight.metrics && (
+                      <span className="text-[11px] font-semibold text-[var(--ink-2)] whitespace-nowrap ml-3">
+                        {insight.metrics}
+                      </span>
+                    )}
                   </div>
                 </div>
               );
