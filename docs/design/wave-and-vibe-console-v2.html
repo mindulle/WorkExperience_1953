@@ -737,56 +737,8 @@
 
     <!-- ---------- GRID ---------- -->
     <div class="grid">
-
-      <!-- 리뷰 추이 (line) -->
-      <div class="card col-8">
-        <div class="c-head">
-          <div>
-            <div class="c-title">리뷰 추이</div>
-            <div class="c-sub">최근 12주 · 주간 집계</div>
-          </div>
-          <div class="legend">
-            <span class="lg"><span class="sw" style="background:var(--s-blue)"></span>전체</span>
-            <span class="lg"><span class="sw" style="background:var(--good)"></span>긍정</span>
-            <span class="lg"><span class="sw" style="background:var(--critical)"></span>부정</span>
-          </div>
-        </div>
-        <svg viewBox="0 0 720 250" width="100%" height="250" font-family="system-ui" font-size="11">
-          <!-- gridlines + y labels -->
-          <g stroke="var(--grid)" stroke-width="1">
-            <line x1="40" y1="20" x2="710" y2="20"/><line x1="40" y1="70" x2="710" y2="70"/>
-            <line x1="40" y1="120" x2="710" y2="120"/><line x1="40" y1="170" x2="710" y2="170"/>
-            <line x1="40" y1="210" x2="710" y2="210" stroke="var(--hairline)"/>
-          </g>
-          <g fill="var(--muted)" text-anchor="end">
-            <text x="32" y="24">400</text><text x="32" y="74">300</text>
-            <text x="32" y="124">200</text><text x="32" y="174">100</text><text x="32" y="214">0</text>
-          </g>
-          <!-- area under total -->
-          <path d="M40,163 92,148 144,158 196,132 248,124 300,138 352,113 404,97 456,103 508,80 560,60 660,72 L660,210 L40,210 Z"
-            fill="var(--s-blue)" opacity="0.07"/>
-          <!-- total -->
-          <polyline fill="none" stroke="var(--s-blue)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
-            points="40,163 92,148 144,158 196,132 248,124 300,138 352,113 404,97 456,103 508,80 560,60 660,72"/>
-          <!-- positive -->
-          <polyline fill="none" stroke="var(--good)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-            points="40,128 92,118 144,125 196,107 248,102 300,110 352,96 404,88 456,92 508,79 560,68 660,74"/>
-          <!-- negative -->
-          <polyline fill="none" stroke="var(--critical)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-            points="40,195 92,194 144,193 196,191 248,190 300,187 352,189 404,188 456,187 508,186 560,185 660,187"/>
-          <!-- endpoint dots -->
-          <circle cx="660" cy="72" r="3.5" fill="var(--s-blue)"/><circle cx="660" cy="74" r="3" fill="var(--good)"/>
-          <circle cx="660" cy="187" r="3" fill="var(--critical)"/>
-          <!-- x labels -->
-          <g fill="var(--muted)" text-anchor="middle">
-            <text x="40" y="232">5/05</text><text x="196" y="232">5/26</text><text x="352" y="232">6/16</text>
-            <text x="508" y="232">7/07</text><text x="660" y="232">7/21</text>
-          </g>
-        </svg>
-      </div>
-
-      <!-- 긍정/부정 비율 (donut) -->
-      <div class="card col-4">
+<!-- 긍정/부정 비율 (donut) -->
+      <div class="card col-6">
         <div class="c-head">
           <div class="c-title">긍정 / 부정 비율</div>
           <span class="c-tag">3,428건</span>
@@ -807,203 +759,16 @@
             </svg>
             <div class="dc-txt"><div class="dc-big">78%</div><div class="dc-small">긍정</div></div>
           </div>
-          <div style="flex:1">
-            <div class="stat-line"><span class="sl-l"><span class="sw" style="background:var(--good)"></span>긍정</span><span class="sl-v tnum">78% · 2,674</span></div>
-            <div class="stat-line"><span class="sl-l"><span class="sw" style="background:#cfcec8"></span>중립</span><span class="sl-v tnum">8% · 274</span></div>
-            <div class="stat-line"><span class="sl-l"><span class="sw" style="background:var(--critical)"></span>부정</span><span class="sl-v tnum">14% · 480</span></div>
-          </div>
-        </div>
-      </div>
 
-      <!-- 지점별 비교 (table) -->
-      <div class="card col-12">
-        <div class="c-head">
-          <div>
-            <div class="c-title">지점별 비교</div>
-            <div class="c-sub">리뷰 수 기준 정렬 · 긍정률과 평점 함께 확인</div>
-          </div>
-          <div class="seg"><button class="on">리뷰 수</button><button>평점</button><button>긍정률</button></div>
-        </div>
-        <table>
-          <thead><tr>
-            <th style="width:22%">지점</th><th style="width:26%">리뷰 수</th><th style="width:12%" class="r">평점</th>
-            <th style="width:28%">감성 구성 (긍정·중립·부정)</th><th style="width:12%" class="r">긍정률</th>
-          </tr></thead>
-          <tbody>
-            <tr>
-              <td><span class="b-name"><span class="b-rank">1</span>서면본점</span></td>
-              <td><span class="mini-track"><span class="mini-fill" style="width:100%"></span></span> <span class="tnum" style="margin-left:8px">1,024</span></td>
-              <td class="r tnum">4.5</td>
-              <td><span class="msent"><span style="width:84%;background:var(--good)"></span><span style="width:7%;background:#cfcec8"></span><span style="width:9%;background:var(--critical)"></span></span></td>
-              <td class="r"><span class="badge g">84%</span></td>
-            </tr>
-            <tr>
-              <td><span class="b-name"><span class="b-rank">2</span>부산대점</span></td>
-              <td><span class="mini-track"><span class="mini-fill" style="width:87%"></span></span> <span class="tnum" style="margin-left:8px">892</span></td>
-              <td class="r tnum">4.2</td>
-              <td><span class="msent"><span style="width:76%;background:var(--good)"></span><span style="width:9%;background:#cfcec8"></span><span style="width:15%;background:var(--critical)"></span></span></td>
-              <td class="r"><span class="badge g">76%</span></td>
-            </tr>
-            <tr>
-              <td><span class="b-name"><span class="b-rank">3</span>해운대점</span></td>
-              <td><span class="mini-track"><span class="mini-fill" style="width:65%"></span></span> <span class="tnum" style="margin-left:8px">664</span></td>
-              <td class="r tnum">4.4</td>
-              <td><span class="msent"><span style="width:81%;background:var(--good)"></span><span style="width:8%;background:#cfcec8"></span><span style="width:11%;background:var(--critical)"></span></span></td>
-              <td class="r"><span class="badge g">81%</span></td>
-            </tr>
-            <tr>
-              <td><span class="b-name"><span class="b-rank">4</span>센텀점</span></td>
-              <td><span class="mini-track"><span class="mini-fill" style="width:52%"></span></span> <span class="tnum" style="margin-left:8px">528</span></td>
-              <td class="r tnum">4.1</td>
-              <td><span class="msent"><span style="width:72%;background:var(--good)"></span><span style="width:10%;background:#cfcec8"></span><span style="width:18%;background:var(--critical)"></span></span></td>
-              <td class="r"><span class="badge w">72%</span></td>
-            </tr>
-            <tr>
-              <td><span class="b-name"><span class="b-rank">5</span>광안리점</span></td>
-              <td><span class="mini-track"><span class="mini-fill" style="width:31%;background:var(--serious)"></span></span> <span class="tnum" style="margin-left:8px">320</span></td>
-              <td class="r tnum">3.9</td>
-              <td><span class="msent"><span style="width:66%;background:var(--good)"></span><span style="width:11%;background:#cfcec8"></span><span style="width:23%;background:var(--critical)"></span></span></td>
-              <td class="r"><span class="badge c">66%</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
 
-      <!-- 리뷰 키워드 (positive) -->
+<!-- 리뷰 추이 (line) -->
       <div class="card col-6">
         <div class="c-head">
-          <div class="c-title">주요 언급 키워드 <span style="color:var(--good);font-size:12px;font-weight:600">· 긍정</span></div>
-          <span class="c-tag">언급 상위 6</span>
-        </div>
-        <div class="kw">
-          <div class="kw-row"><span class="kw-name">국물이 진해요</span><span class="kw-track"><span class="kw-fill" style="width:100%;background:var(--good)"></span></span><span class="kw-val tnum">642</span></div>
-          <div class="kw-row"><span class="kw-name">직원이 친절해요</span><span class="kw-track"><span class="kw-fill" style="width:81%;background:var(--good)"></span></span><span class="kw-val tnum">518</span></div>
-          <div class="kw-row"><span class="kw-name">양이 많아요</span><span class="kw-track"><span class="kw-fill" style="width:73%;background:var(--good)"></span></span><span class="kw-val tnum">470</span></div>
-          <div class="kw-row"><span class="kw-name">가성비 좋아요</span><span class="kw-track"><span class="kw-fill" style="width:63%;background:var(--good)"></span></span><span class="kw-val tnum">402</span></div>
-          <div class="kw-row"><span class="kw-name">깍두기 맛집</span><span class="kw-track"><span class="kw-fill" style="width:55%;background:var(--good)"></span></span><span class="kw-val tnum">356</span></div>
-          <div class="kw-row"><span class="kw-name">재방문 의사</span><span class="kw-track"><span class="kw-fill" style="width:47%;background:var(--good)"></span></span><span class="kw-val tnum">300</span></div>
-        </div>
-      </div>
-
-      <!-- 개선 필요 키워드 (negative) -->
-      <div class="card col-6">
-        <div class="c-head">
-          <div class="c-title">개선이 필요한 키워드 <span style="color:var(--critical);font-size:12px;font-weight:600">· 부정</span></div>
-          <span class="c-tag">최근 2주 추세</span>
-        </div>
-        <div class="kw">
-          <div class="kw-row"><span class="kw-name">대기시간 길어요</span><span class="kw-track"><span class="kw-fill" style="width:100%;background:var(--critical)"></span></span><span class="kw-val tnum">214<span class="kw-trend" style="color:var(--critical)">▲18%</span></span></div>
-          <div class="kw-row"><span class="kw-name">주차 불편해요</span><span class="kw-track"><span class="kw-fill" style="width:82%;background:var(--critical)"></span></span><span class="kw-val tnum">176<span class="kw-trend" style="color:var(--critical)">▲11%</span></span></div>
-          <div class="kw-row"><span class="kw-name">국물이 짜요</span><span class="kw-track"><span class="kw-fill" style="width:69%;background:var(--serious)"></span></span><span class="kw-val tnum">148<span class="kw-trend" style="color:var(--muted)">─ 0%</span></span></div>
-          <div class="kw-row"><span class="kw-name">위생·청결</span><span class="kw-track"><span class="kw-fill" style="width:45%;background:var(--critical)"></span></span><span class="kw-val tnum">96<span class="kw-trend" style="color:var(--critical)">▲38%</span></span></div>
-          <div class="kw-row"><span class="kw-name">매장이 시끄러워요</span><span class="kw-track"><span class="kw-fill" style="width:38%;background:var(--serious)"></span></span><span class="kw-val tnum">82<span class="kw-trend" style="color:var(--good)">▼7%</span></span></div>
-          <div class="kw-row"><span class="kw-name">반찬 리필 아쉬움</span><span class="kw-track"><span class="kw-fill" style="width:30%;background:var(--serious)"></span></span><span class="kw-val tnum">64<span class="kw-trend" style="color:var(--muted)">─ 2%</span></span></div>
-        </div>
-      </div>
-
-      <!-- 고객 유형 분석 -->
-      <div class="card col-4">
-        <div class="c-head"><div class="c-title">고객 유형 분석</div></div>
-        <div style="display:flex;align-items:center;gap:16px">
-          <svg width="112" height="112" viewBox="0 0 42 42">
-            <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--s-blue)" stroke-width="6" stroke-dasharray="38 62" stroke-dashoffset="25"/>
-            <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--s-aqua)" stroke-width="6" stroke-dasharray="26 74" stroke-dashoffset="-13"/>
-            <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--s-yellow)" stroke-width="6" stroke-dasharray="20 80" stroke-dashoffset="-39"/>
-            <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--s-magenta)" stroke-width="6" stroke-dasharray="10 90" stroke-dashoffset="-59"/>
-            <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--s-violet)" stroke-width="6" stroke-dasharray="6 94" stroke-dashoffset="-69"/>
-          </svg>
-          <div style="flex:1">
-            <div class="stat-line"><span class="sl-l"><span class="sw" style="background:var(--s-blue)"></span>직장인</span><span class="sl-v tnum">38%</span></div>
-            <div class="stat-line"><span class="sl-l"><span class="sw" style="background:var(--s-aqua)"></span>가족</span><span class="sl-v tnum">26%</span></div>
-            <div class="stat-line"><span class="sl-l"><span class="sw" style="background:var(--s-yellow)"></span>혼밥</span><span class="sl-v tnum">20%</span></div>
-            <div class="stat-line"><span class="sl-l"><span class="sw" style="background:var(--s-magenta)"></span>관광객</span><span class="sl-v tnum">10%</span></div>
-            <div class="stat-line"><span class="sl-l"><span class="sw" style="background:var(--s-violet)"></span>학생</span><span class="sl-v tnum">6%</span></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 시간대 분석 -->
-      <div class="card col-4">
-        <div class="c-head"><div><div class="c-title">시간대 분석</div><div class="c-sub">리뷰 방문 언급 기준</div></div></div>
-        <svg viewBox="0 0 320 170" width="100%" height="150" font-family="system-ui" font-size="9.5">
-          <g stroke="var(--grid)" stroke-width="1">
-            <line x1="0" y1="30" x2="320" y2="30"/><line x1="0" y1="70" x2="320" y2="70"/><line x1="0" y1="110" x2="320" y2="110"/>
-          </g>
-          <!-- bars: 11..22 ; peak highlighted -->
-          <g>
-            <rect x="6"  y="98"  width="18" height="42"  rx="4" fill="var(--s-blue-soft)"/>
-            <rect x="32" y="30"  width="18" height="110" rx="4" fill="var(--s-blue)"/>
-            <rect x="58" y="42"  width="18" height="98"  rx="4" fill="var(--s-blue)"/>
-            <rect x="84" y="92"  width="18" height="48"  rx="4" fill="var(--s-blue-soft)"/>
-            <rect x="110" y="112" width="18" height="28" rx="4" fill="var(--s-blue-soft)"/>
-            <rect x="136" y="118" width="18" height="22" rx="4" fill="var(--s-blue-soft)"/>
-            <rect x="162" y="104" width="18" height="36" rx="4" fill="var(--s-blue-soft)"/>
-            <rect x="188" y="55"  width="18" height="85" rx="4" fill="var(--s-blue)"/>
-            <rect x="214" y="62"  width="18" height="78" rx="4" fill="var(--s-blue)"/>
-            <rect x="240" y="92"  width="18" height="48" rx="4" fill="var(--s-blue-soft)"/>
-            <rect x="266" y="112" width="18" height="28" rx="4" fill="var(--s-blue-soft)"/>
-            <rect x="292" y="126" width="18" height="14" rx="4" fill="var(--s-blue-soft)"/>
-          </g>
-          <g fill="var(--muted)" text-anchor="middle">
-            <text x="15" y="154">11</text><text x="41" y="154">12</text><text x="67" y="154">13</text>
-            <text x="119" y="154">15</text><text x="197" y="154">18</text><text x="223" y="154">19</text><text x="301" y="154">22</text>
-          </g>
-          <text x="41" y="24" fill="var(--brand)" font-weight="700" text-anchor="middle" font-size="10">점심 피크</text>
-        </svg>
-      </div>
-
-      <!-- 메뉴 언급량 -->
-      <div class="card col-4">
-        <div class="c-head"><div class="c-title">메뉴 언급량</div><span class="c-tag">상위 6</span></div>
-        <div class="kw">
-          <div class="kw-row" style="grid-template-columns:96px 1fr auto"><span class="kw-name">돼지국밥</span><span class="kw-track"><span class="kw-fill" style="width:100%;background:var(--s-blue)"></span></span><span class="kw-val tnum">1,180</span></div>
-          <div class="kw-row" style="grid-template-columns:96px 1fr auto"><span class="kw-name">순대국밥</span><span class="kw-track"><span class="kw-fill" style="width:54%;background:var(--s-blue)"></span></span><span class="kw-val tnum">642</span></div>
-          <div class="kw-row" style="grid-template-columns:96px 1fr auto"><span class="kw-name">섞어국밥</span><span class="kw-track"><span class="kw-fill" style="width:40%;background:var(--s-blue)"></span></span><span class="kw-val tnum">470</span></div>
-          <div class="kw-row" style="grid-template-columns:96px 1fr auto"><span class="kw-name">수육</span><span class="kw-track"><span class="kw-fill" style="width:33%;background:var(--s-blue)"></span></span><span class="kw-val tnum">388</span></div>
-          <div class="kw-row" style="grid-template-columns:96px 1fr auto"><span class="kw-name">내장국밥</span><span class="kw-track"><span class="kw-fill" style="width:23%;background:var(--s-blue)"></span></span><span class="kw-val tnum">274</span></div>
-          <div class="kw-row" style="grid-template-columns:96px 1fr auto"><span class="kw-name">모듬국밥</span><span class="kw-track"><span class="kw-fill" style="width:18%;background:var(--s-blue)"></span></span><span class="kw-val tnum">210</span></div>
-        </div>
-      </div>
-
-      <!-- AI 추천 액션 -->
-      <div class="card col-12">
-        <div class="c-head">
           <div>
-            <div class="c-title">✦ AI 추천 액션</div>
-            <div class="c-sub">리뷰 데이터 기반 · 우선순위 순</div>
+            <div class="c-title">리뷰 추이</div>
+            <div class="c-sub">최근 12주 · 주간 집계</div>
           </div>
-          <span class="c-tag">4개 제안</span>
-        </div>
-        <div class="ai-grid">
-          <div class="ai-card crit">
-            <span class="ai-sev" style="color:var(--critical)"><span class="pip" style="width:7px;height:7px;border-radius:50%;background:var(--critical);display:inline-block"></span>긴급</span>
-            <div class="ai-title">광안리점 위생·대기 집중 관리</div>
-            <div class="ai-body">긍정률 66%로 전 지점 최저. ‘위생·청결’ 언급이 최근 2주 <b>+38%</b> 급증했습니다. 현장 점검과 응대 매뉴얼 재교육을 권장합니다.</div>
-            <div class="ai-foot"><span class="ai-link">지점 리포트 열기 →</span><span class="ai-metric">긍정률 66%</span></div>
-          </div>
-          <div class="ai-card">
-            <span class="ai-sev" style="color:var(--warn)"><span class="pip" style="width:7px;height:7px;border-radius:50%;background:var(--warn);display:inline-block"></span>주의</span>
-            <div class="ai-title">점심 피크 대기시간 개선</div>
-            <div class="ai-body">‘대기시간’ 부정 언급 214건 중 <b>71%가 12–13시</b>에 집중. 예약·포장 라인 분리와 회전율 관리 검토가 필요합니다.</div>
-            <div class="ai-foot"><span class="ai-link">시간대 상세 →</span><span class="ai-metric">부정 214건</span></div>
-          </div>
-          <div class="ai-card">
-            <span class="ai-sev" style="color:var(--good)"><span class="pip" style="width:7px;height:7px;border-radius:50%;background:var(--good);display:inline-block"></span>기회</span>
-            <div class="ai-title">‘진한 국물’ 강점 마케팅</div>
-            <div class="ai-body">최다 긍정 키워드(<b>642건</b>). 시그니처 메시지로 SNS·메뉴판 전면 배치 시 신규 유입과 재방문 전환이 기대됩니다.</div>
-            <div class="ai-foot"><span class="ai-link">캠페인 만들기 →</span><span class="ai-metric">긍정 642건</span></div>
-          </div>
-          <div class="ai-card">
-            <span class="ai-sev" style="color:var(--muted)"><span class="pip" style="width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block"></span>모니터링</span>
-            <div class="ai-title">센텀점 평점 하락 추세</div>
-            <div class="ai-body">최근 30일 평점 <b>-0.2</b>, ‘짜다’ 언급 증가. 국물 간 표준화 레시피 점검으로 조기 대응을 제안합니다.</div>
-            <div class="ai-foot"><span class="ai-link">추이 보기 →</span><span class="ai-metric">평점 4.1</span></div>
-          </div>
-        </div>
-      </div>
-
-
-      <!-- 누락 사항 반영: 키워드/문장 분석 & 프롬프트 설정 -->
+<!-- 누락 사항 반영: 키워드/문장 분석 & 프롬프트 설정 -->
       <div class="card col-12" style="margin-top:20px; display:flex; gap:20px; flex-wrap:wrap;">
         <div style="flex:2; min-width:300px;">
           <div class="c-head"><div class="c-title">주요 키워드 및 네이버 리뷰 문장 분석</div></div>
@@ -1032,7 +797,6 @@
             </div>
           </div>
         </div>
-      </div>
     </div><!-- /grid -->
 
     <div class="foot-note">웨이브앤바이브 리뷰 인텔리전스 · 데모 데이터 · 네이버·카카오·구글·배달앱 리뷰 통합 분석</div>
