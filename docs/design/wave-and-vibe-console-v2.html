@@ -737,8 +737,7 @@
 
     <!-- ---------- GRID ---------- -->
     <div class="grid">
-<!-- 긍정/부정 비율 (donut) -->
-      <div class="card col-6">
+<div class="card col-6">
         <div class="c-head">
           <div class="c-title">긍정 / 부정 비율</div>
           <span class="c-tag">3,428건</span>
@@ -758,9 +757,48 @@
                 stroke-dasharray="14 86" stroke-dashoffset="-61" stroke-linecap="round"/>
             </svg>
             <div class="dc-txt"><div class="dc-big">78%</div><div class="dc-small">긍정</div></div>
+<div class="card col-6">
+        <div class="c-head"><div class="c-title">긍정 추천 메뉴</div><span class="c-tag">상위 6</span></div>
+        <div class="kw">
+          <div class="kw-row" style="grid-template-columns:96px 1fr auto"><span class="kw-name">돼지국밥</span><span class="kw-track"><span class="kw-fill" style="width:100%;background:var(--s-blue)"></span></span><span class="kw-val tnum">1,180</span></div>
+          <div class="kw-row" style="grid-template-columns:96px 1fr auto"><span class="kw-name">순대국밥</span><span class="kw-track"><span class="kw-fill" style="width:54%;background:var(--s-blue)"></span></span><span class="kw-val tnum">642</span></div>
+          <div class="kw-row" style="grid-template-columns:96px 1fr auto"><span class="kw-name">섞어국밥</span><span class="kw-track"><span class="kw-fill" style="width:40%;background:var(--s-blue)"></span></span><span class="kw-val tnum">470</span></div>
+          <div class="kw-row" style="grid-template-columns:96px 1fr auto"><span class="kw-name">수육</span><span class="kw-track"><span class="kw-fill" style="width:33%;background:var(--s-blue)"></span></span><span class="kw-val tnum">388</span></div>
+          <div class="kw-row" style="grid-template-columns:96px 1fr auto"><span class="kw-name">내장국밥</span><span class="kw-track"><span class="kw-fill" style="width:23%;background:var(--s-blue)"></span></span><span class="kw-val tnum">274</span></div>
+          <div class="kw-row" style="grid-template-columns:96px 1fr auto"><span class="kw-name">모듬국밥</span><span class="kw-track"><span class="kw-fill" style="width:18%;background:var(--s-blue)"></span></span><span class="kw-val tnum">210</span></div>
+        </div>
+
+
+
+      <div class="card col-12" style="display:flex; gap:20px; flex-wrap:wrap;">
+        <div style="flex:2; min-width:300px;">
+          <div class="c-head"><div class="c-title">네이버 리뷰 문장 분석</div></div>
+          <div style="padding:15px; background:var(--surface-2); border-radius:8px; margin-top:10px;">
+            <p style="font-size:13.5px; margin-bottom:12px;"><b>추출된 핵심 키워드:</b> <span class="tag">#솥밥</span> <span class="tag">#맑은국물</span> <span class="tag">#웨이팅</span></p>
+            <blockquote style="border-left:3px solid var(--brand); padding-left:12px; font-size:13px; color:var(--ink-2); line-height:1.6;">
+              "국물은 깔끔하고 <b>솥밥</b>이 같이 나와서 든든했어요. 주말 점심이라 <b>웨이팅</b>이 40분이나 걸려서 조금 아쉬웠지만 뷰가 좋아서 용서가 됩니다."<br>
+              <span style="font-size:11px; color:var(--muted); margin-top:5px; display:block;">- 네이버 영수증 리뷰 (광안리점) 발췌</span>
+            </blockquote>
           </div>
-
-
+        </div>
+        <div style="flex:1; min-width:250px;">
+          <div class="c-head"><div class="c-title">AI 제어 및 연동 (Admin)</div></div>
+          <div style="padding:15px; background:var(--surface-2); border-radius:8px; margin-top:10px;">
+            <div style="font-size:13px; margin-bottom:12px;">
+              <b style="display:block; margin-bottom:5px;">키워드 분류 기준 (Prompting)</b>
+              <textarea style="width:100%; height:55px; font-size:12px; padding:6px; border:1px solid var(--hairline); border-radius:4px; resize:none;" readonly>- 긍정: 맛, 서비스 명확한 만족
+- 부정: 불친절, 냄새 등 불만</textarea>
+              <div style="text-align:right; margin-top:5px;">
+                <button style="font-size:11.5px; padding:4px 8px; border:1px solid var(--hairline); background:var(--surface); border-radius:4px; cursor:pointer;">프롬프트 수정</button>
+              </div>
+            </div>
+            <div style="font-size:13px; display:flex; justify-content:space-between; align-items:center; border-top:1px dashed var(--hairline); padding-top:12px;">
+              <span><b>클로드 n8n 워크플로우</b></span>
+              <span class="status-tag" style="background:var(--good-soft); color:var(--good);">✅ Active</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
     </div><!-- /grid -->
 
