@@ -5,7 +5,7 @@ import { MessageSquare, Star, ThumbsUp, ThumbsDown, Inbox } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { KpiCard } from "@/components/dashboard/KpiCard";
-import type { DashboardData } from "@/lib/types";
+import type { DashboardData, ReviewItem } from "@/lib/types";
 
 // "정보없음"은 축소하지 않고 실제 비중대로 muted 색으로 크게 보여준다 (데이터 한계를 숨기지 않음).
 const PURPOSE_COLORS: Record<string, string> = {
@@ -17,6 +17,7 @@ const PURPOSE_COLORS: Record<string, string> = {
 export function DashboardClient({
   initialData,
   updatedAt,
+  allReviews,
 }: {
   initialData: DashboardData;
   /**
@@ -25,14 +26,44 @@ export function DashboardClient({
    * 하이드레이션 불일치가 발생한다.
    */
   updatedAt: string;
+  allReviews?: ReviewItem[];
 }) {
   const [selectedBranch, setSelectedBranch] = React.useState("전체");
+  const [selectedPeriod, setSelectedPeriod] = React.useState("전체");
   
-  const handleBranchChange = (branch: string) => {
-    setSelectedBranch(branch);
-  };
+  const handleBranchChange = (branch: string) => setSelectedBranch(branch);
+  const handlePeriodChange = (period: string) => setSelectedPeriod(period);
   
   const branchOptions = ["전체", ...(initialData.branchStats?.map(b => b.branch) || [])];
+  const periodOptions = ["전체", "최근 30일", "최근 90일", "최근 6개월"];
+
+  // 필터링 적용 (원시 데이터 기반)
+  const filteredReviews = React.useMemo(() => {
+    if (!allReviews) return [];
+    
+    // 날짜 역순 정렬 후 최신 날짜 찾기
+    const sorted = [...allReviews].sort((a, b) => b.date.localeCompare(a.date));
+    const latestDate = sorted.length > 0 ? new Date(sorted[0].date) : new Date();
+    
+    let daysToKeep = Infinity;
+    if (selectedPeriod === "최근 30일") daysToKeep = 30;
+    else if (selectedPeriod === "최근 90일") daysToKeep = 90;
+    else if (selectedPeriod === "최근 6개월") daysToKeep = 180;
+    
+    return allReviews.filter(r => {
+      // 지점 필터
+      if (selectedBranch !== "전체" && r.branch !== selectedBranch) return false;
+      
+      // 기간 필터
+      if (daysToKeep !== Infinity && r.date) {
+        const rDate = new Date(r.date);
+        const diffTime = Math.abs(latestDate.getTime() - rDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays > daysToKeep) return false;
+      }
+      return true;
+    });
+  }, [allReviews, selectedBranch, selectedPeriod]);
 
   // 파생 KPI 계산
   let displayReviews = initialData.totalReviews;
@@ -41,21 +72,29 @@ export function DashboardClient({
   let displayAvgRating = initialData.averageRating;
   let displayPending = initialData.pendingReplies;
 
-  if (selectedBranch !== "전체") {
-    const stat = initialData.branchStats?.find(b => b.branch === selectedBranch);
-    if (stat) {
-      displayReviews = stat.reviewCount;
-      displayPosPct = stat.positivePct;
-      displayNegPct = stat.negativePct;
-      displayAvgRating = stat.avgRating;
-      displayPending = undefined; // 지점별 미답변 리뷰 수는 현재 API에 없음
-    } else {
-      displayReviews = 0;
-      displayPosPct = 0;
-      displayNegPct = 0;
-      displayAvgRating = undefined;
-      displayPending = undefined;
-    }
+  if (allReviews && (selectedBranch !== "전체" || selectedPeriod !== "전체")) {
+    let pos = 0, neg = 0, judged = 0, rSum = 0, rCount = 0, pending = 0;
+    
+    filteredReviews.forEach(r => {
+      if (r.sentiment === "긍정") { pos++; judged++; }
+      else if (r.sentiment === "부정") { neg++; judged++; }
+      else if (r.sentiment === "중립" || r.sentiment === "혼합") { judged++; }
+      
+      if (typeof r.rating === "number" && !isNaN(r.rating)) {
+        rSum += r.rating;
+        rCount++;
+      }
+      
+      if (r.sentiment === "부정" || (typeof r.rating === "number" && r.rating <= 2)) {
+        pending++;
+      }
+    });
+    
+    displayReviews = filteredReviews.length;
+    displayPosPct = judged > 0 ? Math.round((pos / judged) * 100) : 0;
+    displayNegPct = judged > 0 ? Math.round((neg / judged) * 100) : 0;
+    displayAvgRating = rCount > 0 ? Math.round((rSum / rCount) * 10) / 10 : undefined;
+    displayPending = pending;
   }
 
 
@@ -67,6 +106,9 @@ export function DashboardClient({
         branchFilter={selectedBranch}
         onBranchChange={handleBranchChange}
         branchOptions={branchOptions}
+        periodFilter={selectedPeriod}
+        onPeriodChange={handlePeriodChange}
+        periodOptions={periodOptions}
       />
 
       {/* KPI 행. 데이터가 없는 지표는 값을 지어내지 않고 사유를 표시한다. */}

@@ -98,6 +98,8 @@ export type ReviewItem = {
   rating?: number;
   url?: string;
   keywords: string[];
+  menus?: string[];
+  purpose?: string;
 };
 
 /** AI 주간리포트 지점별 인사이트 */
