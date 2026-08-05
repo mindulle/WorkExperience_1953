@@ -17,7 +17,6 @@ const PURPOSE_COLORS: Record<string, string> = {
 export function DashboardClient({
   initialData,
   updatedAt,
-  branchFilter,
 }: {
   initialData: DashboardData;
   /**
@@ -26,7 +25,6 @@ export function DashboardClient({
    * 하이드레이션 불일치가 발생한다.
    */
   updatedAt: string;
-  branchFilter?: string;
 }) {
   const [selectedBranch, setSelectedBranch] = React.useState("전체");
   
@@ -106,7 +104,7 @@ export function DashboardClient({
           value={displayPending !== undefined ? String(displayPending) : undefined}
           pending={displayPending === undefined ? (selectedBranch === "전체" ? "오너 콘솔 연동 필요" : "데이터 없음") : undefined}
           meta={initialData.pendingReplies !== undefined ? "1~2점 및 부정 감성" : undefined}
-          valueColor={displayPending && displayPending > 0 ? "var(--critical)" : "var(--good)"}
+          valueColor={(displayPending ?? 0) > 0 ? "var(--critical)" : "var(--good)"}
         />
       </div>
 

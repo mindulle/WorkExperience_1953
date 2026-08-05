@@ -53,9 +53,10 @@ test.describe('대시보드 레이아웃', () => {
     // 값이 있는 지표
     // 삭제됨: 실제 시트 데이터가 렌더링되므로 하드코딩된 '1,716' 검증 제외
 
-    // 아직 수집하지 않는 지표는 값을 지어내지 않고 사유를 보여준다.
-    await expect(page.getByText('평점 수집 미구현')).toBeVisible();
-    await expect(page.getByText('오너 콘솔 연동 필요')).toBeVisible();
+    // 이슈 #87 반영으로, 이제 평점과 미답변 리뷰 수가 실제 연동되었습니다.
+    // 기존의 미구현 텍스트는 사라지고 실제 라벨이 표시되어야 합니다.
+    await expect(page.getByText('평균 평점')).toBeVisible();
+    await expect(page.getByText('응답 필요 리뷰')).toBeVisible();
   });
 
   test('시트 연동 상태가 표시된다', async ({ page }) => {
