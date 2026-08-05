@@ -10,8 +10,8 @@ from pathlib import Path
 from datetime import datetime
 
 # ── 경로 설정 ─────────────────────────────────────────────────────────────────
-INPUT_CSV = Path("/home/ubuntu/WorkExperience_1953/data/1953_일경험프로젝트_통합자료/07_데이터_수집분석_리소스/mentions_clean.csv")
-OUTPUT_DIR = Path("/home/ubuntu/WorkExperience_1953/data/clean")
+INPUT_CSV = Path(__file__).resolve().parent.parent.parent.parent / "data" / "clean" / "mentions_clean.csv"
+OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent.parent / "data" / "clean"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_CSV     = OUTPUT_DIR / "reviews_analyzed.csv"
 UNCERTAIN_CSV  = OUTPUT_DIR / "reviews_uncertain.csv"
