@@ -13,9 +13,11 @@ export type KpiCardProps = {
   meta?: string;
   /** 데이터 연동 전 상태. 값 대신 사유를 보여준다. */
   pending?: string;
+  /** 값의 색상 커스텀 (예: var(--critical)) */
+  valueColor?: string;
 };
 
-export function KpiCard({ label, icon: Icon, value, unit, meta, pending }: KpiCardProps) {
+export function KpiCard({ label, icon: Icon, value, unit, meta, pending, valueColor }: KpiCardProps) {
   return (
     <div
       className={`bg-[var(--surface)] border border-[var(--hairline)] rounded-[var(--r-md)] px-[18px] py-[17px] relative overflow-hidden [box-shadow:var(--shadow)] ${
@@ -36,7 +38,7 @@ export function KpiCard({ label, icon: Icon, value, unit, meta, pending }: KpiCa
         </>
       ) : (
         <>
-          <div className="mt-[9px] text-[30px] font-bold leading-none tracking-[-1px] [font-variant-numeric:tabular-nums]">
+          <div className="mt-[9px] text-[30px] font-bold leading-none tracking-[-1px] [font-variant-numeric:tabular-nums]" style={valueColor ? { color: valueColor } : {}}>
             {value}
             {unit && <span className="text-base font-semibold text-[var(--muted)] ml-1">{unit}</span>}
           </div>

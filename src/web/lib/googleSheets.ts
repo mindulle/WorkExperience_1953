@@ -282,16 +282,37 @@ export async function getDashboardData(): Promise<DashboardData> {
     let positive = 0;
     let negative = 0;
     let neutral = 0;
+    let ratingSum = 0;
+    let ratingCount = 0;
+    let pendingReplies = 0;
     
     const sentimentCol = reviewSheet.header.indexOf("sentiment_final");
+    const ratingCol = reviewSheet.header.indexOf("rating");
+    
     if (sentimentCol !== -1) {
       for (const row of reviewSheet.rows) {
         const s = row[sentimentCol];
         if (s === "긍정") positive++;
         else if (s === "부정") negative++;
         else if (s === "중립" || s === "혼합") neutral++;
+        
+        let r = NaN;
+        if (ratingCol !== -1 && row[ratingCol]) {
+          r = parseFloat(row[ratingCol]);
+          if (!isNaN(r)) {
+            ratingSum += r;
+            ratingCount++;
+          }
+        }
+        
+        // 악성/불만 리뷰는 미답변(Pending) 처리
+        if (s === "부정" || (!isNaN(r) && r <= 2)) {
+          pendingReplies++;
+        }
       }
     }
+    
+    const averageRating = ratingCount > 0 ? Math.round((ratingSum / ratingCount) * 10) / 10 : undefined;
 
     const total = reviewSheet.rows.length;
     const totalPosNeg = positive + negative;
@@ -310,6 +331,8 @@ export async function getDashboardData(): Promise<DashboardData> {
       totalReviews: total > 0 ? total : FALLBACK.totalReviews,
       positivePct: posPct,
       negativePct: negPct,
+      averageRating,
+      pendingReplies,
       purposes: purposes ?? FALLBACK.purposes,
       monthlyTrend: monthlyTrend ?? FALLBACK.monthlyTrend,
       menuRanking: menuRanking ?? FALLBACK.menuRanking,
