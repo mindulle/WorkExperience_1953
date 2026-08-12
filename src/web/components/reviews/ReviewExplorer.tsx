@@ -82,11 +82,6 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
 
   const selectedReview = reviews.find(r => r.id === selectedId) || null;
 
-  // AI 리뷰 분석 파이프라인 (Admin) 카드용 — 가장 최근 작성된 리뷰 1건을 실데이터로 미리보기.
-  const latestReview = useMemo(() => {
-    if (reviews.length === 0) return null;
-    return [...reviews].sort((a, b) => b.date.localeCompare(a.date))[0];
-  }, [reviews]);
 
   // 요약 카운트
   const countPos = reviews.filter(r => r.sentiment === "긍정").length;
@@ -198,92 +193,6 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
           </span>
         </div>
       </div>
-
-      {/* AI 리뷰 분석 파이프라인 (Admin). 오너 콘솔용 미리보기 — 프론트엔드는 AI를
-          직접 호출하지 않고 배치 파이프라인(rule_classifier.py) 결과만 보여준다 (RULES §3.2). */}
-      <Card className="mt-[18px]">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <div>
-            <div className="text-[15px] font-bold">AI 리뷰 분석 파이프라인 (Admin)</div>
-            <div className="text-[12px] text-[var(--muted)] mt-0.5">규칙 기반 분류 기준 및 최신 분석 결과 미리보기</div>
-          </div>
-          <span className="status-tag new">규칙 기반 분류 파이프라인</span>
-        </div>
-        <div className="flex gap-6 flex-wrap">
-          <div className="flex-1 min-w-[260px] flex flex-col md:border-r md:border-dashed md:border-[var(--hairline)] md:pr-6">
-            <b className="text-[13px] mb-2 block">키워드 분류 기준 (rule_classifier.py)</b>
-            <textarea
-              readOnly
-              className="flex-1 w-full min-h-[80px] text-[12.5px] p-2.5 border border-[var(--hairline)] rounded-md resize-none bg-[var(--surface-2)]"
-              value={"- 긍정: 맛있, 친절, 깔끔, 만족, 재방문 등\n- 부정: 별로, 불친절, 위생, 냄새, 웨이팅 등\n- 긍정/부정 키워드가 함께 발견되면 '혼합'으로 분류"}
-            />
-            <div className="text-right mt-2.5">
-              <button disabled className="text-xs px-3 py-1.5 rounded-md border border-[var(--hairline)] opacity-50 cursor-not-allowed">
-                ✏️ 프롬프트 수정 (준비 중)
-              </button>
-            </div>
-          </div>
-          <div className="flex-[1.5] min-w-[260px] flex flex-col">
-            <b className="text-[13px] mb-2 block">최신 발췌 문장 (AI Analysis Preview)</b>
-            {latestReview ? (
-              <div className="bg-[var(--surface-2)] p-4 rounded-lg flex-1 border border-[var(--hairline)]">
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
-                      latestReview.sentiment === "긍정" ? "bg-[var(--s-blue-soft)] text-[var(--brand)]" :
-                      latestReview.sentiment === "부정" ? "bg-[var(--critical-soft)] text-[var(--critical)]" :
-                      "bg-[var(--surface-3)] text-[var(--ink-2)]"
-                    }`}>{latestReview.sentiment}</span>
-                    <span className="text-[12px] font-semibold">★ {latestReview.rating || "-"}</span>
-                  </div>
-                  <div className="text-[11px] text-[var(--muted)]">{latestReview.date || "날짜미상"}</div>
-                </div>
-                
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  {latestReview.customerType && latestReview.customerType !== "정보없음" && (
-                    <span className="text-[10.5px] px-2 py-0.5 bg-[var(--s-yellow-soft)] text-[#b45309] rounded font-medium">👤 {latestReview.customerType}</span>
-                  )}
-                  {latestReview.menus && latestReview.menus.length > 0 && (
-                    <span className="text-[10.5px] px-2 py-0.5 bg-[var(--s-aqua-soft)] text-[#0d9488] rounded font-medium">🍲 {latestReview.menus.slice(0,2).join(', ')}</span>
-                  )}
-                  {latestReview.keywords && latestReview.keywords.slice(0, 3).map((k, i) => (
-                    <span key={i} className="text-[10.5px] px-2 py-0.5 bg-white border border-[var(--hairline)] text-[var(--ink-2)] rounded">#{k}</span>
-                  ))}
-                </div>
-
-                {latestReview.aspects && latestReview.aspects.length > 0 ? (
-                  <div className="flex flex-col gap-2 mt-2">
-                    {latestReview.aspects.map((aspect, idx) => (
-                      <blockquote key={idx} className={`border-l-[3px] pl-3.5 text-[13px] leading-relaxed m-0 ${
-                        aspect.sentiment === "긍정" ? "border-[var(--brand)] text-[var(--ink)]" :
-                        aspect.sentiment === "부정" ? "border-[var(--critical)] text-[var(--ink)]" :
-                        "border-[var(--muted)] text-[var(--ink-2)]"
-                      }`}>
-                        <span className="font-semibold mr-1">[{aspect.category}]</span> 
-                        {aspect.context}
-                      </blockquote>
-                    ))}
-                    <span className="text-[11px] text-[var(--muted)] mt-1.5 block">
-                      - {latestReview.branch} ({latestReview.channel})
-                    </span>
-                  </div>
-                ) : (
-                  <blockquote className="border-l-[3px] border-[var(--brand)] pl-3.5 text-[13px] text-[var(--ink-2)] leading-relaxed m-0 mt-2">
-                    &ldquo;{latestReview.content}&rdquo;
-                    <span className="text-[11px] text-[var(--muted)] mt-2 block">
-                      - {latestReview.branch} 리뷰 원문 ({latestReview.channel})
-                    </span>
-                  </blockquote>
-                )}
-              </div>
-            ) : (
-              <div className="bg-[var(--surface-2)] p-4 rounded-lg flex-1 text-[var(--muted)] text-[13px] border border-[var(--hairline)]">
-                표시할 리뷰가 없습니다.
-              </div>
-            )}
-          </div>
-        </div>
-      </Card>
 
       <div className="pane-grid">
         <div className="list">
