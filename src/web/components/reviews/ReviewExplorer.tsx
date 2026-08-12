@@ -332,16 +332,52 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
               <div className="d-title">리뷰 상세</div>
               <div className="d-close" onClick={() => setSelectedId(null)}>✕</div>
             </div>
-            <div className="d-meta-row">
+            <div className="d-meta-row mb-3 flex flex-wrap gap-1.5 items-center">
               <span className="branch-badge">{selectedReview.branch}</span>
               <span className="d-stars font-bold text-sm text-[var(--s-orange)]">
                 ★ {selectedReview.rating || "-"}
               </span>
-              <span className="rdate">{selectedReview.date || "날짜미상"} · {selectedReview.channel}</span>
+              <span className="rdate ml-1">{selectedReview.date || "날짜미상"} · {selectedReview.channel}</span>
             </div>
-            <div className="d-body">
+
+            {/* AI 메타 태그 */}
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                selectedReview.sentiment === "긍정" ? "bg-[var(--s-blue-soft)] text-[var(--brand)]" :
+                selectedReview.sentiment === "부정" ? "bg-[var(--critical-soft)] text-[var(--critical)]" :
+                "bg-[var(--surface-3)] text-[var(--ink-2)]"
+              }`}>{selectedReview.sentiment}</span>
+              {selectedReview.customerType && selectedReview.customerType !== "정보없음" && (
+                <span className="text-[10.5px] px-2 py-0.5 bg-[var(--s-yellow-soft)] text-[#b45309] rounded font-medium">👤 {selectedReview.customerType}</span>
+              )}
+              {selectedReview.menus && selectedReview.menus.length > 0 && (
+                <span className="text-[10.5px] px-2 py-0.5 bg-[var(--s-aqua-soft)] text-[#0d9488] rounded font-medium">🍲 {selectedReview.menus.join(', ')}</span>
+              )}
+            </div>
+
+            <div className="d-label">리뷰 본문</div>
+            <div className="d-body mb-6 text-[13.5px] leading-relaxed">
               {selectedReview.content}
             </div>
+
+            {/* AI 발췌 분석 (Aspects) */}
+            {selectedReview.aspects && selectedReview.aspects.length > 0 && (
+              <div className="d-section mb-6">
+                <div className="d-label">AI 발췌 및 분석</div>
+                <div className="flex flex-col gap-2 mt-1">
+                  {selectedReview.aspects.map((aspect, idx) => (
+                    <blockquote key={idx} className={`border-l-[3px] pl-3.5 py-0.5 text-[13px] leading-relaxed m-0 bg-[var(--plane)] ${
+                      aspect.sentiment === "긍정" ? "border-[var(--brand)] text-[var(--ink)]" :
+                      aspect.sentiment === "부정" ? "border-[var(--critical)] text-[var(--ink)]" :
+                      "border-[var(--muted)] text-[var(--ink-2)]"
+                    }`}>
+                      <span className="font-semibold mr-1">[{aspect.category}]</span> 
+                      {aspect.context}
+                    </blockquote>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="d-section">
               <div className="d-label">키워드</div>
