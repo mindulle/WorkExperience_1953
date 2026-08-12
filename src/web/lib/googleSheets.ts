@@ -395,7 +395,7 @@ export async function getAllReviews(): Promise<ReviewItem[]> {
     const authorIdx = h.indexOf("작성자");
     const dateIdx = h.indexOf("작성일");
     const ymIdx = h.indexOf("approx_ym");
-    const contentIdx = h.indexOf("review_text");
+    const contentIdx = h.indexOf("review_text") !== -1 ? h.indexOf("review_text") : h.indexOf("본문");
     const sentimentIdx = h.indexOf("sentiment_final");
     const ratingIdx = h.indexOf("rating");
     const urlIdx = h.indexOf("URL");
