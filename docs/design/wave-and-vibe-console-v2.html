@@ -375,10 +375,6 @@
 #page-trend .dir-badge.down{color:#0a7a0a;background:var(--good-soft);}
 #page-trend .dir-badge svg{width:10px;height:10px;}
 /* heatmap */
-  #page-trend .heatmap{display:grid;grid-template-columns:52px repeat(7,1fr);gap:4px;}
-#page-trend .hm-cell{height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:var(--ink-2);}
-#page-trend .hm-label{font-size:11px;color:var(--muted);display:flex;align-items:center;}
-#page-trend .hm-col-label{font-size:11px;color:var(--muted);text-align:center;padding-bottom:4px;}
 #page-trend .foot-note{font-size:11px;color:var(--muted);margin-top:22px;text-align:center;padding-top:16px;border-top:1px solid var(--hairline);}
 
   /* ===== page: branch (지점 관리) ===== */
@@ -955,7 +951,8 @@
       </div>
 
       <!-- keyword trend table -->
-      <div class="card col-7">
+      <!-- [#130] "요일 × 시간대 히트맵" 카드 제외 (파이프라인에 방문 시각 데이터 없음) — 이 카드를 col-12로 확장해 빈 자리를 채움 -->
+      <div class="card col-12">
         <div class="c-head"><div><div class="c-title">키워드 트렌드</div><div class="c-sub">전기 대비 언급량 변화 상위</div></div><span class="c-tag">최근 12주</span></div>
         <table>
           <thead><tr><th style="width:24%">키워드</th><th style="width:20%">유형</th><th style="width:22%">최근 추이</th><th class="r" style="width:16%">언급량</th><th class="r" style="width:18%">전기 대비</th></tr></thead>
@@ -989,43 +986,6 @@
         </table>
       </div>
 
-      <!-- heatmap -->
-      <div class="card col-5">
-        <div class="c-head"><div><div class="c-title">요일 × 시간대 히트맵</div><div class="c-sub">리뷰 방문 언급 밀도</div></div></div>
-        <div class="heatmap">
-          <div></div>
-          <div class="hm-col-label">11시</div><div class="hm-col-label">12시</div><div class="hm-col-label">13시</div>
-          <div class="hm-col-label">15시</div><div class="hm-col-label">18시</div><div class="hm-col-label">19시</div><div class="hm-col-label">22시</div>
-
-          <div class="hm-label">월</div>
-          <div class="hm-cell" style="background:var(--seq-200)">32</div><div class="hm-cell" style="background:var(--seq-500);color:#fff">88</div><div class="hm-cell" style="background:var(--seq-400);color:#fff">74</div>
-          <div class="hm-cell" style="background:var(--seq-100)">20</div><div class="hm-cell" style="background:var(--seq-300);color:#fff">55</div><div class="hm-cell" style="background:var(--seq-200)">40</div><div class="hm-cell" style="background:var(--seq-100)">12</div>
-
-          <div class="hm-label">화</div>
-          <div class="hm-cell" style="background:var(--seq-200)">30</div><div class="hm-cell" style="background:var(--seq-500);color:#fff">90</div><div class="hm-cell" style="background:var(--seq-400);color:#fff">72</div>
-          <div class="hm-cell" style="background:var(--seq-100)">18</div><div class="hm-cell" style="background:var(--seq-300);color:#fff">52</div><div class="hm-cell" style="background:var(--seq-200)">38</div><div class="hm-cell" style="background:var(--seq-100)">10</div>
-
-          <div class="hm-label">수</div>
-          <div class="hm-cell" style="background:var(--seq-200)">34</div><div class="hm-cell" style="background:var(--seq-600);color:#fff">95</div><div class="hm-cell" style="background:var(--seq-400);color:#fff">76</div>
-          <div class="hm-cell" style="background:var(--seq-100)">22</div><div class="hm-cell" style="background:var(--seq-300);color:#fff">58</div><div class="hm-cell" style="background:var(--seq-200)">42</div><div class="hm-cell" style="background:var(--seq-100)">14</div>
-
-          <div class="hm-label">목</div>
-          <div class="hm-cell" style="background:var(--seq-200)">33</div><div class="hm-cell" style="background:var(--seq-500);color:#fff">87</div><div class="hm-cell" style="background:var(--seq-400);color:#fff">73</div>
-          <div class="hm-cell" style="background:var(--seq-100)">21</div><div class="hm-cell" style="background:var(--seq-300);color:#fff">54</div><div class="hm-cell" style="background:var(--seq-200)">39</div><div class="hm-cell" style="background:var(--seq-100)">13</div>
-
-          <div class="hm-label">금</div>
-          <div class="hm-cell" style="background:var(--seq-300);color:#fff">48</div><div class="hm-cell" style="background:var(--seq-500);color:#fff">92</div><div class="hm-cell" style="background:var(--seq-400);color:#fff">80</div>
-          <div class="hm-cell" style="background:var(--seq-200)">30</div><div class="hm-cell" style="background:var(--seq-500);color:#fff">86</div><div class="hm-cell" style="background:var(--seq-500);color:#fff">90</div><div class="hm-cell" style="background:var(--seq-300);color:#fff">44</div>
-
-          <div class="hm-label">토</div>
-          <div class="hm-cell" style="background:var(--seq-400);color:#fff">70</div><div class="hm-cell" style="background:var(--seq-600);color:#fff">98</div><div class="hm-cell" style="background:var(--seq-500);color:#fff">88</div>
-          <div class="hm-cell" style="background:var(--seq-300);color:#fff">50</div><div class="hm-cell" style="background:var(--seq-600);color:#fff">96</div><div class="hm-cell" style="background:var(--seq-600);color:#fff">99</div><div class="hm-cell" style="background:var(--seq-400);color:#fff">60</div>
-
-          <div class="hm-label">일</div>
-          <div class="hm-cell" style="background:var(--seq-400);color:#fff">68</div><div class="hm-cell" style="background:var(--seq-600);color:#fff">96</div><div class="hm-cell" style="background:var(--seq-500);color:#fff">85</div>
-          <div class="hm-cell" style="background:var(--seq-300);color:#fff">46</div><div class="hm-cell" style="background:var(--seq-500);color:#fff">82</div><div class="hm-cell" style="background:var(--seq-500);color:#fff">84</div><div class="hm-cell" style="background:var(--seq-300);color:#fff">52</div>
-        </div>
-      </div>
     </div>
 
     <div class="foot-note">웨이브앤바이브 리뷰 인텔리전스 · 데모 데이터 · 색상 진할수록 리뷰 언급 밀도가 높음을 의미합니다</div>
@@ -1197,7 +1157,8 @@
       <!-- [#131] "개선 액션 체크리스트" 카드 제외 (8/6 팀 결정, 일정상 범위 축소) — 트렌드 카드를 col-12로 확장해 빈 자리를 채움 -->
 
       <!-- keyword top for this branch -->
-      <div class="card col-6">
+      <!-- [#130] "방문 시간대 분포" 카드 제외 (파이프라인에 방문 시각 데이터 없음) — 이 카드를 col-12로 확장해 빈 자리를 채움 -->
+      <div class="card col-12">
         <div class="c-head"><div class="c-title">지점 주요 키워드</div><span class="c-tag">긍정·부정 혼합</span></div>
         <div class="kw">
           <div class="kw-row"><span class="kw-name">위생·청결</span><span class="kw-track"><span class="kw-fill" style="width:100%;background:var(--critical)"></span></span><span class="kw-val">42</span></div>
@@ -1205,23 +1166,6 @@
           <div class="kw-row"><span class="kw-name">주차 불편</span><span class="kw-track"><span class="kw-fill" style="width:52%;background:var(--serious)"></span></span><span class="kw-val">22</span></div>
           <div class="kw-row"><span class="kw-name">직원 친절</span><span class="kw-track"><span class="kw-fill" style="width:38%;background:var(--good)"></span></span><span class="kw-val">16</span></div>
         </div>
-      </div>
-
-      <!-- time distribution -->
-      <div class="card col-6">
-        <div class="c-head"><div class="c-title">방문 시간대 분포</div></div>
-        <svg viewBox="0 0 320 130" width="100%" height="120" font-family="system-ui" font-size="9.5">
-          <g stroke="var(--grid)" stroke-width="1"><line x1="0" y1="20" x2="320" y2="20"/><line x1="0" y1="60" x2="320" y2="60"/></g>
-          <g>
-            <rect x="10" y="70" width="30" height="40" rx="4" fill="var(--s-blue-soft)"/>
-            <rect x="60" y="30" width="30" height="80" rx="4" fill="var(--s-blue)"/>
-            <rect x="110" y="46" width="30" height="64" rx="4" fill="var(--s-blue)"/>
-            <rect x="160" y="86" width="30" height="24" rx="4" fill="var(--s-blue-soft)"/>
-            <rect x="210" y="50" width="30" height="60" rx="4" fill="var(--s-blue)"/>
-            <rect x="260" y="72" width="30" height="38" rx="4" fill="var(--s-blue-soft)"/>
-          </g>
-          <g fill="var(--muted)" text-anchor="middle"><text x="25" y="122">11</text><text x="75" y="122">12</text><text x="125" y="122">13</text><text x="175" y="122">15</text><text x="225" y="122">18</text><text x="275" y="122">19</text></g>
-        </svg>
       </div>
 
       <!-- recent reviews preview -->
@@ -1268,7 +1212,7 @@
           <div class="skpi"><div class="skpi-label">리뷰 수</div><div class="skpi-val tnum">1,303</div><div class="skpi-cmp">전체의 38% · 최대 세그먼트</div></div>
           <div class="skpi"><div class="skpi-label">긍정률</div><div class="skpi-val tnum" style="color:var(--good)">81%</div><div class="skpi-cmp">전체 평균 78% 대비 +3%p</div></div>
           <div class="skpi"><div class="skpi-label">평균 평점</div><div class="skpi-val tnum">4.4</div><div class="skpi-cmp">전체 평균 4.3 대비 +0.1</div></div>
-          <div class="skpi"><div class="skpi-label">주 방문 시간</div><div class="skpi-val" style="font-size:19px">평일 12–13시</div><div class="skpi-cmp" style="color:var(--muted)">점심시간 집중</div></div>
+          <!-- [#130] "주 방문 시간" 타일 제외 (파이프라인에 방문 시각 데이터 없음). .skpi-row는 flex라 남은 타일이 자동으로 폭을 채움 -->
         </div>
       </div>
 
@@ -1350,7 +1294,8 @@
         <div class="c-head"><div class="c-title">✦ 세그먼트 인사이트</div></div>
         <div class="ai-box">
           <div class="ai-box-head">직장인 세그먼트</div>
-          가장 큰 비중(38%)을 차지하며 만족도도 가장 높습니다. <b>평일 점심 12–13시</b>에 집중 방문하므로, 이 시간대 회전율과 포장 옵션을 강화하면 추가 매출 기회가 있습니다.
+          <!-- [#130] "평일 점심 12–13시 집중 방문" 등 시간대 관련 서술 제거 (파이프라인에 방문 시각 데이터 없음) -->
+          가장 큰 비중(38%)을 차지하며 만족도도 가장 높습니다. 가성비·빠른 응대·포장 편리 키워드 비중이 높으므로, 포장 옵션을 강화하면 추가 매출 기회가 있습니다.
         </div>
         <div class="ai-box" style="margin-top:10px;background:#fdf7ec;border-color:#f3e0b8">
           <div class="ai-box-head" style="color:var(--warn)">학생 세그먼트 주의</div>
@@ -1359,7 +1304,8 @@
       </div>
 
       <!-- keyword for selected segment -->
-      <div class="card col-4">
+      <!-- [#130] "직장인 방문 시간대" 카드 제외 (파이프라인에 방문 시각 데이터 없음) — 이 카드를 col-8로 확장해 빈 자리를 채움 -->
+      <div class="card col-8">
         <div class="c-head"><div class="c-title">직장인 주요 키워드</div></div>
         <div class="kw">
           <div class="kw-row"><span class="kw-name">가성비</span><span class="kw-track"><span class="kw-fill" style="width:100%;background:var(--s-blue)"></span></span><span class="kw-val">312</span></div>
@@ -1367,21 +1313,6 @@
           <div class="kw-row"><span class="kw-name">국물이 진해요</span><span class="kw-track"><span class="kw-fill" style="width:64%;background:var(--s-blue)"></span></span><span class="kw-val">201</span></div>
           <div class="kw-row"><span class="kw-name">포장 편리</span><span class="kw-track"><span class="kw-fill" style="width:41%;background:var(--s-blue)"></span></span><span class="kw-val">128</span></div>
         </div>
-      </div>
-
-      <!-- time distribution for selected segment -->
-      <div class="card col-4">
-        <div class="c-head"><div class="c-title">직장인 방문 시간대</div></div>
-        <svg viewBox="0 0 260 130" width="100%" height="120" font-family="system-ui" font-size="9.5">
-          <g stroke="var(--grid)" stroke-width="1"><line x1="0" y1="20" x2="260" y2="20"/><line x1="0" y1="60" x2="260" y2="60"/></g>
-          <rect x="8" y="80" width="26" height="30" rx="4" fill="var(--s-blue-soft)"/>
-          <rect x="50" y="20" width="26" height="90" rx="4" fill="var(--s-blue)"/>
-          <rect x="92" y="30" width="26" height="80" rx="4" fill="var(--s-blue)"/>
-          <rect x="134" y="90" width="26" height="20" rx="4" fill="var(--s-blue-soft)"/>
-          <rect x="176" y="60" width="26" height="50" rx="4" fill="var(--s-blue)"/>
-          <rect x="218" y="94" width="26" height="16" rx="4" fill="var(--s-blue-soft)"/>
-          <g fill="var(--muted)" text-anchor="middle"><text x="21" y="122">11</text><text x="63" y="122">12</text><text x="105" y="122">13</text><text x="147" y="122">15</text><text x="189" y="122">18</text><text x="231" y="122">19</text></g>
-        </svg>
       </div>
 
       <!-- segment x branch heatmap -->
