@@ -36,7 +36,7 @@ jobs:
 
       - name: Install Playwright Chromium
         working-directory: src/web
-        run: node_modules/.bin/playwright install --with-deps chromium
+        run: node_modules/.bin/playwright install --with-deps chromium chromium-headless-shell
 
       - name: Take Snapshot
         working-directory: src/web
