@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import type { DashboardData } from "@/lib/types";
+import React, { useState, useMemo } from "react";
+import type { DashboardData, ReviewItem } from "@/lib/types";
 import { DonutChart } from "@/components/dashboard/DonutChart";
 
 // Colors for purposes
@@ -20,18 +20,57 @@ const CUSTOMER_TYPE_COLORS: Record<string, string> = {
 };
 
 export function SegmentExplorer({
-  purposes,
-  customerTypes,
+  purposes: initialPurposes,
+  customerTypes: initialCustomerTypes,
+  reviews,
 }: {
   purposes: DashboardData["purposes"];
   customerTypes: DashboardData["customerTypes"];
+  reviews: ReviewItem[];
 }) {
-  const [selectedSeg, setSelectedSeg] = useState<string>(purposes[0]?.purpose || "");
-
-  const selectedData = purposes.find(p => p.purpose === selectedSeg);
+  const [branchFilter, setBranchFilter] = useState<string>("전체");
   
-  // Calculate max ratio for mini-track
-  const maxRatio = Math.max(...purposes.map(p => p.ratio));
+  const uniqueBranches = useMemo(() => {
+    const branches = Array.from(new Set(reviews.map(r => r.branch))).filter(Boolean);
+    return ["전체", ...branches.sort()];
+  }, [reviews]);
+
+  const { filteredPurposes, filteredCustomerTypes } = useMemo(() => {
+    if (branchFilter === "전체" && reviews.length === 0) {
+      return { filteredPurposes: initialPurposes, filteredCustomerTypes: initialCustomerTypes };
+    }
+    
+    const filtered = reviews.filter(r => branchFilter === "전체" || r.branch === branchFilter);
+    
+    const purpCounts: Record<string, number> = {};
+    const custCounts: Record<string, number> = {};
+    
+    filtered.forEach(r => {
+      if (r.purpose) purpCounts[r.purpose] = (purpCounts[r.purpose] || 0) + 1;
+      if (r.customerType) custCounts[r.customerType] = (custCounts[r.customerType] || 0) + 1;
+    });
+    
+    const toRatios = (counts: Record<string, number>, keyName: string) => {
+      const total = Object.values(counts).reduce((a, b) => a + b, 0);
+      if (total === 0) return [];
+      return Object.entries(counts)
+        .map(([k, count]) => ({ [keyName]: k, ratio: Math.round((count / total) * 100) }))
+        .sort((a: any, b: any) => b.ratio - a.ratio);
+    };
+
+    return {
+      filteredPurposes: toRatios(purpCounts, "purpose") as DashboardData["purposes"],
+      filteredCustomerTypes: toRatios(custCounts, "type") as DashboardData["customerTypes"],
+    };
+  }, [reviews, branchFilter, initialPurposes, initialCustomerTypes]);
+
+  // fallback for initial state before click
+  const [selectedSeg, setSelectedSeg] = useState<string>(filteredPurposes[0]?.purpose || "");
+  const activePurposes = filteredPurposes.length > 0 ? filteredPurposes : initialPurposes;
+  const activeCustomerTypes = filteredCustomerTypes.length > 0 ? filteredCustomerTypes : initialCustomerTypes;
+
+  const selectedData = activePurposes.find(p => p.purpose === selectedSeg) || activePurposes[0];
+  const maxRatio = activePurposes.length > 0 ? Math.max(...activePurposes.map(p => p.ratio)) : 100;
 
   return (
     <div className="flex flex-col h-full">
@@ -41,19 +80,22 @@ export function SegmentExplorer({
             <h1 className="text-2xl font-bold tracking-tight">고객 세그먼트</h1>
             <p className="text-[12.5px] text-[var(--muted)] mt-1">리뷰에 나타난 고객 유형별 반응을 비교합니다</p>
           </div>
-          <div className="filters">
-            <div className="chip h-[38px] px-[13px] bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] flex items-center gap-2 shadow-[var(--shadow-sm)]">
-              지점 <strong className="text-[var(--ink)] font-semibold">전체</strong>
-            </div>
-            <div className="chip h-[38px] px-[13px] bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] flex items-center gap-2 shadow-[var(--shadow-sm)]">
-              기간 <strong className="text-[var(--ink)] font-semibold">전체 데이터</strong>
-            </div>
+          <div className="filters flex items-center gap-2 flex-wrap">
+            <select 
+              value={branchFilter}
+              onChange={(e) => setBranchFilter(e.target.value)}
+              className="h-[38px] px-3 bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] font-semibold shadow-[var(--shadow-sm)] outline-none cursor-pointer focus:border-[var(--brand)]"
+            >
+              {uniqueBranches.map(b => (
+                <option key={b} value={b}>{b === "전체" ? "지점 전체" : b}</option>
+              ))}
+            </select>
           </div>
         </div>
         
-        {purposes.length > 0 && (
+        {activePurposes.length > 0 && (
           <div className="seg-tabs">
-            {purposes.map(p => {
+            {activePurposes.map(p => {
               const color = PURPOSE_COLORS[p.purpose] || "var(--brand)";
               const isOn = selectedSeg === p.purpose;
               return (
@@ -114,17 +156,17 @@ export function SegmentExplorer({
               리뷰 본문 언급 기반
             </span>
           </div>
-          {purposes.length > 0 ? (
+          {activePurposes.length > 0 ? (
             <>
               <DonutChart
-                segments={purposes.map((p) => ({
+                segments={activePurposes.map((p) => ({
                   label: p.purpose,
                   ratio: p.ratio,
                   color: PURPOSE_COLORS[p.purpose] ?? "var(--muted)",
                 }))}
               />
               <div className="flex flex-col gap-1.5 mt-2 text-sm">
-                {purposes.map((p) => (
+                {activePurposes.map((p) => (
                   <span key={p.purpose} className="flex items-center gap-1.5">
                     <span
                       className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
@@ -136,7 +178,7 @@ export function SegmentExplorer({
               </div>
             </>
           ) : (
-            <div className="text-[var(--muted)] text-sm p-4 text-center">데이터가 없습니다.</div>
+            <div className="text-[var(--muted)] text-sm p-4 text-center">조건에 맞는 데이터가 없습니다.</div>
           )}
         </div>
 
@@ -146,14 +188,14 @@ export function SegmentExplorer({
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-[15px] font-bold tracking-[-0.3px]">방문자 고객 유형</h3>
             <span className="text-[11px] font-semibold bg-[var(--surface-2)] px-2 py-1 rounded text-[var(--ink-2)]">
-              규칙 기반 분류
+              AI / 규칙 기반 분류
             </span>
           </div>
-          {customerTypes.length > 0 ? (
+          {activeCustomerTypes.length > 0 ? (
             <div className="kw mt-2">
               {(() => {
-                const maxRatio = Math.max(...customerTypes.map((c) => c.ratio));
-                return customerTypes.map((c) => (
+                const maxRatio = Math.max(...activeCustomerTypes.map((c) => c.ratio));
+                return activeCustomerTypes.map((c) => (
                   <div key={c.type} className="kw-row">
                     <span className="kw-name">{c.type}</span>
                     <span className="kw-track">
@@ -193,7 +235,7 @@ export function SegmentExplorer({
               </tr>
             </thead>
             <tbody>
-              {purposes.map((p) => {
+              {activePurposes.map((p) => {
                 const color = PURPOSE_COLORS[p.purpose] || "var(--brand)";
                 return (
                   <tr key={p.purpose} className="border-b border-[var(--hairline)]">

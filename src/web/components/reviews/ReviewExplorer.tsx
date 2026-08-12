@@ -224,24 +224,60 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
             </div>
           </div>
           <div className="flex-[1.5] min-w-[260px] flex flex-col">
-            <b className="text-[13px] mb-2 block">최신 발췌 문장 (Live Preview)</b>
+            <b className="text-[13px] mb-2 block">최신 발췌 문장 (AI Analysis Preview)</b>
             {latestReview ? (
-              <div className="bg-[var(--surface-2)] p-4 rounded-lg flex-1">
-                <p className="text-[13px] mb-2.5">
-                  <b>추출된 핵심 키워드:</b>{" "}
-                  {latestReview.keywords.slice(0, 3).map((k, i) => (
-                    <span key={i} className="tag mr-1" style={{ background: "#fff" }}>#{k}</span>
+              <div className="bg-[var(--surface-2)] p-4 rounded-lg flex-1 border border-[var(--hairline)]">
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                      latestReview.sentiment === "긍정" ? "bg-[var(--s-blue-soft)] text-[var(--brand)]" :
+                      latestReview.sentiment === "부정" ? "bg-[var(--critical-soft)] text-[var(--critical)]" :
+                      "bg-[var(--surface-3)] text-[var(--ink-2)]"
+                    }`}>{latestReview.sentiment}</span>
+                    <span className="text-[12px] font-semibold">★ {latestReview.rating || "-"}</span>
+                  </div>
+                  <div className="text-[11px] text-[var(--muted)]">{latestReview.date || "날짜미상"}</div>
+                </div>
+                
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {latestReview.customerType && latestReview.customerType !== "정보없음" && (
+                    <span className="text-[10.5px] px-2 py-0.5 bg-[var(--s-yellow-soft)] text-[#b45309] rounded font-medium">👤 {latestReview.customerType}</span>
+                  )}
+                  {latestReview.menus && latestReview.menus.length > 0 && (
+                    <span className="text-[10.5px] px-2 py-0.5 bg-[var(--s-aqua-soft)] text-[#0d9488] rounded font-medium">🍲 {latestReview.menus.slice(0,2).join(', ')}</span>
+                  )}
+                  {latestReview.keywords && latestReview.keywords.slice(0, 3).map((k, i) => (
+                    <span key={i} className="text-[10.5px] px-2 py-0.5 bg-white border border-[var(--hairline)] text-[var(--ink-2)] rounded">#{k}</span>
                   ))}
-                </p>
-                <blockquote className="border-l-[3px] border-[var(--brand)] pl-3.5 text-[13.5px] text-[var(--ink-2)] leading-relaxed m-0">
-                  &ldquo;{latestReview.content}&rdquo;
-                  <span className="text-[11.5px] text-[var(--muted)] mt-2 block">
-                    - {latestReview.branch} 리뷰 원문 ({latestReview.date || "날짜미상"})
-                  </span>
-                </blockquote>
+                </div>
+
+                {latestReview.aspects && latestReview.aspects.length > 0 ? (
+                  <div className="flex flex-col gap-2 mt-2">
+                    {latestReview.aspects.map((aspect, idx) => (
+                      <blockquote key={idx} className={`border-l-[3px] pl-3.5 text-[13px] leading-relaxed m-0 ${
+                        aspect.sentiment === "긍정" ? "border-[var(--brand)] text-[var(--ink)]" :
+                        aspect.sentiment === "부정" ? "border-[var(--critical)] text-[var(--ink)]" :
+                        "border-[var(--muted)] text-[var(--ink-2)]"
+                      }`}>
+                        <span className="font-semibold mr-1">[{aspect.category}]</span> 
+                        {aspect.context}
+                      </blockquote>
+                    ))}
+                    <span className="text-[11px] text-[var(--muted)] mt-1.5 block">
+                      - {latestReview.branch} ({latestReview.channel})
+                    </span>
+                  </div>
+                ) : (
+                  <blockquote className="border-l-[3px] border-[var(--brand)] pl-3.5 text-[13px] text-[var(--ink-2)] leading-relaxed m-0 mt-2">
+                    &ldquo;{latestReview.content}&rdquo;
+                    <span className="text-[11px] text-[var(--muted)] mt-2 block">
+                      - {latestReview.branch} 리뷰 원문 ({latestReview.channel})
+                    </span>
+                  </blockquote>
+                )}
               </div>
             ) : (
-              <div className="bg-[var(--surface-2)] p-4 rounded-lg flex-1 text-[var(--muted)] text-[13px]">
+              <div className="bg-[var(--surface-2)] p-4 rounded-lg flex-1 text-[var(--muted)] text-[13px] border border-[var(--hairline)]">
                 표시할 리뷰가 없습니다.
               </div>
             )}
