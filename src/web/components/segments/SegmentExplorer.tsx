@@ -137,8 +137,20 @@ export function SegmentExplorer({
               </div>
               <div className="skpi">
                 <div className="skpi-label">데이터 특성</div>
-                <div className="skpi-val text-[16px] text-[var(--muted)]">상세 통계 연동 대기</div>
-                <div className="skpi-cmp">별점/키워드 등 상세 결합 필요</div>
+                <div className="skpi-val text-[16px] text-[var(--brand)]">
+                  {(() => {
+                    const segReviews = reviews.filter(r => r.purpose === selectedSeg);
+                    const validRatings = segReviews.map(r => r.rating).filter(Boolean) as number[];
+                    const avgR = validRatings.length > 0 ? (validRatings.reduce((a,b)=>a+b,0) / validRatings.length).toFixed(1) : "-";
+                    
+                    const kws: Record<string, number> = {};
+                    segReviews.forEach(r => r.keywords?.forEach(k => { kws[k] = (kws[k]||0)+1 }));
+                    const topKw = Object.entries(kws).sort((a,b)=>b[1]-a[1])[0];
+                    
+                    return `평점 ${avgR} · ${topKw ? `'${topKw[0]}' 위주` : "키워드 없음"}`;
+                  })()}
+                </div>
+                <div className="skpi-cmp">해당 세그먼트 요약 통계</div>
               </div>
             </div>
           </div>
