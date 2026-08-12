@@ -54,7 +54,9 @@ jobs:
           cat << 'JS_EOF' > take-snapshot.mjs
           import { chromium } from './node_modules/playwright/index.mjs';
           (async () => {
-            const browser = await chromium.launch();
+            // chromium-headless-shell 대신 일반 chromium 바이너리 명시 사용
+            const executablePath = chromium.executablePath('chrome');
+            const browser = await chromium.launch({ executablePath });
             // 프로토타입 시각 규격(wave-and-vibe-console.html)에 맞춰 넓게 해상도 설정
             const page = await browser.newPage({ viewport: { width: 1440, height: 1080 } });
             
