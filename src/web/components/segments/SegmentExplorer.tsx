@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import type { DashboardData } from "@/lib/types";
+import { DonutChart } from "@/components/dashboard/DonutChart";
 
 // Colors for purposes
 const PURPOSE_COLORS: Record<string, string> = {
@@ -10,7 +11,21 @@ const PURPOSE_COLORS: Record<string, string> = {
   "정보없음": "var(--muted)",
 };
 
-export function SegmentExplorer({ purposes }: { purposes: DashboardData["purposes"] }) {
+// 고객 유형별 고정 색상. PURPOSE_COLORS와 같은 컨벤션.
+const CUSTOMER_TYPE_COLORS: Record<string, string> = {
+  "직장인": "var(--s-blue)",
+  "가족": "var(--s-aqua)",
+  "학생": "var(--s-yellow)",
+  "정보없음": "var(--muted)",
+};
+
+export function SegmentExplorer({
+  purposes,
+  customerTypes,
+}: {
+  purposes: DashboardData["purposes"];
+  customerTypes: DashboardData["customerTypes"];
+}) {
   const [selectedSeg, setSelectedSeg] = useState<string>(purposes[0]?.purpose || "");
 
   const selectedData = purposes.find(p => p.purpose === selectedSeg);
@@ -88,6 +103,79 @@ export function SegmentExplorer({ purposes }: { purposes: DashboardData["purpose
         ) : (
           <div className="text-[var(--muted)] text-sm p-4 text-center">세그먼트 데이터가 없습니다.</div>
         )}
+      </div>
+
+      {/* 이슈 #124: 방문 목적 도넛(실데이터) + 방문자 고객 유형(연동 대기). */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="bg-[var(--surface)] border border-[var(--hairline)] rounded-[var(--r-lg)] shadow-[var(--shadow-sm)] p-6">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-[15px] font-bold tracking-[-0.3px]">방문 목적</h3>
+            <span className="text-[11px] font-semibold bg-[var(--surface-2)] px-2 py-1 rounded text-[var(--ink-2)]">
+              리뷰 본문 언급 기반
+            </span>
+          </div>
+          {purposes.length > 0 ? (
+            <>
+              <DonutChart
+                segments={purposes.map((p) => ({
+                  label: p.purpose,
+                  ratio: p.ratio,
+                  color: PURPOSE_COLORS[p.purpose] ?? "var(--muted)",
+                }))}
+              />
+              <div className="flex flex-col gap-1.5 mt-2 text-sm">
+                {purposes.map((p) => (
+                  <span key={p.purpose} className="flex items-center gap-1.5">
+                    <span
+                      className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ background: PURPOSE_COLORS[p.purpose] ?? "var(--muted)" }}
+                    />
+                    {p.purpose} {p.ratio}%
+                  </span>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="text-[var(--muted)] text-sm p-4 text-center">데이터가 없습니다.</div>
+          )}
+        </div>
+
+        {/* 방문자 고객 유형(직장인/가족/학생). rule_classifier.py/ai_engine.py의 customer_type
+            컬럼이 시트에 반영되기 전까지는 customerTypes가 빈 배열이라 안내 문구로 저하된다. */}
+        <div className="bg-[var(--surface)] border border-[var(--hairline)] rounded-[var(--r-lg)] shadow-[var(--shadow-sm)] p-6">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-[15px] font-bold tracking-[-0.3px]">방문자 고객 유형</h3>
+            <span className="text-[11px] font-semibold bg-[var(--surface-2)] px-2 py-1 rounded text-[var(--ink-2)]">
+              규칙 기반 분류
+            </span>
+          </div>
+          {customerTypes.length > 0 ? (
+            <div className="kw mt-2">
+              {(() => {
+                const maxRatio = Math.max(...customerTypes.map((c) => c.ratio));
+                return customerTypes.map((c) => (
+                  <div key={c.type} className="kw-row">
+                    <span className="kw-name">{c.type}</span>
+                    <span className="kw-track">
+                      <span
+                        className="kw-fill"
+                        style={{
+                          width: `${maxRatio > 0 ? (c.ratio / maxRatio) * 100 : 0}%`,
+                          background: CUSTOMER_TYPE_COLORS[c.type] ?? "var(--muted)",
+                        }}
+                      />
+                    </span>
+                    <span className="kw-val tnum">{c.ratio}%</span>
+                  </div>
+                ));
+              })()}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center border border-dashed border-gray-200 bg-[var(--plane)] rounded-lg text-[var(--muted)] text-sm text-center p-4 min-h-[180px]">
+              미구현<br />(파이프라인에 customer_type 반영 후 자동 표시됩니다)
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">

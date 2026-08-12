@@ -8,7 +8,7 @@ export default async function SegmentsPage() {
 
   return (
     <div className="flex-1 h-full -mx-6 px-6 -mt-6 pt-6 overflow-y-auto">
-      <SegmentExplorer purposes={data.purposes} />
+      <SegmentExplorer purposes={data.purposes} customerTypes={data.customerTypes} />
     </div>
   );
 }

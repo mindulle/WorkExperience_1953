@@ -67,11 +67,10 @@ test.describe('대시보드 레이아웃', () => {
 
 test.describe('뷰 이동', () => {
   const VIEWS = [
-    { href: '/reviews', label: '리뷰 탐색' },
+    { href: '/reviews', label: 'AI 리뷰 탐색' },
     { href: '/trends', label: '트렌드 분석' },
     { href: '/branches', label: '지점 관리' },
     { href: '/segments', label: '고객 세그먼트' },
-    { href: '/insights', label: 'AI 추천' },
   ];
 
   for (const view of VIEWS) {

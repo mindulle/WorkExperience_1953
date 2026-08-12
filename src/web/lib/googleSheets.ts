@@ -1,4 +1,4 @@
-import type { DashboardData, VisitPurpose, MonthlyTrend, MenuMention, BranchStat, KeywordMention, ReviewItem, AiInsightItem } from "./types";
+import type { DashboardData, VisitPurpose, CustomerType, MonthlyTrend, MenuMention, BranchStat, KeywordMention, ReviewItem, AiInsightItem } from "./types";
 
 // 랭킹 집계 시 서로 다른 표기를 하나로 합친다(원본 값 자체는 건드리지 않음).
 // "국밥"은 국밥집 리뷰 대부분에 등장해 랭킹 변별력이 없어 제외한다.
@@ -51,16 +51,16 @@ function parseCsv(text: string): string[][] {
 }
 
 /** 카테고리별 개수를 합계 100이 되는 비율(%) 배열로 변환한다 (반올림 오차는 마지막 항목이 흡수). */
-function toRatios(counts: Record<string, number>): VisitPurpose[] {
+function toRatios<K extends string>(counts: Record<string, number>, key: K): Array<Record<K, string> & { ratio: number }> {
   const entries = Object.entries(counts);
   const total = entries.reduce((sum, [, n]) => sum + n, 0);
   if (total === 0) return [];
   let used = 0;
-  return entries.map(([purpose, n], i) => {
+  return entries.map(([value, n], i) => {
     const isLast = i === entries.length - 1;
     const ratio = isLast ? 100 - used : Math.round((n / total) * 100);
     used += ratio;
-    return { purpose, ratio };
+    return { [key]: value, ratio } as Record<K, string> & { ratio: number };
   });
 }
 
@@ -92,7 +92,21 @@ function derivePurposes(header: string[], rows: string[][]): VisitPurpose[] | nu
     counts[v] = (counts[v] ?? 0) + 1;
   }
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
-  return total > 0 ? toRatios(counts) : null;
+  return total > 0 ? toRatios(counts, "purpose") : null;
+}
+
+/** customer_type(직장인/가족/학생/정보없음, rule_classifier.py·ai_engine.py 산출)로 고객 유형 비율을 낸다. */
+function deriveCustomerTypes(header: string[], rows: string[][]): CustomerType[] | null {
+  const col = header.indexOf("customer_type");
+  if (col === -1) return null;
+  const counts: Record<string, number> = {};
+  for (const row of rows) {
+    const v = row[col];
+    if (!v) continue;
+    counts[v] = (counts[v] ?? 0) + 1;
+  }
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  return total > 0 ? toRatios(counts, "type") : null;
 }
 
 /** approx_ym(YYYY-MM) + date_precision(일/월만 인정) + rating으로 월별 건수·평균평점을 낸다. */
@@ -253,7 +267,10 @@ export async function getDashboardData(): Promise<DashboardData> {
       { menu: "순대", count: 17 },
       { menu: "맑은국밥", count: 14 },
     ],
-    purposes: toRatios({ "외지/관광 방문": 11, "현지인/단골": 9, "정보없음": 574 }),
+    purposes: toRatios({ "외지/관광 방문": 11, "현지인/단골": 9, "정보없음": 574 }, "purpose"),
+    // customer_type은 아직 파이프라인에서 실제로 생산되지 않아(rule_classifier.py 신규 추가분이
+    // 아직 시트에 반영되기 전) 가짜 수치를 채우지 않고 빈 배열로 둔다 — UI가 "미구현" 상태를 표시한다.
+    customerTypes: [],
     branchStats: [
       { branch: "서면점", reviewCount: 15, avgRating: 5.0, positivePct: 100, negativePct: 0 },
       { branch: "광안점", reviewCount: 258, avgRating: 4.5, positivePct: 85, negativePct: 9 },
@@ -320,6 +337,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     const negPct = totalPosNeg > 0 ? 100 - posPct : 20;
 
     const purposes = derivePurposes(reviewSheet.header, reviewSheet.rows);
+    const customerTypes = deriveCustomerTypes(reviewSheet.header, reviewSheet.rows);
     const monthlyTrend = deriveMonthlyTrend(reviewSheet.header, reviewSheet.rows);
     const menuRanking = deriveMenuRanking(reviewSheet.header, reviewSheet.rows);
     const branchStats = deriveBranchStats(reviewSheet.header, reviewSheet.rows);
@@ -334,6 +352,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       averageRating,
       pendingReplies,
       purposes: purposes ?? FALLBACK.purposes,
+      customerTypes: customerTypes ?? FALLBACK.customerTypes,
       monthlyTrend: monthlyTrend ?? FALLBACK.monthlyTrend,
       menuRanking: menuRanking ?? FALLBACK.menuRanking,
       branchStats: branchStats ?? FALLBACK.branchStats,
@@ -365,6 +384,7 @@ export async function getAllReviews(): Promise<ReviewItem[]> {
     const nKeyIdx = h.indexOf("negative_keywords");
     const menuIdx = h.indexOf("mentioned_menu");
     const purposeIdx = h.indexOf("visit_origin");
+    const customerTypeIdx = h.indexOf("customer_type");
 
     return reviewSheet.rows.map((row, i) => {
       const getStr = (idx: number) => (idx >= 0 && row[idx]) ? row[idx] : "";
@@ -388,6 +408,7 @@ export async function getAllReviews(): Promise<ReviewItem[]> {
         keywords: [...pos, ...neg],
         menus,
         purpose: getStr(purposeIdx),
+        customerType: getStr(customerTypeIdx),
       };
     }).filter(r => r.content.trim().length > 0);
   } catch (e) {

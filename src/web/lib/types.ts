@@ -18,9 +18,20 @@ export type MenuMention = {
   count: number;
 };
 
-/** 방문 목적 / 고객 유형. 프로토타입의 "고객 유형 분석" 카드용. */
+/** 방문 목적. 프로토타입의 "방문 목적" 도넛 카드용. */
 export type VisitPurpose = {
   purpose: string;
+  /** 비율(%). 합계 100 을 기대한다. */
+  ratio: number;
+};
+
+/**
+ * 고객 유형(직장인/가족/학생/정보없음). 프로토타입의 "방문자 고객 유형" 카드용.
+ * visit_origin(방문 목적)과는 별개의 분류축이다 — rule_classifier.py/ai_engine.py의
+ * customer_type 컬럼에서 온다(이슈 #124 회의 인사이트: 고객 세그먼트 - 학생 개강이벤트).
+ */
+export type CustomerType = {
+  type: string;
   /** 비율(%). 합계 100 을 기대한다. */
   ratio: number;
 };
@@ -74,6 +85,7 @@ export type DashboardData = {
   topKeywords: KeywordMention[];
   menuRanking: MenuMention[];
   purposes: VisitPurpose[];
+  customerTypes: CustomerType[];
   monthlyTrend: MonthlyTrend[];
   branchStats: BranchStat[];
 
@@ -100,6 +112,7 @@ export type ReviewItem = {
   keywords: string[];
   menus?: string[];
   purpose?: string;
+  customerType?: string;
 };
 
 /** AI 주간리포트 지점별 인사이트 */

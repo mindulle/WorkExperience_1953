@@ -5,6 +5,7 @@ import { MessageSquare, Star, ThumbsUp, ThumbsDown, Inbox } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { KpiCard } from "@/components/dashboard/KpiCard";
+import { DonutChart } from "@/components/dashboard/DonutChart";
 import type { DashboardData, ReviewItem } from "@/lib/types";
 
 // "정보없음"은 축소하지 않고 실제 비중대로 muted 색으로 크게 보여준다 (데이터 한계를 숨기지 않음).
@@ -156,13 +157,12 @@ export function DashboardClient({
         {/* 1. 긍정/부정 리뷰 (도넛 그래프) */}
         <Card className="col-span-1 flex flex-col">
           <h3 className="text-base font-bold mb-4">감성 분석 (긍/부정) - {initialData.totalReviews.toLocaleString()}건</h3>
-          <div className="flex-1 flex items-center justify-center border border-dashed border-gray-200 rounded-full w-40 h-40 mx-auto my-4 relative">
-            <span className="text-[var(--muted)] absolute text-xs text-center">도넛 차트<br/>렌더링 영역</span>
-            <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90 opacity-30">
-              <circle cx="50" cy="50" r="40" fill="transparent" stroke="var(--brand)" strokeWidth="20" strokeDasharray={`${initialData.positivePct * 2.51} 251`} />
-              <circle cx="50" cy="50" r="40" fill="transparent" stroke="var(--critical)" strokeWidth="20" strokeDasharray={`${initialData.negativePct * 2.51} 251`} strokeDashoffset={`-${initialData.positivePct * 2.51}`} />
-            </svg>
-          </div>
+          <DonutChart
+            segments={[
+              { label: "긍정", ratio: initialData.positivePct, color: "var(--brand)" },
+              { label: "부정", ratio: initialData.negativePct, color: "var(--critical)" },
+            ]}
+          />
           <div className="flex justify-around mt-4 text-sm">
             <span className="text-[var(--brand)] font-semibold">긍정 {initialData.positivePct}%</span>
             <span className="text-[var(--critical)] font-semibold">부정 {initialData.negativePct}%</span>
@@ -250,31 +250,13 @@ export function DashboardClient({
               {/* 리뷰 본문에 방문 목적을 알 수 있는 언급이 있는 경우만 분류 가능하다.
                   대부분은 언급이 없어 "정보없음"이 압도적으로 크며, 이는 데이터 한계이지
                   실제로 방문자 대부분의 목적이 불명확하다는 뜻이 아니다 — 축소 표시하지 않는다. */}
-              <div className="flex-1 flex items-center justify-center relative w-40 h-40 mx-auto my-4">
-                <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
-                  {(() => {
-                    let offset = 0;
-                    return initialData.purposes.map((p) => {
-                      const dash = (p.ratio / 100) * 251;
-                      const el = (
-                        <circle
-                          key={p.purpose}
-                          cx="50"
-                          cy="50"
-                          r="40"
-                          fill="transparent"
-                          stroke={PURPOSE_COLORS[p.purpose] ?? "var(--muted)"}
-                          strokeWidth="20"
-                          strokeDasharray={`${dash} ${251 - dash}`}
-                          strokeDashoffset={`-${offset}`}
-                        />
-                      );
-                      offset += dash;
-                      return el;
-                    });
-                  })()}
-                </svg>
-              </div>
+              <DonutChart
+                segments={initialData.purposes.map((p) => ({
+                  label: p.purpose,
+                  ratio: p.ratio,
+                  color: PURPOSE_COLORS[p.purpose] ?? "var(--muted)",
+                }))}
+              />
               <div className="flex flex-col gap-1.5 mt-2 text-sm">
                 {initialData.purposes.map((p) => (
                   <span key={p.purpose} className="flex items-center gap-1.5">
@@ -297,67 +279,36 @@ export function DashboardClient({
           )}
         </Card>
 
-        {/* 5. 지점별 강점 & 6. 키워드 분석 */}
-        <div className="col-span-1 flex flex-col gap-4">
-          <Card className="flex-1 flex flex-col">
-            <h3 className="text-base font-bold mb-2">지점별 강점 (경쟁우위)</h3>
-            {initialData.branchStats.length > 0 ? (
-              <div className="flex-1 flex flex-col gap-2 overflow-y-auto">
-                {initialData.branchStats.map((b, i) => (
-                  <div key={b.branch} className="flex items-center justify-between text-sm py-1 border-b border-[var(--hairline)] last:border-0">
-                    <div>
-                      <span className="font-medium">
-                        {i === 0 && "🏆 "}
-                        {b.branch}
-                      </span>
-                      <div className="text-[11px] text-[var(--muted)]">
-                        {b.reviewCount}건{b.avgRating !== undefined ? ` · 평균 ${b.avgRating}점` : ""}
-                        {b.reviewCount < 10 ? " (표본 적음)" : ""}
-                      </div>
-                    </div>
-                    <span className="font-semibold text-[var(--brand)] [font-variant-numeric:tabular-nums]">
-                      긍정 {b.positivePct}%
+        {/* 5. 키워드 분석 (지점별 강점 카드는 지점 관리 탭으로 이동 — 이슈 #124) */}
+        <Card className="col-span-1 flex flex-col">
+          <h3 className="text-base font-bold mb-2">Top 5 핵심 키워드</h3>
+          {initialData.topKeywords.length > 0 ? (
+            <div className="flex-1 flex flex-wrap content-center items-center justify-center gap-2 p-2">
+              {(() => {
+                const maxCount = Math.max(...initialData.topKeywords.map((k) => k.count));
+                return initialData.topKeywords.map((k) => {
+                  // 언급량 비례로 칩 크기를 다르게 해 워드클라우드 느낌을 낸다.
+                  const scale = maxCount > 0 ? k.count / maxCount : 0;
+                  const fontPx = 13 + Math.round(scale * 11); // 13~24px
+                  return (
+                    <span
+                      key={k.keyword}
+                      className="inline-flex items-center gap-1 rounded-full bg-[var(--s-blue-soft)] text-[var(--brand)] font-semibold px-3 py-1"
+                      style={{ fontSize: `${fontPx}px` }}
+                    >
+                      {k.keyword}
+                      <span className="text-[10px] font-normal text-[var(--muted)]">{k.count}</span>
                     </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex-1 border border-dashed border-gray-200 flex items-center justify-center text-[var(--muted)] bg-[var(--plane)] rounded-lg text-center text-sm p-4">
-                미구현<br/>(지점별 차원 분석 데이터 필요)
-              </div>
-            )}
-          </Card>
-
-          <Card className="flex-1 flex flex-col">
-            <h3 className="text-base font-bold mb-2">Top 5 핵심 키워드</h3>
-            {initialData.topKeywords.length > 0 ? (
-              <div className="flex-1 flex flex-wrap content-center items-center justify-center gap-2 p-2">
-                {(() => {
-                  const maxCount = Math.max(...initialData.topKeywords.map((k) => k.count));
-                  return initialData.topKeywords.map((k) => {
-                    // 언급량 비례로 칩 크기를 다르게 해 워드클라우드 느낌을 낸다.
-                    const scale = maxCount > 0 ? k.count / maxCount : 0;
-                    const fontPx = 13 + Math.round(scale * 11); // 13~24px
-                    return (
-                      <span
-                        key={k.keyword}
-                        className="inline-flex items-center gap-1 rounded-full bg-[var(--s-blue-soft)] text-[var(--brand)] font-semibold px-3 py-1"
-                        style={{ fontSize: `${fontPx}px` }}
-                      >
-                        {k.keyword}
-                        <span className="text-[10px] font-normal text-[var(--muted)]">{k.count}</span>
-                      </span>
-                    );
-                  });
-                })()}
-              </div>
-            ) : (
-              <div className="flex-1 border border-dashed border-gray-200 flex items-center justify-center text-[var(--muted)] bg-[var(--plane)] rounded-lg text-center text-sm p-4">
-                미구현<br/>(워드클라우드/키워드 추출 연동 예정)
-              </div>
-            )}
-          </Card>
-        </div>
+                  );
+                });
+              })()}
+            </div>
+          ) : (
+            <div className="flex-1 border border-dashed border-gray-200 flex items-center justify-center text-[var(--muted)] bg-[var(--plane)] rounded-lg text-center text-sm p-4">
+              미구현<br/>(워드클라우드/키워드 추출 연동 예정)
+            </div>
+          )}
+        </Card>
 
       </div>
     </>

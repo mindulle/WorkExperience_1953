@@ -27,7 +27,7 @@ JSON_FORMAT = """
   "sentiment_final": "'긍정', '중립', '부정', '분석 불가' 중 하나",
   "sentiment_confidence": "'HIGH', 'MEDIUM', 'LOW' 중 하나",
   "mentioned_menu": "언급된 메뉴 (여러 개는 ';'로 구분). 없으면 빈 문자열",
-  "visit_origin": "'직장인', '가족', '학생', '관광객', '혼밥', '기타' 중 하나. 판단 불가시 빈 문자열",
+  "customer_type": "'직장인', '가족', '학생', '정보없음' 중 하나 (rule_classifier.py 의 customer_type 분류와 동일한 기준 사용). 판단 불가시 '정보없음'",
   "needs_response": "'Y' 또는 'N' (1~2점이거나 불만/개선 요청 포함 시 'Y')",
   "word_level_keywords": ["단순 명사 키워드 (예: 국물, 주차, 웨이팅) 배열. 없으면 빈 배열"],
   "aspect_analysis": [
