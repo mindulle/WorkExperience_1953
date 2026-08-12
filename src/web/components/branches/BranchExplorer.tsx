@@ -1,7 +1,12 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { Mail } from "lucide-react";
 import type { ReviewItem, BranchStat } from "@/lib/types";
+
+// 별도 Cloudflare Worker(src/mail-sender/)를 통해서만 실제 발송이 이뤄진다.
+// RULES §3.2: 프론트엔드는 트리거만 하고, 발송 로직/키는 백엔드(Worker)에만 둔다.
+const MAIL_WORKER_URL = process.env.NEXT_PUBLIC_MAIL_WORKER_URL || "";
 
 type SortKey = "reviewCount" | "avgRating" | "positivePct";
 const SORT_LABELS: Record<SortKey, string> = {
@@ -19,6 +24,35 @@ export function BranchExplorer({
 }) {
   const [selectedBranch, setSelectedBranch] = useState<string | null>(branchStats[0]?.branch || null);
   const [sortKey, setSortKey] = useState<SortKey>("reviewCount");
+  const [mailStatus, setMailStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [mailError, setMailError] = useState<string | null>(null);
+
+  async function handleSendMail(branch: string) {
+    if (!MAIL_WORKER_URL) {
+      setMailStatus("error");
+      setMailError("메일 발송 서버가 설정되지 않았습니다 (src/mail-sender/README.md 참고).");
+      return;
+    }
+    setMailStatus("sending");
+    setMailError(null);
+    try {
+      const res = await fetch(MAIL_WORKER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          branch,
+          subject: `[1953형제돼지국밥] ${branch} 리뷰 현황 알림`,
+          message: `${branch} 지점의 리뷰 현황을 확인해주세요. 대시보드에서 상세 내용을 볼 수 있습니다.`,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || "알 수 없는 오류");
+      setMailStatus("sent");
+    } catch (e) {
+      setMailStatus("error");
+      setMailError(e instanceof Error ? e.message : "메일 전송에 실패했습니다.");
+    }
+  }
 
   // 이슈 #124: 대시보드에 있던 "지점별 강점(경쟁우위)"를 지점 관리 탭으로 이동.
   const rankedStats = useMemo(() => {
@@ -59,7 +93,11 @@ export function BranchExplorer({
             <div 
               key={b.branch} 
               className={`bcard ${isSelected ? "selected" : ""}`}
-              onClick={() => setSelectedBranch(b.branch)}
+              onClick={() => {
+                setSelectedBranch(b.branch);
+                setMailStatus("idle");
+                setMailError(null);
+              }}
             >
               {needsAttention && <div className="bcard-badge crit">긴급</div>}
               <div className="bcard-top">
@@ -166,6 +204,23 @@ export function BranchExplorer({
                 </div>
                 <div className="dh-meta">1953형제돼지국밥 · {selectedStat.reviewCount.toLocaleString()}개의 누적 리뷰</div>
               </div>
+            </div>
+            <div className="dh-actions flex-col items-end!">
+              {mailStatus === "sent" ? (
+                <span className="text-[12.5px] font-semibold text-[var(--good)]">✓ 메일을 전송했습니다</span>
+              ) : (
+                <button
+                  onClick={() => handleSendMail(selectedStat.branch)}
+                  disabled={mailStatus === "sending"}
+                  className="inline-flex items-center gap-2 h-9 px-3.5 rounded-[10px] text-[12.5px] font-semibold border border-[var(--hairline)] bg-[var(--surface)] shadow-[var(--shadow-sm)] disabled:opacity-50"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  {mailStatus === "sending" ? "전송 중..." : "담당자에게 메일 전송"}
+                </button>
+              )}
+              {mailStatus === "error" && mailError && (
+                <div className="text-[11.5px] text-[var(--critical)] mt-1.5 max-w-[240px] text-right">{mailError}</div>
+              )}
             </div>
           </div>
 
