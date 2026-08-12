@@ -21,6 +21,8 @@ function json(body, status, headers) {
   });
 }
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default {
   async fetch(request, env) {
     const headers = corsHeaders(request.headers.get("Origin") || "");
@@ -48,9 +50,18 @@ export default {
       return json({ ok: false, error: "잘못된 요청 본문입니다." }, 400, headers);
     }
 
-    const { branch, subject, message } = payload || {};
+    const { branch, subject, message, to } = payload || {};
     if (!branch || !subject || !message) {
       return json({ ok: false, error: "branch, subject, message가 모두 필요합니다." }, 400, headers);
+    }
+
+    // 지점별 담당자 매핑이 아직 없어(이슈 #131), 클라이언트가 입력한 수신자를 우선 사용하고
+    // 없으면 env.MANAGER_EMAIL로 폴백한다. 형식만 검증한다 — 임의 수신자 입력이 가능하다는
+    // 뜻이므로, 이 Worker URL이 공개되면 스팸 릴레이로 악용될 수 있다는 점을 알고 있어야 한다
+    // (남용 우려 시 허용 수신자 목록을 추가하는 걸 권장, README 참고).
+    const recipient = to || env.MANAGER_EMAIL;
+    if (!EMAIL_PATTERN.test(recipient)) {
+      return json({ ok: false, error: "수신자 이메일 형식이 올바르지 않습니다." }, 400, headers);
     }
 
     const resendRes = await fetch("https://api.resend.com/emails", {
@@ -61,8 +72,7 @@ export default {
       },
       body: JSON.stringify({
         from: env.FROM_EMAIL,
-        // 현재는 지점별 담당자 매핑이 없어 단일 수신자(env.MANAGER_EMAIL)로 보낸다 (이슈 #131 프로토타입 범위).
-        to: [env.MANAGER_EMAIL],
+        to: [recipient],
         subject,
         text: `[${branch}]\n\n${message}`,
       }),

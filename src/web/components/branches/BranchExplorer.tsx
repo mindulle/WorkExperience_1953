@@ -7,6 +7,9 @@ import type { ReviewItem, BranchStat } from "@/lib/types";
 // 별도 Cloudflare Worker(src/mail-sender/)를 통해서만 실제 발송이 이뤄진다.
 // RULES §3.2: 프론트엔드는 트리거만 하고, 발송 로직/키는 백엔드(Worker)에만 둔다.
 const MAIL_WORKER_URL = process.env.NEXT_PUBLIC_MAIL_WORKER_URL || "";
+// 지점별 담당자 이메일 매핑이 아직 없어(이슈 #131 프로토타입 범위), 보낼 때마다 직접 입력받는다.
+const RECIPIENT_STORAGE_KEY = "1953-dashboard-mail-recipient";
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type SortKey = "reviewCount" | "avgRating" | "positivePct";
 const SORT_LABELS: Record<SortKey, string> = {
@@ -26,6 +29,11 @@ export function BranchExplorer({
   const [sortKey, setSortKey] = useState<SortKey>("reviewCount");
   const [mailStatus, setMailStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [mailError, setMailError] = useState<string | null>(null);
+  // 마지막으로 입력했던 수신자 이메일을 기억해 매번 다시 칠 필요가 없게 한다.
+  // 정적 export라 서버에는 이 값이 없고, 클라이언트 최초 렌더에서만 채워진다.
+  const [recipientEmail, setRecipientEmail] = useState(
+    () => (typeof window !== "undefined" ? window.localStorage.getItem(RECIPIENT_STORAGE_KEY) ?? "" : "")
+  );
 
   async function handleSendMail(branch: string) {
     if (!MAIL_WORKER_URL) {
@@ -33,6 +41,12 @@ export function BranchExplorer({
       setMailError("메일 발송 서버가 설정되지 않았습니다 (src/mail-sender/README.md 참고).");
       return;
     }
+    if (!EMAIL_PATTERN.test(recipientEmail)) {
+      setMailStatus("error");
+      setMailError("올바른 수신자 이메일을 입력해주세요.");
+      return;
+    }
+    window.localStorage.setItem(RECIPIENT_STORAGE_KEY, recipientEmail);
     setMailStatus("sending");
     setMailError(null);
     try {
@@ -41,6 +55,7 @@ export function BranchExplorer({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           branch,
+          to: recipientEmail,
           subject: `[1953형제돼지국밥] ${branch} 리뷰 현황 알림`,
           message: `${branch} 지점의 리뷰 현황을 확인해주세요. 대시보드에서 상세 내용을 볼 수 있습니다.`,
         }),
@@ -209,17 +224,26 @@ export function BranchExplorer({
               {mailStatus === "sent" ? (
                 <span className="text-[12.5px] font-semibold text-[var(--good)]">✓ 메일을 전송했습니다</span>
               ) : (
-                <button
-                  onClick={() => handleSendMail(selectedStat.branch)}
-                  disabled={mailStatus === "sending"}
-                  className="inline-flex items-center gap-2 h-9 px-3.5 rounded-[10px] text-[12.5px] font-semibold border border-[var(--hairline)] bg-[var(--surface)] shadow-[var(--shadow-sm)] disabled:opacity-50"
-                >
-                  <Mail className="w-3.5 h-3.5" />
-                  {mailStatus === "sending" ? "전송 중..." : "담당자에게 메일 전송"}
-                </button>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="email"
+                    value={recipientEmail}
+                    onChange={(e) => setRecipientEmail(e.target.value)}
+                    placeholder="담당자 이메일 입력"
+                    className="h-9 px-3 rounded-[10px] text-[12.5px] border border-[var(--hairline)] bg-[var(--surface)] w-[190px]"
+                  />
+                  <button
+                    onClick={() => handleSendMail(selectedStat.branch)}
+                    disabled={mailStatus === "sending"}
+                    className="inline-flex items-center gap-2 h-9 px-3.5 rounded-[10px] text-[12.5px] font-semibold border border-[var(--hairline)] bg-[var(--surface)] shadow-[var(--shadow-sm)] disabled:opacity-50 shrink-0"
+                  >
+                    <Mail className="w-3.5 h-3.5" />
+                    {mailStatus === "sending" ? "전송 중..." : "메일 전송"}
+                  </button>
+                </div>
               )}
               {mailStatus === "error" && mailError && (
-                <div className="text-[11.5px] text-[var(--critical)] mt-1.5 max-w-[240px] text-right">{mailError}</div>
+                <div className="text-[11.5px] text-[var(--critical)] mt-1.5 max-w-[300px] text-right">{mailError}</div>
               )}
             </div>
           </div>
