@@ -35,7 +35,7 @@ def main():
     print("==================================================")
 
     # 1. 수집 스크립트 실행
-    print("\n[1/4] 데이터 수집 시작...")
+    print("\n[1/6] 데이터 수집 시작...")
     run_script(PIPELINE_DIR / "collect" / "naver_review_collector.py", cwd=RAW_DATA_DIR)
     print("--- [1-1] 네이버 블로그 작성 시간(Time) 스크래핑 복원 ---")
     run_script(PIPELINE_DIR / "collect" / "naver_blog_time_scraper.py", cwd=RAW_DATA_DIR)
@@ -46,25 +46,30 @@ def main():
     run_script(PIPELINE_DIR / "collect" / "naver_place_collector.py", cwd=RAW_DATA_DIR)
 
     # 2. 정제 스크립트 실행
-    print("\n[2/4] 팀원 데이터 병합 및 데이터 정제 검증 시작...")
+    print("\n[2/6] 팀원 데이터 병합 및 데이터 정제 검증 시작...")
     run_script(PIPELINE_DIR / "clean" / "merge_team_data.py", cwd=PIPELINE_DIR)
-    run_script(PIPELINE_DIR / "clean" / "clean_mentions.py", 
+    run_script(PIPELINE_DIR / "clean" / "clean_mentions.py",
                "--outdir", str(CLEAN_DATA_DIR),
                "--naver", str(RAW_DATA_DIR / "naver_mentions_raw.csv"),
                "--kakao", str(RAW_DATA_DIR / "kakaomap_reviews.csv"),
                "--xlsx", str(PROJECT_ROOT / "data/1953_일경험프로젝트_통합자료/04_프로젝트_실무_및_참고자료/1953_통합분석_대시보드.xlsx"),
                cwd=RAW_DATA_DIR)
 
-    # 3. AI 분석 실행
-    print("\n[3/5] AI 꼼수 모드 (OpenCode Free-riding) 기반 감성/키워드 분석 시작...")
+    # 3. 규칙 기반 분류 (감성/방문 유형/고객 유형). ai_engine.py 가 이 단계의 출력
+    # (reviews_analyzed.csv)을 입력으로 쓰므로 반드시 AI 분석보다 먼저 실행해야 한다.
+    print("\n[3/6] 규칙 기반 감성/유형 분류 시작...")
+    run_script(PIPELINE_DIR / "analyze" / "rule_classifier.py", cwd=PIPELINE_DIR)
+
+    # 4. AI 분석 실행
+    print("\n[4/6] AI 꼼수 모드 (OpenCode Free-riding) 기반 감성/키워드 분석 시작...")
     run_script(PIPELINE_DIR / "analyze" / "ai_engine.py", cwd=PIPELINE_DIR)
 
-    # 4. 거시적(Macro) AI 인사이트 추출
-    print("\n[4/5] 비용 최적화를 위한 거시적(Macro) 지점별 AI 리포트 생성 시작...")
+    # 5. 거시적(Macro) AI 인사이트 추출
+    print("\n[5/6] 비용 최적화를 위한 거시적(Macro) 지점별 AI 리포트 생성 시작...")
     run_script(PIPELINE_DIR / "analyze" / "macro_insight.py", cwd=PIPELINE_DIR)
 
-    # 5. 구글 시트 업로드 실행
-    print("\n[5/5] Google Sheets 자동 업로드(Mock) 시작...")
+    # 6. 구글 시트 업로드 실행
+    print("\n[6/6] Google Sheets 자동 업로드(Mock) 시작...")
     run_script(PIPELINE_DIR / "upload" / "google_sheets.py", cwd=PIPELINE_DIR)
 
     print("\n🎉 모든 파이프라인 실행이 완료되었습니다!")

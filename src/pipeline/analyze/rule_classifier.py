@@ -98,6 +98,12 @@ BRAND_RE = re.compile(r"1953|형제돼지국밥|형제\s*돼지\s*국밥")
 TOURIST_PATTERNS = r"여행|관광|ktx|ksx|기차|부산\s*(왔|내려|방문)|타지|외지|서울.*부산|부산.*서울|숙소|호텔|여행자|투어"
 LOCAL_PATTERNS   = r"단골|매일|자주|항상|늘\s*오|근처\s*살|동네|집\s*근처|퇴근|점심\s*(자주|항상|매일)|자주\s*찾|자주\s*가"
 
+# ── customer_type 패턴 (고객 유형: 직장인/가족/학생) ──────────────────────────
+# visit_origin(외지/현지인)과는 별개의 축이다 — 혼동 방지를 위해 별도 컬럼으로 관리한다.
+STUDENT_PATTERNS   = r"학생|개강|방학|중간고사|기말고사|캠퍼스|동아리|학교\s*근처"
+FAMILY_PATTERNS    = r"가족|아이들|아이와|아기|부모님|엄마.*아빠|유모차"
+OFFICE_PATTERNS    = r"직장|퇴근|회사|점심시간|회식"
+
 # ── 날짜 정규화 ────────────────────────────────────────────────────────────────
 def normalize_date(date_str: str) -> tuple[str, str]:
     """(approx_ym, date_precision) 반환. 없으면 ('', '없음')"""
@@ -133,6 +139,7 @@ def classify_row(row) -> dict:
         "negative_keywords": "",
         "mentioned_menu":    "",
         "visit_origin":      "",
+        "customer_type":     "",
         "approx_ym":         "",
         "date_precision":    "",
         "rating":            "",
@@ -201,6 +208,16 @@ def classify_row(row) -> dict:
         result["visit_origin"] = "현지인/단골"
     else:
         result["visit_origin"] = "정보없음"
+
+    # ── customer_type (고객 유형) ────────────────────────────────────────────
+    if re.search(STUDENT_PATTERNS, text, re.IGNORECASE):
+        result["customer_type"] = "학생"
+    elif re.search(FAMILY_PATTERNS, text, re.IGNORECASE):
+        result["customer_type"] = "가족"
+    elif re.search(OFFICE_PATTERNS, text, re.IGNORECASE):
+        result["customer_type"] = "직장인"
+    else:
+        result["customer_type"] = "정보없음"
 
     # ── 별점 추출 ────────────────────────────────────────────────────────────
     # ⭐⭐⭐⭐ 또는 별점 4.5 패턴

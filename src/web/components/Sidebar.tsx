@@ -11,7 +11,7 @@ const NAV_GROUPS = [
     label: "개요",
     items: [
       { href: "/", label: "대시보드" },
-      { href: "/reviews", label: "리뷰 탐색" },
+      { href: "/reviews", label: "AI 리뷰 탐색" },
       { href: "/trends", label: "트렌드 분석" },
     ],
   },
@@ -21,10 +21,6 @@ const NAV_GROUPS = [
       { href: "/branches", label: "지점 관리" },
       { href: "/segments", label: "고객 세그먼트" },
     ],
-  },
-  {
-    label: "인사이트",
-    items: [{ href: "/insights", label: "AI 추천" }],
   },
 ] as const;
 

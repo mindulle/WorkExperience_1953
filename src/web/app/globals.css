@@ -829,3 +829,40 @@ body {
   display: block;
   height: 100%;
 }
+
+/* --- 키워드/비율 가로 바 리스트 (Segment 고객 유형 등) --- */
+.kw {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.kw-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.kw-name {
+  width: 64px;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.kw-track {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--plane);
+  overflow: hidden;
+}
+.kw-fill {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+}
+.kw-val {
+  width: 40px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 600;
+}
