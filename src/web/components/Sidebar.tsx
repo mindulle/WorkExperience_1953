@@ -12,7 +12,6 @@ const NAV_GROUPS = [
     items: [
       { href: "/", label: "대시보드" },
       { href: "/reviews", label: "AI 리뷰 탐색" },
-      { href: "/trends", label: "트렌드 분석" },
     ],
   },
   {
