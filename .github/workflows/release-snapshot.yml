@@ -3,6 +3,12 @@ name: Upload Release Snapshot
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release tag to upload snapshot to (e.g. v0.3.0)'
+        required: true
+        default: 'v0.3.0'
 
 permissions:
   contents: write
@@ -34,6 +40,8 @@ jobs:
 
       - name: Take Snapshot
         working-directory: src/web
+        env:
+          TAG_NAME: ${{ github.event.inputs.tag_name || github.ref_name }}
         run: |
           # 백그라운드에서 정적 서버 실행
           npx serve@latest out -l 3333 &
@@ -54,7 +62,7 @@ jobs:
             // 클라이언트 사이드 렌더링 및 애니메이션 완료 대기
             await page.waitForTimeout(1500);
             
-            const tagName = process.env.GITHUB_REF_NAME || 'snapshot';
+            const tagName = process.env.TAG_NAME || process.env.GITHUB_REF_NAME || 'snapshot';
             const filename = `dashboard-${tagName}.png`;
             
             await page.screenshot({ path: filename, fullPage: true });
@@ -73,5 +81,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG_NAME=${{ github.ref_name }}
+          TAG_NAME=${{ github.event.inputs.tag_name || github.ref_name }}
           gh release upload "$TAG_NAME" "dashboard-${TAG_NAME}.png" --clobber
