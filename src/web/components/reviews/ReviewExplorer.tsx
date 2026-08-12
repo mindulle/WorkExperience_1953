@@ -2,8 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import type { ReviewItem } from "@/lib/types";
-import { Search, ChevronDown } from "lucide-react";
-import { Card } from "@/components/ui/Card";
+import { Search } from "lucide-react";
 
 // AI 토픽 필터. 리뷰별 별도 분류 필드가 없어, 키워드/본문에 대한 휴리스틱
 // 매칭으로 근사한다 (rule_classifier.py 의 POS/NEG_KEYWORDS 와 같은 성격의

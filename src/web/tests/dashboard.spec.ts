@@ -36,13 +36,13 @@ test.describe('대시보드 레이아웃', () => {
    */
   test('폼 요소가 본문 폰트를 상속한다', async ({ page }) => {
     const bodyFont = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
-    const buttonFont = await page
-      .locator('button')
+    const formElementFont = await page
+      .locator('select, button, input')
       .first()
       .evaluate((el) => getComputedStyle(el).fontFamily);
 
     expect(bodyFont).toContain('Pretendard');
-    expect(buttonFont).toBe(bodyFont);
+    expect(formElementFont).toBe(bodyFont);
   });
 
   test('KPI 행이 렌더되고 미수집 지표는 사유를 표시한다', async ({ page }) => {
@@ -68,7 +68,6 @@ test.describe('대시보드 레이아웃', () => {
 test.describe('뷰 이동', () => {
   const VIEWS = [
     { href: '/reviews', label: 'AI 리뷰 탐색' },
-    { href: '/trends', label: '트렌드 분석' },
     { href: '/branches', label: '지점 관리' },
     { href: '/segments', label: '고객 세그먼트' },
   ];

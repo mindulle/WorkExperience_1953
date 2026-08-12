@@ -55,7 +55,7 @@ export function SegmentExplorer({
       if (total === 0) return [];
       return Object.entries(counts)
         .map(([k, count]) => ({ [keyName]: k, ratio: Math.round((count / total) * 100) }))
-        .sort((a: any, b: any) => b.ratio - a.ratio);
+        .sort((a: { ratio: number }, b: { ratio: number }) => b.ratio - a.ratio);
     };
 
     return {
