@@ -24,13 +24,13 @@ jobs:
         working-directory: src/web
         run: npm ci
 
-      - name: Install Playwright
-        working-directory: src/web
-        run: npx playwright install --with-deps chromium
-
       - name: Build Next.js App
         working-directory: src/web
         run: npm run build
+
+      - name: Install Playwright Chromium
+        working-directory: src/web
+        run: npx playwright install --with-deps chromium
 
       - name: Take Snapshot
         working-directory: src/web
@@ -40,11 +40,11 @@ jobs:
           SERVER_PID=$!
           
           # 서버가 뜰 때까지 대기
-          sleep 3
+          sleep 5
           
-          # Playwright 스크립트 작성 및 실행
+          # Playwright 스크립트 작성 및 실행 (node_modules의 playwright 사용)
           cat << 'JS_EOF' > take-snapshot.mjs
-          import { chromium } from 'playwright';
+          import { chromium } from './node_modules/playwright/index.mjs';
           (async () => {
             const browser = await chromium.launch();
             // 프로토타입 시각 규격(wave-and-vibe-console.html)에 맞춰 넓게 해상도 설정
@@ -52,13 +52,13 @@ jobs:
             
             await page.goto('http://localhost:3333', { waitUntil: 'networkidle' });
             // 클라이언트 사이드 렌더링 및 애니메이션 완료 대기
-            await page.waitForTimeout(1500); 
+            await page.waitForTimeout(1500);
             
             const tagName = process.env.GITHUB_REF_NAME || 'snapshot';
             const filename = `dashboard-${tagName}.png`;
             
             await page.screenshot({ path: filename, fullPage: true });
-            console.log(`✅ Snapshot saved to ${filename}`);
+            console.log(`Snapshot saved to ${filename}`);
             await browser.close();
           })();
           JS_EOF
