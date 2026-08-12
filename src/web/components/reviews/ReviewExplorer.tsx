@@ -20,15 +20,22 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
   const [search, setSearch] = useState("");
   const [sentimentFilter, setSentimentFilter] = useState<string>("전체");
   const [topicFilter, setTopicFilter] = useState<string>("전체");
+  const [branchFilter, setBranchFilter] = useState<string>("전체");
+  const [sortOrder, setSortOrder] = useState<string>("최신순");
+
+  const uniqueBranches = useMemo(() => {
+    const branches = Array.from(new Set(reviews.map(r => r.branch))).filter(Boolean);
+    return ["전체", ...branches.sort()];
+  }, [reviews]);
 
   const filtered = useMemo(() => {
-    return reviews.filter(r => {
+    let result = reviews.filter(r => {
       // 1. 텍스트 검색 (본문, 지점명, 키워드)
       const q = search.toLowerCase();
       const matchSearch = q === "" ||
         r.content.toLowerCase().includes(q) ||
         r.branch.toLowerCase().includes(q) ||
-        r.keywords.some(k => k.toLowerCase().includes(q));
+        (r.keywords && r.keywords.some(k => k.toLowerCase().includes(q)));
 
       // 2. 감성 필터
       let matchSent = true;
@@ -39,17 +46,39 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
          if (sentimentFilter === "분석 스킵") matchSent = r.sentiment === "분석 스킵" || r.sentiment === "분석 불가" || !r.sentiment;
       }
 
-      // 3. AI 토픽 필터 (휴리스틱)
+      // 3. AI 토픽 필터
       let matchTopic = true;
       if (topicFilter !== "전체") {
-        const pattern = TOPIC_PATTERNS[topicFilter];
-        const haystack = `${r.content} ${r.keywords.join(" ")}`;
-        matchTopic = pattern ? pattern.test(haystack) : true;
+        if (r.aspects && r.aspects.length > 0) {
+          // 실제 AI가 추출한 토픽(aspect_analysis)이 존재하면 이를 기반으로 필터링
+          matchTopic = r.aspects.some(a => a.category.includes(topicFilter) || topicFilter.includes(a.category));
+        } else {
+          // 데이터 파이프라인에서 AI 처리가 안 된 예전 데이터에 대한 휴리스틱 폴백
+          const pattern = TOPIC_PATTERNS[topicFilter];
+          const haystack = `${r.content} ${r.keywords ? r.keywords.join(" ") : ""}`;
+          matchTopic = pattern ? pattern.test(haystack) : true;
+        }
       }
 
-      return matchSearch && matchSent && matchTopic;
+      // 4. 지점 필터
+      const matchBranch = branchFilter === "전체" || r.branch === branchFilter;
+
+      return matchSearch && matchSent && matchTopic && matchBranch;
     });
-  }, [reviews, search, sentimentFilter, topicFilter]);
+
+    // 정렬 로직
+    if (sortOrder === "최신순") {
+      result = result.sort((a, b) => b.date.localeCompare(a.date));
+    } else if (sortOrder === "오래된순") {
+      result = result.sort((a, b) => a.date.localeCompare(b.date));
+    } else if (sortOrder === "별점높은순") {
+      result = result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    } else if (sortOrder === "별점낮은순") {
+      result = result.sort((a, b) => (a.rating || 5) - (b.rating || 5));
+    }
+
+    return result;
+  }, [reviews, search, sentimentFilter, topicFilter, branchFilter, sortOrder]);
 
   const selectedReview = reviews.find(r => r.id === selectedId) || null;
 
@@ -79,14 +108,26 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
             </p>
           </div>
           <div className="filters flex items-center gap-2 flex-wrap">
-            <div className="chip h-[38px] px-[13px] bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] flex items-center gap-2 shadow-[var(--shadow-sm)] cursor-pointer">
-              지점 <strong className="text-[var(--ink)] font-semibold">전체</strong>
-              <ChevronDown className="w-3 h-3 text-[var(--muted)]" />
-            </div>
-            <div className="chip h-[38px] px-[13px] bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] flex items-center gap-2 shadow-[var(--shadow-sm)] cursor-pointer">
-              정렬 <strong className="text-[var(--ink)] font-semibold">최신순</strong>
-              <ChevronDown className="w-3 h-3 text-[var(--muted)]" />
-            </div>
+            <select 
+              value={branchFilter}
+              onChange={(e) => setBranchFilter(e.target.value)}
+              className="h-[38px] px-3 bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] font-semibold shadow-[var(--shadow-sm)] outline-none cursor-pointer focus:border-[var(--brand)]"
+            >
+              {uniqueBranches.map(b => (
+                <option key={b} value={b}>{b === "전체" ? "지점 전체" : b}</option>
+              ))}
+            </select>
+            
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+              className="h-[38px] px-3 bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] font-semibold shadow-[var(--shadow-sm)] outline-none cursor-pointer focus:border-[var(--brand)]"
+            >
+              <option value="최신순">정렬 최신순</option>
+              <option value="오래된순">정렬 오래된순</option>
+              <option value="별점높은순">별점 높은순</option>
+              <option value="별점낮은순">별점 낮은순</option>
+            </select>
           </div>
         </div>
 

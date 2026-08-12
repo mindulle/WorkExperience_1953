@@ -8,6 +8,7 @@
   // 실제 지점별 담당자 이메일이 정해지면 vars.MANAGER_EMAIL을 교체한다 (이슈 #131).
   "vars": {
     "MANAGER_EMAIL": "site-admin@example.com",
-    "FROM_EMAIL": "1953형제돼지국밥 대시보드 <onboarding@resend.dev>"
+    "FROM_EMAIL": "1953형제돼지국밥 대시보드 <onboarding@resend.dev>",
+    "ALLOWED_DOMAINS": "sonagi.space,example.com,mindulle.com,gmail.com"
   }
 }
