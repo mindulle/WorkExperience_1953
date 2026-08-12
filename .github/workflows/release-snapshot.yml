@@ -36,15 +36,12 @@ jobs:
 
       - name: Install Playwright Chromium
         working-directory: src/web
-        env:
-          PLAYWRIGHT_BROWSERS_PATH: 0
-        run: node_modules/.bin/playwright install --with-deps --force chromium chromium-headless-shell
+        run: npx playwright install --with-deps chromium
 
       - name: Take Snapshot
         working-directory: src/web
         env:
           TAG_NAME: ${{ github.event.inputs.tag_name || github.ref_name }}
-          PLAYWRIGHT_BROWSERS_PATH: 0
         run: |
           # 백그라운드에서 정적 서버 실행
           npx serve@latest out -l 3333 &
@@ -53,9 +50,9 @@ jobs:
           # 서버가 뜰 때까지 대기
           sleep 5
           
-          # Playwright 스크립트 작성 및 실행 (node_modules의 playwright 사용)
+          # @playwright/test의 chromium을 사용하는 스크립트
           cat << 'JS_EOF' > take-snapshot.mjs
-          import { chromium } from './node_modules/playwright/index.mjs';
+          import { chromium } from './node_modules/@playwright/test/index.mjs';
           (async () => {
             const browser = await chromium.launch();
             // 프로토타입 시각 규격(wave-and-vibe-console.html)에 맞춰 넓게 해상도 설정
