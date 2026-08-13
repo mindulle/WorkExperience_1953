@@ -3,6 +3,12 @@ name: Upload Release Snapshot
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release tag to upload snapshot to (e.g. v0.3.0)'
+        required: true
+        default: 'v0.3.0'
 
 permissions:
   contents: write
@@ -24,27 +30,29 @@ jobs:
         working-directory: src/web
         run: npm ci
 
-      - name: Install Playwright
-        working-directory: src/web
-        run: npx playwright install --with-deps chromium
-
       - name: Build Next.js App
         working-directory: src/web
         run: npm run build
 
+      - name: Install Playwright Chromium
+        working-directory: src/web
+        run: npx playwright install --with-deps chromium
+
       - name: Take Snapshot
         working-directory: src/web
+        env:
+          TAG_NAME: ${{ github.event.inputs.tag_name || github.ref_name }}
         run: |
           # 백그라운드에서 정적 서버 실행
           npx serve@latest out -l 3333 &
           SERVER_PID=$!
           
           # 서버가 뜰 때까지 대기
-          sleep 3
+          sleep 5
           
-          # Playwright 스크립트 작성 및 실행
+          # @playwright/test의 chromium을 사용하는 스크립트
           cat << 'JS_EOF' > take-snapshot.mjs
-          import { chromium } from 'playwright';
+          import { chromium } from './node_modules/@playwright/test/index.mjs';
           (async () => {
             const browser = await chromium.launch();
             // 프로토타입 시각 규격(wave-and-vibe-console.html)에 맞춰 넓게 해상도 설정
@@ -52,13 +60,13 @@ jobs:
             
             await page.goto('http://localhost:3333', { waitUntil: 'networkidle' });
             // 클라이언트 사이드 렌더링 및 애니메이션 완료 대기
-            await page.waitForTimeout(1500); 
+            await page.waitForTimeout(1500);
             
-            const tagName = process.env.GITHUB_REF_NAME || 'snapshot';
+            const tagName = process.env.TAG_NAME || process.env.GITHUB_REF_NAME || 'snapshot';
             const filename = `dashboard-${tagName}.png`;
             
             await page.screenshot({ path: filename, fullPage: true });
-            console.log(`✅ Snapshot saved to ${filename}`);
+            console.log(`Snapshot saved to ${filename}`);
             await browser.close();
           })();
           JS_EOF
@@ -73,5 +81,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG_NAME=${{ github.ref_name }}
+          TAG_NAME=${{ github.event.inputs.tag_name || github.ref_name }}
           gh release upload "$TAG_NAME" "dashboard-${TAG_NAME}.png" --clobber
