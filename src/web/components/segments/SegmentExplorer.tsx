@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import type { DashboardData, ReviewItem } from "@/lib/types";
+import type { ReviewItem } from "@/lib/types";
 import { DonutChart } from "@/components/dashboard/DonutChart";
 
 // Colors for purposes
@@ -19,29 +19,68 @@ const CUSTOMER_TYPE_COLORS: Record<string, string> = {
   "정보없음": "var(--muted)",
 };
 
+/** 값 배열에서 합계 100이 되는 비율(%) 목록을 낸다 (반올림 오차는 마지막 항목이 흡수). */
+function toRatioList(values: string[]): Array<{ key: string; ratio: number }> {
+  const counts: Record<string, number> = {};
+  for (const v of values) {
+    if (!v) continue;
+    counts[v] = (counts[v] ?? 0) + 1;
+  }
+  const entries = Object.entries(counts);
+  const total = entries.reduce((sum, [, n]) => sum + n, 0);
+  if (total === 0) return [];
+  let used = 0;
+  return entries.map(([key, n], i) => {
+    const isLast = i === entries.length - 1;
+    const ratio = isLast ? 100 - used : Math.round((n / total) * 100);
+    used += ratio;
+    return { key, ratio };
+  });
+}
+
 export function SegmentExplorer({
-  purposes,
-  customerTypes,
   reviews,
 }: {
-  purposes: DashboardData["purposes"];
-  customerTypes: DashboardData["customerTypes"];
   reviews: ReviewItem[];
 }) {
-  const [selectedSeg, setSelectedSeg] = useState<string>(purposes[0]?.purpose || "");
+  // "기간"은 이 탭에서 의미가 애매해 걷어냈다 — 지점 필터만 실제로 동작하게 유지한다.
+  const [branchFilter, setBranchFilter] = useState<string>("전체");
 
-  const selectedData = purposes.find(p => p.purpose === selectedSeg);
+  const uniqueBranches = React.useMemo(() =>
+    ["전체", ...Array.from(new Set(reviews.map(r => r.branch))).filter(Boolean).sort()],
+    [reviews]
+  );
+
+  const filteredReviews = React.useMemo(() => {
+    if (branchFilter === "전체") return reviews;
+    return reviews.filter(r => r.branch === branchFilter);
+  }, [reviews, branchFilter]);
+
+  const purposes = React.useMemo(
+    () => toRatioList(filteredReviews.map(r => r.purpose || "")).map(({ key, ratio }) => ({ purpose: key, ratio })),
+    [filteredReviews]
+  );
+  const customerTypes = React.useMemo(
+    () => toRatioList(filteredReviews.map(r => r.customerType || "")).map(({ key, ratio }) => ({ type: key, ratio })),
+    [filteredReviews]
+  );
+
+  // 지점 필터가 바뀌면 이전에 선택했던 세그먼트가 새 목록에 없을 수 있어, 그럴 때만 첫 항목으로 대체한다.
+  const [selectedSeg, setSelectedSeg] = useState<string>("");
+  const effectiveSelectedSeg = purposes.some(p => p.purpose === selectedSeg) ? selectedSeg : (purposes[0]?.purpose ?? "");
+
+  const selectedData = purposes.find(p => p.purpose === effectiveSelectedSeg);
 
   // 유형별 예시 리뷰 (최대 3건). AI가 근거를 남긴 건을 우선하고, 그 다음은 규칙 기반 매칭 건을 채운다.
   const typeSamples = React.useMemo(() => {
     const byType: Record<string, ReviewItem[]> = {};
     for (const type of ["직장인", "가족", "학생"]) {
-      const withReason = reviews.filter(r => r.customerType === type && r.customerTypeReason);
-      const withoutReason = reviews.filter(r => r.customerType === type && !r.customerTypeReason);
+      const withReason = filteredReviews.filter(r => r.customerType === type && r.customerTypeReason);
+      const withoutReason = filteredReviews.filter(r => r.customerType === type && !r.customerTypeReason);
       byType[type] = [...withReason, ...withoutReason].slice(0, 3);
     }
     return byType;
-  }, [reviews]);
+  }, [filteredReviews]);
 
   return (
     <div className="flex flex-col h-full">
@@ -52,12 +91,18 @@ export function SegmentExplorer({
             <p className="text-[12.5px] text-[var(--muted)] mt-1">리뷰에 나타난 고객 유형별 반응을 비교합니다</p>
           </div>
           <div className="filters">
-            <div className="chip h-[38px] px-[13px] bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] flex items-center gap-2 shadow-[var(--shadow-sm)]">
-              지점 <strong className="text-[var(--ink)] font-semibold">전체</strong>
-            </div>
-            <div className="chip h-[38px] px-[13px] bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] flex items-center gap-2 shadow-[var(--shadow-sm)]">
-              기간 <strong className="text-[var(--ink)] font-semibold">전체 데이터</strong>
-            </div>
+            <label className="chip h-[38px] px-[13px] bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] flex items-center gap-2 shadow-[var(--shadow-sm)] cursor-pointer">
+              지점
+              <select
+                value={branchFilter}
+                onChange={(e) => setBranchFilter(e.target.value)}
+                className="font-semibold text-[var(--ink)] bg-transparent outline-none cursor-pointer"
+              >
+                {uniqueBranches.map(b => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
+            </label>
           </div>
         </div>
         
@@ -65,7 +110,7 @@ export function SegmentExplorer({
           <div className="seg-tabs">
             {purposes.map(p => {
               const color = PURPOSE_COLORS[p.purpose] || "var(--brand)";
-              const isOn = selectedSeg === p.purpose;
+              const isOn = effectiveSelectedSeg === p.purpose;
               return (
                 <div 
                   key={p.purpose} 
@@ -90,7 +135,7 @@ export function SegmentExplorer({
                 <span style={{ color: PURPOSE_COLORS[selectedData.purpose] || "var(--brand)" }}>●</span> 
                 {selectedData.purpose} 세그먼트 요약
               </div>
-              <div className="text-[12px] text-[var(--muted)] mt-1">전체 데이터 기반 분석</div>
+              <div className="text-[12px] text-[var(--muted)] mt-1">{branchFilter === "전체" ? "전체 데이터 기반 분석" : `${branchFilter} 데이터 기반 분석`}</div>
             </div>
             <div className="skpi-row rounded-none border-0 border-t border-[var(--hairline)]">
               <div className="skpi">

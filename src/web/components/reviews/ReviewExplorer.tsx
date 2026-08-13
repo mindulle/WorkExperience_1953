@@ -24,9 +24,15 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
   const [search, setSearch] = useState("");
   const [sentimentFilter, setSentimentFilter] = useState<string>("전체");
   const [topicFilter, setTopicFilter] = useState<string>("전체");
+  const [channelFilter, setChannelFilter] = useState<string>("전체");
 
-  // 검색어 + AI 토픽 필터만 적용한 목록. 감성 pill의 개수 표시가 이 목록을 기준으로
-  // 계산되어, 검색/토픽을 바꾸면 pill의 숫자도 그에 맞게 바뀐다.
+  const uniqueChannels = useMemo(() => {
+    const channels = Array.from(new Set(reviews.map(r => r.channel))).filter(Boolean);
+    return ["전체", ...channels.sort()];
+  }, [reviews]);
+
+  // 검색어 + AI 토픽 + 채널 필터만 적용한 목록. 감성 pill의 개수 표시가 이 목록을 기준으로
+  // 계산되어, 검색/토픽/채널을 바꾸면 pill의 숫자도 그에 맞게 바뀐다.
   const bySearchAndTopic = useMemo(() => {
     return reviews.filter(r => {
       const q = search.toLowerCase();
@@ -42,9 +48,11 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
         matchTopic = pattern ? pattern.test(haystack) : true;
       }
 
-      return matchSearch && matchTopic;
+      const matchChannel = channelFilter === "전체" || r.channel === channelFilter;
+
+      return matchSearch && matchTopic && matchChannel;
     });
-  }, [reviews, search, topicFilter]);
+  }, [reviews, search, topicFilter, channelFilter]);
 
   const filtered = useMemo(() => {
     if (sentimentFilter === "전체") return bySearchAndTopic;
@@ -83,6 +91,19 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
             </p>
           </div>
           <div className="filters flex items-center gap-2 flex-wrap">
+            <label className="chip h-[38px] px-[13px] bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] flex items-center gap-2 shadow-[var(--shadow-sm)] cursor-pointer">
+              채널
+              <select
+                value={channelFilter}
+                onChange={(e) => setChannelFilter(e.target.value)}
+                className="font-semibold text-[var(--ink)] bg-transparent outline-none cursor-pointer"
+              >
+                {uniqueChannels.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              <ChevronDown className="w-3 h-3 text-[var(--muted)]" />
+            </label>
             <div className="chip h-[38px] px-[13px] bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] flex items-center gap-2 shadow-[var(--shadow-sm)] cursor-pointer">
               지점 <strong className="text-[var(--ink)] font-semibold">전체</strong>
               <ChevronDown className="w-3 h-3 text-[var(--muted)]" />
