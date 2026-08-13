@@ -229,13 +229,8 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
             <textarea
               readOnly
               className="flex-1 w-full min-h-[80px] text-[12.5px] p-2.5 border border-[var(--hairline)] rounded-md resize-none bg-[var(--surface-2)]"
-              value={"- 긍정: 맛있, 친절, 깔끔, 만족, 재방문 등\n- 부정: 별로, 불친절, 위생, 냄새, 웨이팅 등\n- 긍정/부정 키워드가 함께 발견되면 '혼합'으로 분류"}
+              value={"- 긍정: 맛있, 친절, 깔끔, 만족, 재방문 등 90개 키워드\n- 부정: 별로, 불친절, 위생, 냄새, 웨이팅 등 27개 키워드\n- 긍정/부정 키워드가 함께 발견되면 '혼합'으로 분류"}
             />
-            <div className="text-right mt-2.5">
-              <button disabled className="text-xs px-3 py-1.5 rounded-md border border-[var(--hairline)] opacity-50 cursor-not-allowed">
-                ✏️ 프롬프트 수정 (준비 중)
-              </button>
-            </div>
           </div>
           <div className="flex-[1.5] min-w-[260px] flex flex-col">
             <b className="text-[13px] mb-2 block">최신 발췌 문장 (Live Preview)</b>
