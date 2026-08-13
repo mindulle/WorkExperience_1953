@@ -110,7 +110,7 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
               <select
                 value={channelFilter}
                 onChange={(e) => setChannelFilter(e.target.value)}
-                className="font-semibold text-[var(--ink)] bg-transparent outline-none cursor-pointer"
+                className="appearance-none font-semibold text-[var(--ink)] bg-transparent outline-none cursor-pointer"
               >
                 {uniqueChannels.map(c => (
                   <option key={c} value={c}>{c}</option>
@@ -123,7 +123,7 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
               <select
                 value={branchFilter}
                 onChange={(e) => setBranchFilter(e.target.value)}
-                className="font-semibold text-[var(--ink)] bg-transparent outline-none cursor-pointer"
+                className="appearance-none font-semibold text-[var(--ink)] bg-transparent outline-none cursor-pointer"
               >
                 {uniqueBranches.map(b => (
                   <option key={b} value={b}>{displayBranch(b)}</option>
@@ -136,7 +136,7 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
               <select
                 value={sortOrder}
                 onChange={(e) => setSortOrder(e.target.value)}
-                className="font-semibold text-[var(--ink)] bg-transparent outline-none cursor-pointer"
+                className="appearance-none font-semibold text-[var(--ink)] bg-transparent outline-none cursor-pointer"
               >
                 <option value="최신순">최신순</option>
                 <option value="오래된순">오래된순</option>
