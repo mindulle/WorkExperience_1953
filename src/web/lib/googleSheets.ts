@@ -3,7 +3,7 @@ import type { DashboardData, VisitPurpose, CustomerType, MonthlyTrend, MenuMenti
 // 랭킹 집계 시 서로 다른 표기를 하나로 합친다(원본 값 자체는 건드리지 않음).
 // "국밥"은 국밥집 리뷰 대부분에 등장해 랭킹 변별력이 없어 제외한다.
 const MENU_ALIAS: Record<string, string> = { "섞어": "섞어국밥" };
-const MENU_EXCLUDE = new Set(["국밥"]);
+const MENU_EXCLUDE = new Set(["국밥", "밀면"]);
 
 /**
  * 최소 CSV 파서. review_text 등에 콤마·줄바꿈·따옴표가 포함된 필드가 있어
