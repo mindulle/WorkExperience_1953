@@ -1,4 +1,4 @@
-import { Building2, CalendarRange, Download, Radio, type LucideIcon } from "lucide-react";
+import { Building2, CalendarRange, type LucideIcon } from "lucide-react";
 import type { DashboardSource } from "@/lib/types";
 
 function ScopeChip({ icon: Icon, label, value, options, onChange }: { icon: LucideIcon; label: string; value: string; options?: string[]; onChange?: (val: string) => void }) {
@@ -128,15 +128,6 @@ export function Topbar({
           {onDateFromChange && onDateToChange && (
             <DateRangeChip from={dateFrom} to={dateTo} onFromChange={onDateFromChange} onToChange={onDateToChange} />
           )}
-          <ScopeChip icon={Radio} label="채널" value="카카오맵 외" />
-          <button
-            type="button"
-            disabled
-            className="flex items-center gap-2 h-[38px] px-[13px] rounded-[10px] text-[12.5px] whitespace-nowrap bg-[var(--brand)] border border-[var(--brand)] text-white opacity-40 cursor-not-allowed"
-          >
-            <Download className="w-[14px] h-[14px]" aria-hidden />
-            내보내기
-          </button>
         </div>
       </div>
     </div>

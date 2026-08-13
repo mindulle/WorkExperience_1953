@@ -24,9 +24,22 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
   const [search, setSearch] = useState("");
   const [sentimentFilter, setSentimentFilter] = useState<string>("전체");
   const [topicFilter, setTopicFilter] = useState<string>("전체");
+  const [channelFilter, setChannelFilter] = useState<string>("전체");
+  const [branchFilter, setBranchFilter] = useState<string>("전체");
+  const [sortOrder, setSortOrder] = useState<string>("최신순");
 
-  // 검색어 + AI 토픽 필터만 적용한 목록. 감성 pill의 개수 표시가 이 목록을 기준으로
-  // 계산되어, 검색/토픽을 바꾸면 pill의 숫자도 그에 맞게 바뀐다.
+  const uniqueChannels = useMemo(() => {
+    const channels = Array.from(new Set(reviews.map(r => r.channel))).filter(Boolean);
+    return ["전체", ...channels.sort()];
+  }, [reviews]);
+
+  const uniqueBranches = useMemo(() => {
+    const branches = Array.from(new Set(reviews.map(r => r.branch))).filter(Boolean);
+    return ["전체", ...branches.sort()];
+  }, [reviews]);
+
+  // 검색어 + AI 토픽 + 채널 + 지점 필터만 적용한 목록. 감성 pill의 개수 표시가 이 목록을
+  // 기준으로 계산되어, 검색/토픽/채널/지점을 바꾸면 pill의 숫자도 그에 맞게 바뀐다.
   const bySearchAndTopic = useMemo(() => {
     return reviews.filter(r => {
       const q = search.toLowerCase();
@@ -42,19 +55,28 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
         matchTopic = pattern ? pattern.test(haystack) : true;
       }
 
-      return matchSearch && matchTopic;
+      const matchChannel = channelFilter === "전체" || r.channel === channelFilter;
+      const matchBranch = branchFilter === "전체" || r.branch === branchFilter;
+
+      return matchSearch && matchTopic && matchChannel && matchBranch;
     });
-  }, [reviews, search, topicFilter]);
+  }, [reviews, search, topicFilter, channelFilter, branchFilter]);
 
   const filtered = useMemo(() => {
-    if (sentimentFilter === "전체") return bySearchAndTopic;
-    return bySearchAndTopic.filter(r => {
+    const bySentiment = sentimentFilter === "전체" ? bySearchAndTopic : bySearchAndTopic.filter(r => {
       if (sentimentFilter === "긍정") return r.sentiment === "긍정";
       if (sentimentFilter === "부정") return r.sentiment === "부정";
       if (sentimentFilter === "중립") return r.sentiment === "중립" || r.sentiment === "혼합";
       return true;
     });
-  }, [bySearchAndTopic, sentimentFilter]);
+
+    const sorted = [...bySentiment];
+    if (sortOrder === "최신순") sorted.sort((a, b) => b.date.localeCompare(a.date));
+    else if (sortOrder === "오래된순") sorted.sort((a, b) => a.date.localeCompare(b.date));
+    else if (sortOrder === "별점높은순") sorted.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+    else if (sortOrder === "별점낮은순") sorted.sort((a, b) => (a.rating ?? 0) - (b.rating ?? 0));
+    return sorted;
+  }, [bySearchAndTopic, sentimentFilter, sortOrder]);
 
   const selectedReview = reviews.find(r => r.id === selectedId) || null;
 
@@ -83,14 +105,46 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
             </p>
           </div>
           <div className="filters flex items-center gap-2 flex-wrap">
-            <div className="chip h-[38px] px-[13px] bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] flex items-center gap-2 shadow-[var(--shadow-sm)] cursor-pointer">
-              지점 <strong className="text-[var(--ink)] font-semibold">전체</strong>
+            <label className="chip h-[38px] px-[13px] bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] flex items-center gap-2 shadow-[var(--shadow-sm)] cursor-pointer">
+              채널
+              <select
+                value={channelFilter}
+                onChange={(e) => setChannelFilter(e.target.value)}
+                className="appearance-none font-semibold text-[var(--ink)] bg-transparent outline-none cursor-pointer"
+              >
+                {uniqueChannels.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
               <ChevronDown className="w-3 h-3 text-[var(--muted)]" />
-            </div>
-            <div className="chip h-[38px] px-[13px] bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] flex items-center gap-2 shadow-[var(--shadow-sm)] cursor-pointer">
-              정렬 <strong className="text-[var(--ink)] font-semibold">최신순</strong>
+            </label>
+            <label className="chip h-[38px] px-[13px] bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] flex items-center gap-2 shadow-[var(--shadow-sm)] cursor-pointer">
+              지점
+              <select
+                value={branchFilter}
+                onChange={(e) => setBranchFilter(e.target.value)}
+                className="appearance-none font-semibold text-[var(--ink)] bg-transparent outline-none cursor-pointer"
+              >
+                {uniqueBranches.map(b => (
+                  <option key={b} value={b}>{displayBranch(b)}</option>
+                ))}
+              </select>
               <ChevronDown className="w-3 h-3 text-[var(--muted)]" />
-            </div>
+            </label>
+            <label className="chip h-[38px] px-[13px] bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] flex items-center gap-2 shadow-[var(--shadow-sm)] cursor-pointer">
+              정렬
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+                className="appearance-none font-semibold text-[var(--ink)] bg-transparent outline-none cursor-pointer"
+              >
+                <option value="최신순">최신순</option>
+                <option value="오래된순">오래된순</option>
+                <option value="별점높은순">별점 높은순</option>
+                <option value="별점낮은순">별점 낮은순</option>
+              </select>
+              <ChevronDown className="w-3 h-3 text-[var(--muted)]" />
+            </label>
           </div>
         </div>
 
@@ -175,13 +229,8 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
             <textarea
               readOnly
               className="flex-1 w-full min-h-[80px] text-[12.5px] p-2.5 border border-[var(--hairline)] rounded-md resize-none bg-[var(--surface-2)]"
-              value={"- 긍정: 맛있, 친절, 깔끔, 만족, 재방문 등\n- 부정: 별로, 불친절, 위생, 냄새, 웨이팅 등\n- 긍정/부정 키워드가 함께 발견되면 '혼합'으로 분류"}
+              value={"- 긍정: 맛있, 친절, 깔끔, 만족, 재방문 등 90개 키워드\n- 부정: 별로, 불친절, 위생, 냄새, 웨이팅 등 27개 키워드\n- 긍정/부정 키워드가 함께 발견되면 '혼합'으로 분류"}
             />
-            <div className="text-right mt-2.5">
-              <button disabled className="text-xs px-3 py-1.5 rounded-md border border-[var(--hairline)] opacity-50 cursor-not-allowed">
-                ✏️ 프롬프트 수정 (준비 중)
-              </button>
-            </div>
           </div>
           <div className="flex-[1.5] min-w-[260px] flex flex-col">
             <b className="text-[13px] mb-2 block">최신 발췌 문장 (Live Preview)</b>
