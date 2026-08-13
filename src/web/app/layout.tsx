@@ -17,7 +17,7 @@ export default function RootLayout({
       <body className="min-h-full bg-[var(--plane)] text-[var(--ink)]">
         <div className="flex min-h-screen">
           <Sidebar />
-          <main className="flex-1 min-w-0 flex flex-col gap-6 p-6 overflow-x-hidden">
+          <main className="flex-1 min-w-0 flex flex-col gap-6 p-6">
             {children}
           </main>
         </div>
