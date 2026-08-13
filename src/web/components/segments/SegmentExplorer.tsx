@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import type { DashboardData, ReviewItem } from "@/lib/types";
 import { DonutChart } from "@/components/dashboard/DonutChart";
 
@@ -20,57 +20,28 @@ const CUSTOMER_TYPE_COLORS: Record<string, string> = {
 };
 
 export function SegmentExplorer({
-  purposes: initialPurposes,
-  customerTypes: initialCustomerTypes,
+  purposes,
+  customerTypes,
   reviews,
 }: {
   purposes: DashboardData["purposes"];
   customerTypes: DashboardData["customerTypes"];
   reviews: ReviewItem[];
 }) {
-  const [branchFilter, setBranchFilter] = useState<string>("전체");
-  
-  const uniqueBranches = useMemo(() => {
-    const branches = Array.from(new Set(reviews.map(r => r.branch))).filter(Boolean);
-    return ["전체", ...branches.sort()];
-  }, [reviews]);
+  const [selectedSeg, setSelectedSeg] = useState<string>(purposes[0]?.purpose || "");
 
-  const { filteredPurposes, filteredCustomerTypes } = useMemo(() => {
-    if (branchFilter === "전체" && reviews.length === 0) {
-      return { filteredPurposes: initialPurposes, filteredCustomerTypes: initialCustomerTypes };
+  const selectedData = purposes.find(p => p.purpose === selectedSeg);
+
+  // 유형별 예시 리뷰 (최대 3건). AI가 근거를 남긴 건을 우선하고, 그 다음은 규칙 기반 매칭 건을 채운다.
+  const typeSamples = React.useMemo(() => {
+    const byType: Record<string, ReviewItem[]> = {};
+    for (const type of ["직장인", "가족", "학생"]) {
+      const withReason = reviews.filter(r => r.customerType === type && r.customerTypeReason);
+      const withoutReason = reviews.filter(r => r.customerType === type && !r.customerTypeReason);
+      byType[type] = [...withReason, ...withoutReason].slice(0, 3);
     }
-    
-    const filtered = reviews.filter(r => branchFilter === "전체" || r.branch === branchFilter);
-    
-    const purpCounts: Record<string, number> = {};
-    const custCounts: Record<string, number> = {};
-    
-    filtered.forEach(r => {
-      if (r.purpose) purpCounts[r.purpose] = (purpCounts[r.purpose] || 0) + 1;
-      if (r.customerType) custCounts[r.customerType] = (custCounts[r.customerType] || 0) + 1;
-    });
-    
-    const toRatios = (counts: Record<string, number>, keyName: string) => {
-      const total = Object.values(counts).reduce((a, b) => a + b, 0);
-      if (total === 0) return [];
-      return Object.entries(counts)
-        .map(([k, count]) => ({ [keyName]: k, ratio: Math.round((count / total) * 100) }))
-        .sort((a: { ratio: number }, b: { ratio: number }) => b.ratio - a.ratio);
-    };
-
-    return {
-      filteredPurposes: toRatios(purpCounts, "purpose") as DashboardData["purposes"],
-      filteredCustomerTypes: toRatios(custCounts, "type") as DashboardData["customerTypes"],
-    };
-  }, [reviews, branchFilter, initialPurposes, initialCustomerTypes]);
-
-  // fallback for initial state before click
-  const [selectedSeg, setSelectedSeg] = useState<string>(filteredPurposes[0]?.purpose || "");
-  const activePurposes = filteredPurposes.length > 0 ? filteredPurposes : initialPurposes;
-  const activeCustomerTypes = filteredCustomerTypes.length > 0 ? filteredCustomerTypes : initialCustomerTypes;
-
-  const selectedData = activePurposes.find(p => p.purpose === selectedSeg) || activePurposes[0];
-  const maxRatio = activePurposes.length > 0 ? Math.max(...activePurposes.map(p => p.ratio)) : 100;
+    return byType;
+  }, [reviews]);
 
   return (
     <div className="flex flex-col h-full">
@@ -80,22 +51,19 @@ export function SegmentExplorer({
             <h1 className="text-2xl font-bold tracking-tight">고객 세그먼트</h1>
             <p className="text-[12.5px] text-[var(--muted)] mt-1">리뷰에 나타난 고객 유형별 반응을 비교합니다</p>
           </div>
-          <div className="filters flex items-center gap-2 flex-wrap">
-            <select 
-              value={branchFilter}
-              onChange={(e) => setBranchFilter(e.target.value)}
-              className="h-[38px] px-3 bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] font-semibold shadow-[var(--shadow-sm)] outline-none cursor-pointer focus:border-[var(--brand)]"
-            >
-              {uniqueBranches.map(b => (
-                <option key={b} value={b}>{b === "전체" ? "지점 전체" : b}</option>
-              ))}
-            </select>
+          <div className="filters">
+            <div className="chip h-[38px] px-[13px] bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] flex items-center gap-2 shadow-[var(--shadow-sm)]">
+              지점 <strong className="text-[var(--ink)] font-semibold">전체</strong>
+            </div>
+            <div className="chip h-[38px] px-[13px] bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] flex items-center gap-2 shadow-[var(--shadow-sm)]">
+              기간 <strong className="text-[var(--ink)] font-semibold">전체 데이터</strong>
+            </div>
           </div>
         </div>
         
-        {activePurposes.length > 0 && (
+        {purposes.length > 0 && (
           <div className="seg-tabs">
-            {activePurposes.map(p => {
+            {purposes.map(p => {
               const color = PURPOSE_COLORS[p.purpose] || "var(--brand)";
               const isOn = selectedSeg === p.purpose;
               return (
@@ -137,20 +105,8 @@ export function SegmentExplorer({
               </div>
               <div className="skpi">
                 <div className="skpi-label">데이터 특성</div>
-                <div className="skpi-val text-[16px] text-[var(--brand)]">
-                  {(() => {
-                    const segReviews = reviews.filter(r => r.purpose === selectedSeg);
-                    const validRatings = segReviews.map(r => r.rating).filter(Boolean) as number[];
-                    const avgR = validRatings.length > 0 ? (validRatings.reduce((a,b)=>a+b,0) / validRatings.length).toFixed(1) : "-";
-                    
-                    const kws: Record<string, number> = {};
-                    segReviews.forEach(r => r.keywords?.forEach(k => { kws[k] = (kws[k]||0)+1 }));
-                    const topKw = Object.entries(kws).sort((a,b)=>b[1]-a[1])[0];
-                    
-                    return `평점 ${avgR} · ${topKw ? `'${topKw[0]}' 위주` : "키워드 없음"}`;
-                  })()}
-                </div>
-                <div className="skpi-cmp">해당 세그먼트 요약 통계</div>
+                <div className="skpi-val text-[16px] text-[var(--muted)]">상세 통계 연동 대기</div>
+                <div className="skpi-cmp">별점/키워드 등 상세 결합 필요</div>
               </div>
             </div>
           </div>
@@ -168,17 +124,17 @@ export function SegmentExplorer({
               리뷰 본문 언급 기반
             </span>
           </div>
-          {activePurposes.length > 0 ? (
+          {purposes.length > 0 ? (
             <>
               <DonutChart
-                segments={activePurposes.map((p) => ({
+                segments={purposes.map((p) => ({
                   label: p.purpose,
                   ratio: p.ratio,
                   color: PURPOSE_COLORS[p.purpose] ?? "var(--muted)",
                 }))}
               />
               <div className="flex flex-col gap-1.5 mt-2 text-sm">
-                {activePurposes.map((p) => (
+                {purposes.map((p) => (
                   <span key={p.purpose} className="flex items-center gap-1.5">
                     <span
                       className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
@@ -190,24 +146,24 @@ export function SegmentExplorer({
               </div>
             </>
           ) : (
-            <div className="text-[var(--muted)] text-sm p-4 text-center">조건에 맞는 데이터가 없습니다.</div>
+            <div className="text-[var(--muted)] text-sm p-4 text-center">데이터가 없습니다.</div>
           )}
         </div>
 
-        {/* 방문자 고객 유형(직장인/가족/학생). rule_classifier.py/ai_engine.py의 customer_type
-            컬럼이 시트에 반영되기 전까지는 customerTypes가 빈 배열이라 안내 문구로 저하된다. */}
+        {/* 방문자 고객 유형(직장인/가족/학생). rule_classifier.py의 키워드 규칙으로 먼저 분류하고,
+            근거가 없던 "정보없음" 리뷰만 AI가 문맥으로 추측해 보완한다 (근거는 아래 카드에서 확인). */}
         <div className="bg-[var(--surface)] border border-[var(--hairline)] rounded-[var(--r-lg)] shadow-[var(--shadow-sm)] p-6">
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-[15px] font-bold tracking-[-0.3px]">방문자 고객 유형</h3>
             <span className="text-[11px] font-semibold bg-[var(--surface-2)] px-2 py-1 rounded text-[var(--ink-2)]">
-              AI / 규칙 기반 분류
+              규칙 + AI 추측
             </span>
           </div>
-          {activeCustomerTypes.length > 0 ? (
+          {customerTypes.length > 0 ? (
             <div className="kw mt-2">
               {(() => {
-                const maxRatio = Math.max(...activeCustomerTypes.map((c) => c.ratio));
-                return activeCustomerTypes.map((c) => (
+                const maxRatio = Math.max(...customerTypes.map((c) => c.ratio));
+                return customerTypes.map((c) => (
                   <div key={c.type} className="kw-row">
                     <span className="kw-name">{c.type}</span>
                     <span className="kw-track">
@@ -232,45 +188,39 @@ export function SegmentExplorer({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
-        <div className="bg-[var(--surface)] border border-[var(--hairline)] rounded-[var(--r-lg)] shadow-[var(--shadow-sm)] p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-[15px] font-bold tracking-[-0.3px]">세그먼트 비교</h3>
-            <span className="text-[11px] font-semibold bg-[var(--surface-2)] px-2 py-1 rounded text-[var(--ink-2)]">비율순</span>
-          </div>
-          
-          <table className="w-full text-left text-sm border-collapse">
-            <thead>
-              <tr className="border-b-2 border-[var(--hairline)]">
-                <th className="py-3 font-semibold text-[var(--muted)]">유형</th>
-                <th className="py-3 font-semibold text-[var(--muted)] text-right">리뷰 비중</th>
-              </tr>
-            </thead>
-            <tbody>
-              {activePurposes.map((p) => {
-                const color = PURPOSE_COLORS[p.purpose] || "var(--brand)";
-                return (
-                  <tr key={p.purpose} className="border-b border-[var(--hairline)]">
-                    <td className="py-4">
-                      <span className="seg-name">
-                        <span className="w-2 h-2 rounded-full" style={{ background: color }}></span>
-                        {p.purpose}
-                      </span>
-                    </td>
-                    <td className="py-4 text-right">
-                      <span className="mini-track mr-2">
-                        <span className="mini-fill" style={{ width: `${(p.ratio / maxRatio) * 100}%`, background: color }}></span>
-                      </span>
-                      <span className="tnum font-semibold">{p.ratio}%</span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-12">
+        {(["직장인", "가족", "학생"] as const).map((type) => {
+          const stat = customerTypes.find((c) => c.type === type);
+          const samples = typeSamples[type] ?? [];
+          return (
+            <div key={type} className="bg-[var(--surface)] border border-[var(--hairline)] rounded-[var(--r-lg)] shadow-[var(--shadow-sm)] p-6 flex flex-col">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-[15px] font-bold tracking-[-0.3px] flex items-center gap-2">
+                  <span style={{ color: CUSTOMER_TYPE_COLORS[type] }}>●</span> {type}
+                </h3>
+                <span className="text-[12px] font-semibold text-[var(--muted)]">{stat ? `${stat.ratio}%` : "-"}</span>
+              </div>
+              {samples.length > 0 ? (
+                <div className="flex flex-col gap-3">
+                  {samples.map((r) => (
+                    <div key={r.id} className="p-3 border border-[var(--hairline)] rounded-[10px] bg-[var(--plane)]">
+                      <p className="text-[12.5px] text-[var(--ink-2)] line-clamp-2">{r.content}</p>
+                      {r.customerTypeReason && (
+                        <p className="text-[11.5px] text-[var(--brand)] mt-1.5">✨ {r.customerTypeReason}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex-1 flex items-center justify-center text-[var(--muted)] text-[12.5px] text-center py-6">
+                  해당 유형으로 분류된 리뷰가 아직 없습니다.
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
-      
+
     </div>
   );
 }

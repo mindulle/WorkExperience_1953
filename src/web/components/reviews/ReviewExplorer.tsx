@@ -2,7 +2,8 @@
 
 import React, { useState, useMemo } from "react";
 import type { ReviewItem } from "@/lib/types";
-import { Search } from "lucide-react";
+import { Search, ChevronDown } from "lucide-react";
+import { Card } from "@/components/ui/Card";
 
 // AI 토픽 필터. 리뷰별 별도 분류 필드가 없어, 키워드/본문에 대한 휴리스틱
 // 매칭으로 근사한다 (rule_classifier.py 의 POS/NEG_KEYWORDS 와 같은 성격의
@@ -14,79 +15,59 @@ const TOPIC_PATTERNS: Record<string, RegExp> = {
   "주차": /주차/,
 };
 
+// "브랜드전체"는 특정 지점이 아닌 브랜드 전반/미분류 리뷰에 붙는 원본 태그값이다.
+// 원본 데이터·필터링은 그대로 두고, AI 리뷰 탐색 화면에 노출되는 텍스트만 "기타"로 바꾼다.
+const displayBranch = (branch: string) => (branch === "브랜드전체" ? "기타" : branch);
+
 export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sentimentFilter, setSentimentFilter] = useState<string>("전체");
   const [topicFilter, setTopicFilter] = useState<string>("전체");
-  const [branchFilter, setBranchFilter] = useState<string>("전체");
-  const [sortOrder, setSortOrder] = useState<string>("최신순");
 
-  const uniqueBranches = useMemo(() => {
-    const branches = Array.from(new Set(reviews.map(r => r.branch))).filter(Boolean);
-    return ["전체", ...branches.sort()];
-  }, [reviews]);
-
-  const filtered = useMemo(() => {
-    let result = reviews.filter(r => {
-      // 1. 텍스트 검색 (본문, 지점명, 키워드)
+  // 검색어 + AI 토픽 필터만 적용한 목록. 감성 pill의 개수 표시가 이 목록을 기준으로
+  // 계산되어, 검색/토픽을 바꾸면 pill의 숫자도 그에 맞게 바뀐다.
+  const bySearchAndTopic = useMemo(() => {
+    return reviews.filter(r => {
       const q = search.toLowerCase();
       const matchSearch = q === "" ||
         r.content.toLowerCase().includes(q) ||
         r.branch.toLowerCase().includes(q) ||
-        (r.keywords && r.keywords.some(k => k.toLowerCase().includes(q)));
+        r.keywords.some(k => k.toLowerCase().includes(q));
 
-      // 2. 감성 필터
-      let matchSent = true;
-      if (sentimentFilter !== "전체") {
-         if (sentimentFilter === "긍정") matchSent = r.sentiment === "긍정";
-         if (sentimentFilter === "부정") matchSent = r.sentiment === "부정";
-         if (sentimentFilter === "중립") matchSent = r.sentiment === "중립" || r.sentiment === "혼합";
-         if (sentimentFilter === "분석 스킵") matchSent = r.sentiment === "분석 스킵" || r.sentiment === "분석 불가" || !r.sentiment;
-      }
-
-      // 3. AI 토픽 필터
       let matchTopic = true;
       if (topicFilter !== "전체") {
-        if (r.aspects && r.aspects.length > 0) {
-          // 실제 AI가 추출한 토픽(aspect_analysis)이 존재하면 이를 기반으로 필터링
-          matchTopic = r.aspects.some(a => a.category.includes(topicFilter) || topicFilter.includes(a.category));
-        } else {
-          // 데이터 파이프라인에서 AI 처리가 안 된 예전 데이터에 대한 휴리스틱 폴백
-          const pattern = TOPIC_PATTERNS[topicFilter];
-          const haystack = `${r.content} ${r.keywords ? r.keywords.join(" ") : ""}`;
-          matchTopic = pattern ? pattern.test(haystack) : true;
-        }
+        const pattern = TOPIC_PATTERNS[topicFilter];
+        const haystack = `${r.content} ${r.keywords.join(" ")}`;
+        matchTopic = pattern ? pattern.test(haystack) : true;
       }
 
-      // 4. 지점 필터
-      const matchBranch = branchFilter === "전체" || r.branch === branchFilter;
-
-      return matchSearch && matchSent && matchTopic && matchBranch;
+      return matchSearch && matchTopic;
     });
+  }, [reviews, search, topicFilter]);
 
-    // 정렬 로직
-    if (sortOrder === "최신순") {
-      result = result.sort((a, b) => b.date.localeCompare(a.date));
-    } else if (sortOrder === "오래된순") {
-      result = result.sort((a, b) => a.date.localeCompare(b.date));
-    } else if (sortOrder === "별점높은순") {
-      result = result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-    } else if (sortOrder === "별점낮은순") {
-      result = result.sort((a, b) => (a.rating || 5) - (b.rating || 5));
-    }
-
-    return result;
-  }, [reviews, search, sentimentFilter, topicFilter, branchFilter, sortOrder]);
+  const filtered = useMemo(() => {
+    if (sentimentFilter === "전체") return bySearchAndTopic;
+    return bySearchAndTopic.filter(r => {
+      if (sentimentFilter === "긍정") return r.sentiment === "긍정";
+      if (sentimentFilter === "부정") return r.sentiment === "부정";
+      if (sentimentFilter === "중립") return r.sentiment === "중립" || r.sentiment === "혼합";
+      return true;
+    });
+  }, [bySearchAndTopic, sentimentFilter]);
 
   const selectedReview = reviews.find(r => r.id === selectedId) || null;
 
+  // AI 리뷰 분석 파이프라인 (Admin) 카드용 — 가장 최근 작성된 리뷰 1건을 실데이터로 미리보기.
+  const latestReview = useMemo(() => {
+    if (reviews.length === 0) return null;
+    return [...reviews].sort((a, b) => b.date.localeCompare(a.date))[0];
+  }, [reviews]);
 
-  // 요약 카운트
-  const countPos = reviews.filter(r => r.sentiment === "긍정").length;
-  const countNeg = reviews.filter(r => r.sentiment === "부정").length;
-  const countNeu = reviews.filter(r => r.sentiment === "중립" || r.sentiment === "혼합").length;
-  const countSkip = reviews.filter(r => r.sentiment === "분석 스킵").length;
+  // 요약 카운트. 검색/토픽 필터가 바뀌면 이 숫자도 함께 바뀐다 (감성 필터 자체는 제외).
+  const countPos = bySearchAndTopic.filter(r => r.sentiment === "긍정").length;
+  const countNeg = bySearchAndTopic.filter(r => r.sentiment === "부정").length;
+  const countNeu = bySearchAndTopic.filter(r => r.sentiment === "중립" || r.sentiment === "혼합").length;
 
   const validRatings = filtered.map(r => r.rating).filter(Boolean) as number[];
   const avgRating = validRatings.length > 0 ? (validRatings.reduce((a,b)=>a+b,0) / validRatings.length).toFixed(1) : "-";
@@ -102,26 +83,14 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
             </p>
           </div>
           <div className="filters flex items-center gap-2 flex-wrap">
-            <select 
-              value={branchFilter}
-              onChange={(e) => setBranchFilter(e.target.value)}
-              className="h-[38px] px-3 bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] font-semibold shadow-[var(--shadow-sm)] outline-none cursor-pointer focus:border-[var(--brand)]"
-            >
-              {uniqueBranches.map(b => (
-                <option key={b} value={b}>{b === "전체" ? "지점 전체" : b}</option>
-              ))}
-            </select>
-            
-            <select
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-              className="h-[38px] px-3 bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] font-semibold shadow-[var(--shadow-sm)] outline-none cursor-pointer focus:border-[var(--brand)]"
-            >
-              <option value="최신순">정렬 최신순</option>
-              <option value="오래된순">정렬 오래된순</option>
-              <option value="별점높은순">별점 높은순</option>
-              <option value="별점낮은순">별점 낮은순</option>
-            </select>
+            <div className="chip h-[38px] px-[13px] bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] flex items-center gap-2 shadow-[var(--shadow-sm)] cursor-pointer">
+              지점 <strong className="text-[var(--ink)] font-semibold">전체</strong>
+              <ChevronDown className="w-3 h-3 text-[var(--muted)]" />
+            </div>
+            <div className="chip h-[38px] px-[13px] bg-[var(--surface)] border border-[var(--hairline)] rounded-[10px] text-[12.5px] text-[var(--ink-2)] flex items-center gap-2 shadow-[var(--shadow-sm)] cursor-pointer">
+              정렬 <strong className="text-[var(--ink)] font-semibold">최신순</strong>
+              <ChevronDown className="w-3 h-3 text-[var(--muted)]" />
+            </div>
           </div>
         </div>
 
@@ -167,9 +136,6 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
             <span className={`pill ${sentimentFilter === "중립" ? "on" : ""}`} onClick={() => setSentimentFilter("중립")}>
               <span className="dot" style={{ background: "#cfcec8" }}></span>중립 {countNeu}
             </span>
-            <span className={`pill ${sentimentFilter === "분석 스킵" ? "on" : ""}`} onClick={() => setSentimentFilter("분석 스킵")}>
-              <span className="dot" style={{ background: "var(--muted)" }}></span>스킵 {countSkip}
-            </span>
           </div>
         </div>
       </div>
@@ -193,6 +159,56 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
         </div>
       </div>
 
+      {/* AI 리뷰 분석 파이프라인 (Admin). 오너 콘솔용 미리보기 — 프론트엔드는 AI를
+          직접 호출하지 않고 배치 파이프라인(rule_classifier.py) 결과만 보여준다 (RULES §3.2). */}
+      <Card className="mt-[18px]">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div>
+            <div className="text-[15px] font-bold">AI 리뷰 분석 파이프라인 (Admin)</div>
+            <div className="text-[12px] text-[var(--muted)] mt-0.5">규칙 기반 분류 기준 및 최신 분석 결과 미리보기</div>
+          </div>
+          <span className="status-tag new">규칙 기반 분류 파이프라인</span>
+        </div>
+        <div className="flex gap-6 flex-wrap">
+          <div className="flex-1 min-w-[260px] flex flex-col md:border-r md:border-dashed md:border-[var(--hairline)] md:pr-6">
+            <b className="text-[13px] mb-2 block">키워드 분류 기준 (rule_classifier.py)</b>
+            <textarea
+              readOnly
+              className="flex-1 w-full min-h-[80px] text-[12.5px] p-2.5 border border-[var(--hairline)] rounded-md resize-none bg-[var(--surface-2)]"
+              value={"- 긍정: 맛있, 친절, 깔끔, 만족, 재방문 등\n- 부정: 별로, 불친절, 위생, 냄새, 웨이팅 등\n- 긍정/부정 키워드가 함께 발견되면 '혼합'으로 분류"}
+            />
+            <div className="text-right mt-2.5">
+              <button disabled className="text-xs px-3 py-1.5 rounded-md border border-[var(--hairline)] opacity-50 cursor-not-allowed">
+                ✏️ 프롬프트 수정 (준비 중)
+              </button>
+            </div>
+          </div>
+          <div className="flex-[1.5] min-w-[260px] flex flex-col">
+            <b className="text-[13px] mb-2 block">최신 발췌 문장 (Live Preview)</b>
+            {latestReview ? (
+              <div className="bg-[var(--surface-2)] p-4 rounded-lg flex-1">
+                <p className="text-[13px] mb-2.5">
+                  <b>추출된 핵심 키워드:</b>{" "}
+                  {latestReview.keywords.slice(0, 3).map((k, i) => (
+                    <span key={i} className="tag mr-1" style={{ background: "#fff" }}>#{k}</span>
+                  ))}
+                </p>
+                <blockquote className="border-l-[3px] border-[var(--brand)] pl-3.5 text-[13.5px] text-[var(--ink-2)] leading-relaxed m-0">
+                  &ldquo;{latestReview.content}&rdquo;
+                  <span className="text-[11.5px] text-[var(--muted)] mt-2 block">
+                    - {displayBranch(latestReview.branch)} 리뷰 원문 ({latestReview.date || "날짜미상"})
+                  </span>
+                </blockquote>
+              </div>
+            ) : (
+              <div className="bg-[var(--surface-2)] p-4 rounded-lg flex-1 text-[var(--muted)] text-[13px]">
+                표시할 리뷰가 없습니다.
+              </div>
+            )}
+          </div>
+        </div>
+      </Card>
+
       <div className="pane-grid">
         <div className="list">
           {filtered.slice(0, 50).map(r => {
@@ -209,7 +225,7 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
               >
                 <div className="rcard-top">
                   <div className="rcard-meta">
-                    <span className="branch-badge">{r.branch}</span>
+                    <span className="branch-badge">{displayBranch(r.branch)}</span>
                     <span className="rdate">{r.date || "날짜미상"} · {r.channel}</span>
                   </div>
                   <span className={`sent-badge ${sentClass}`}>{r.sentiment}</span>
@@ -240,52 +256,16 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
               <div className="d-title">리뷰 상세</div>
               <div className="d-close" onClick={() => setSelectedId(null)}>✕</div>
             </div>
-            <div className="d-meta-row mb-3 flex flex-wrap gap-1.5 items-center">
-              <span className="branch-badge">{selectedReview.branch}</span>
+            <div className="d-meta-row">
+              <span className="branch-badge">{displayBranch(selectedReview.branch)}</span>
               <span className="d-stars font-bold text-sm text-[var(--s-orange)]">
                 ★ {selectedReview.rating || "-"}
               </span>
-              <span className="rdate ml-1">{selectedReview.date || "날짜미상"} · {selectedReview.channel}</span>
+              <span className="rdate">{selectedReview.date || "날짜미상"} · {selectedReview.channel}</span>
             </div>
-
-            {/* AI 메타 태그 */}
-            <div className="flex flex-wrap gap-1.5 mb-4">
-              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
-                selectedReview.sentiment === "긍정" ? "bg-[var(--s-blue-soft)] text-[var(--brand)]" :
-                selectedReview.sentiment === "부정" ? "bg-[var(--critical-soft)] text-[var(--critical)]" :
-                "bg-[var(--surface-3)] text-[var(--ink-2)]"
-              }`}>{selectedReview.sentiment}</span>
-              {selectedReview.customerType && selectedReview.customerType !== "정보없음" && (
-                <span className="text-[10.5px] px-2 py-0.5 bg-[var(--s-yellow-soft)] text-[#b45309] rounded font-medium">👤 {selectedReview.customerType}</span>
-              )}
-              {selectedReview.menus && selectedReview.menus.length > 0 && (
-                <span className="text-[10.5px] px-2 py-0.5 bg-[var(--s-aqua-soft)] text-[#0d9488] rounded font-medium">🍲 {selectedReview.menus.join(', ')}</span>
-              )}
-            </div>
-
-            <div className="d-label">리뷰 본문</div>
-            <div className="d-body mb-6 text-[13.5px] leading-relaxed">
+            <div className="d-body">
               {selectedReview.content}
             </div>
-
-            {/* AI 발췌 분석 (Aspects) */}
-            {selectedReview.aspects && selectedReview.aspects.length > 0 && (
-              <div className="d-section mb-6">
-                <div className="d-label">AI 발췌 및 분석</div>
-                <div className="flex flex-col gap-2 mt-1">
-                  {selectedReview.aspects.map((aspect, idx) => (
-                    <blockquote key={idx} className={`border-l-[3px] pl-3.5 py-0.5 text-[13px] leading-relaxed m-0 bg-[var(--plane)] ${
-                      aspect.sentiment === "긍정" ? "border-[var(--brand)] text-[var(--ink)]" :
-                      aspect.sentiment === "부정" ? "border-[var(--critical)] text-[var(--ink)]" :
-                      "border-[var(--muted)] text-[var(--ink-2)]"
-                    }`}>
-                      <span className="font-semibold mr-1">[{aspect.category}]</span> 
-                      {aspect.context}
-                    </blockquote>
-                  ))}
-                </div>
-              </div>
-            )}
 
             <div className="d-section">
               <div className="d-label">키워드</div>

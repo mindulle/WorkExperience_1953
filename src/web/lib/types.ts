@@ -98,8 +98,6 @@ export type DashboardData = {
 };
 
 /** 개별 리뷰 원문 (리뷰 탐색 페이지용) */
-export type ReviewAspect = { category: string; sentiment: string; context: string; };
-
 export type ReviewItem = {
   id: string;
   branch: string;
@@ -115,7 +113,8 @@ export type ReviewItem = {
   menus?: string[];
   purpose?: string;
   customerType?: string;
-  aspects?: ReviewAspect[];
+  /** customer_type이 규칙 기반으로 못 찾아 AI가 추측한 경우의 판단 근거. 규칙으로 찾은 경우는 비어있다. */
+  customerTypeReason?: string;
 };
 
 /** AI 주간리포트 지점별 인사이트 */

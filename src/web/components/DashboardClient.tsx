@@ -30,41 +30,28 @@ export function DashboardClient({
   allReviews?: ReviewItem[];
 }) {
   const [selectedBranch, setSelectedBranch] = React.useState("전체");
-  const [selectedPeriod, setSelectedPeriod] = React.useState("전체");
-  
+  // 기간은 프리셋이 아니라 달력에서 고른 시작일~종료일(YYYY-MM-DD)로 지정한다. 빈 문자열이면 해당 경계 없음.
+  const [dateFrom, setDateFrom] = React.useState("");
+  const [dateTo, setDateTo] = React.useState("");
+
   const handleBranchChange = (branch: string) => setSelectedBranch(branch);
-  const handlePeriodChange = (period: string) => setSelectedPeriod(period);
-  
+
   const branchOptions = ["전체", ...(initialData.branchStats?.map(b => b.branch) || [])];
-  const periodOptions = ["전체", "최근 30일", "최근 90일", "최근 6개월"];
 
   // 필터링 적용 (원시 데이터 기반)
   const filteredReviews = React.useMemo(() => {
     if (!allReviews) return [];
-    
-    // 날짜 역순 정렬 후 최신 날짜 찾기
-    const sorted = [...allReviews].sort((a, b) => b.date.localeCompare(a.date));
-    const latestDate = sorted.length > 0 ? new Date(sorted[0].date) : new Date();
-    
-    let daysToKeep = Infinity;
-    if (selectedPeriod === "최근 30일") daysToKeep = 30;
-    else if (selectedPeriod === "최근 90일") daysToKeep = 90;
-    else if (selectedPeriod === "최근 6개월") daysToKeep = 180;
-    
+
     return allReviews.filter(r => {
       // 지점 필터
       if (selectedBranch !== "전체" && r.branch !== selectedBranch) return false;
-      
-      // 기간 필터
-      if (daysToKeep !== Infinity && r.date) {
-        const rDate = new Date(r.date);
-        const diffTime = Math.abs(latestDate.getTime() - rDate.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        if (diffDays > daysToKeep) return false;
-      }
+
+      // 기간 필터 (작성일이 YYYY-MM-DD 형식이라 문자열 비교로 충분)
+      if (dateFrom && r.date && r.date < dateFrom) return false;
+      if (dateTo && r.date && r.date > dateTo) return false;
       return true;
     });
-  }, [allReviews, selectedBranch, selectedPeriod]);
+  }, [allReviews, selectedBranch, dateFrom, dateTo]);
 
   // 파생 KPI 계산
   let displayReviews = initialData.totalReviews;
@@ -73,7 +60,7 @@ export function DashboardClient({
   let displayAvgRating = initialData.averageRating;
   let displayPending = initialData.pendingReplies;
 
-  if (allReviews && (selectedBranch !== "전체" || selectedPeriod !== "전체")) {
+  if (allReviews && (selectedBranch !== "전체" || dateFrom || dateTo)) {
     let pos = 0, neg = 0, judged = 0, rSum = 0, rCount = 0, pending = 0;
     
     filteredReviews.forEach(r => {
@@ -101,15 +88,16 @@ export function DashboardClient({
 
   return (
     <>
-      <Topbar 
-        updatedAt={updatedAt} 
-        source={initialData.source} 
+      <Topbar
+        updatedAt={updatedAt}
+        source={initialData.source}
         branchFilter={selectedBranch}
         onBranchChange={handleBranchChange}
         branchOptions={branchOptions}
-        periodFilter={selectedPeriod}
-        onPeriodChange={handlePeriodChange}
-        periodOptions={periodOptions}
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        onDateFromChange={setDateFrom}
+        onDateToChange={setDateTo}
       />
 
       {/* KPI 행. 데이터가 없는 지표는 값을 지어내지 않고 사유를 표시한다. */}

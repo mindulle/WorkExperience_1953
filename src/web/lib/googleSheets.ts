@@ -3,7 +3,7 @@ import type { DashboardData, VisitPurpose, CustomerType, MonthlyTrend, MenuMenti
 // 랭킹 집계 시 서로 다른 표기를 하나로 합친다(원본 값 자체는 건드리지 않음).
 // "국밥"은 국밥집 리뷰 대부분에 등장해 랭킹 변별력이 없어 제외한다.
 const MENU_ALIAS: Record<string, string> = { "섞어": "섞어국밥" };
-const MENU_EXCLUDE = new Set(["국밥"]);
+const MENU_EXCLUDE = new Set(["국밥", "밀면"]);
 
 /**
  * 최소 CSV 파서. review_text 등에 콤마·줄바꿈·따옴표가 포함된 필드가 있어
@@ -222,36 +222,16 @@ function deriveBranchStats(header: string[], rows: string[][]): BranchStat[] | n
 function deriveTopKeywords(header: string[], rows: string[][], topN = 5): KeywordMention[] | null {
   const posCol = header.indexOf("positive_keywords");
   const negCol = header.indexOf("negative_keywords");
-  const aiCol = header.indexOf("word_level_keywords");
-  if (posCol === -1 && negCol === -1 && aiCol === -1) return null;
+  if (posCol === -1 && negCol === -1) return null;
 
   const counts: Record<string, number> = {};
   for (const row of rows) {
-    if (aiCol !== -1 && row[aiCol]) {
-      try {
-        const raw = row[aiCol].replace(/'/g, '"');
-        const kwList = JSON.parse(raw);
-        if (Array.isArray(kwList)) {
-          for (const kw of kwList) {
-            if (!kw) continue;
-            counts[kw] = (counts[kw] ?? 0) + 1;
-          }
-        }
-      } catch {
-        const kws = row[aiCol].replace(/[\[\]"']/g, '').split(',');
-        for (const kw of kws) {
-          const trimmed = kw.trim();
-          if (trimmed) counts[trimmed] = (counts[trimmed] ?? 0) + 1;
-        }
-      }
-    } else {
-      for (const col of [posCol, negCol]) {
-        if (col === -1) continue;
-        const raw = row[col];
-        if (!raw) continue;
-        for (const kw of raw.split(";").map((s) => s.trim()).filter(Boolean)) {
-          counts[kw] = (counts[kw] ?? 0) + 1;
-        }
+    for (const col of [posCol, negCol]) {
+      if (col === -1) continue;
+      const raw = row[col];
+      if (!raw) continue;
+      for (const kw of raw.split(";").map((s) => s.trim()).filter(Boolean)) {
+        counts[kw] = (counts[kw] ?? 0) + 1;
       }
     }
   }
@@ -292,11 +272,12 @@ export async function getDashboardData(): Promise<DashboardData> {
     // 아직 시트에 반영되기 전) 가짜 수치를 채우지 않고 빈 배열로 둔다 — UI가 "미구현" 상태를 표시한다.
     customerTypes: [],
     branchStats: [
-      { branch: "서면점", reviewCount: 185, avgRating: 4.5, positivePct: 85, negativePct: 9 },
-      { branch: "광안리점", reviewCount: 114, avgRating: 4.8, positivePct: 90, negativePct: 5 },
-      { branch: "부산역점", reviewCount: 88, avgRating: 4.2, positivePct: 76, negativePct: 10 },
-      { branch: "경성대본점", reviewCount: 671, avgRating: 4.6, positivePct: 75, negativePct: 12 },
-      { branch: "사직점", reviewCount: 69, avgRating: 4.43, positivePct: 71, negativePct: 14 },
+      { branch: "서면점", reviewCount: 15, avgRating: 5.0, positivePct: 100, negativePct: 0 },
+      { branch: "광안점", reviewCount: 258, avgRating: 4.5, positivePct: 85, negativePct: 9 },
+      { branch: "중앙동점", reviewCount: 29, avgRating: 4.42, positivePct: 76, negativePct: 10 },
+      { branch: "본점", reviewCount: 276, avgRating: 4.26, positivePct: 75, negativePct: 12 },
+      { branch: "사직점", reviewCount: 7, avgRating: 4.43, positivePct: 71, negativePct: 14 },
+      { branch: "BIFC문현점", reviewCount: 7, avgRating: 4.36, positivePct: 57, negativePct: 14 },
     ],
     monthlyTrend: [
       { month: "2025-07", count: 9, avgRating: 4.91 },
@@ -390,12 +371,12 @@ export async function getAllReviews(): Promise<ReviewItem[]> {
     if (!reviewSheet) return [];
     
     const h = reviewSheet.header;
-    const branchIdx = h.indexOf("지점") !== -1 ? h.indexOf("지점") : h.indexOf("branch");
+    const branchIdx = h.indexOf("지점");
     const channelIdx = h.indexOf("채널");
     const authorIdx = h.indexOf("작성자");
     const dateIdx = h.indexOf("작성일");
     const ymIdx = h.indexOf("approx_ym");
-    const contentIdx = h.indexOf("review_text") !== -1 ? h.indexOf("review_text") : h.indexOf("본문");
+    const contentIdx = h.indexOf("본문");
     const sentimentIdx = h.indexOf("sentiment_final");
     const ratingIdx = h.indexOf("rating");
     const urlIdx = h.indexOf("URL");
@@ -404,8 +385,7 @@ export async function getAllReviews(): Promise<ReviewItem[]> {
     const menuIdx = h.indexOf("mentioned_menu");
     const purposeIdx = h.indexOf("visit_origin");
     const customerTypeIdx = h.indexOf("customer_type");
-    const aiKeyIdx = h.indexOf("word_level_keywords");
-    const aspectIdx = h.indexOf("aspect_analysis");
+    const customerTypeReasonIdx = h.indexOf("고객유형_근거");
 
     return reviewSheet.rows.map((row, i) => {
       const getStr = (idx: number) => (idx >= 0 && row[idx]) ? row[idx] : "";
@@ -414,22 +394,6 @@ export async function getAllReviews(): Promise<ReviewItem[]> {
       const neg = getStr(nKeyIdx).split(';').map(k => k.trim()).filter(Boolean);
       const menus = getStr(menuIdx).split(';').map(k => k.trim()).filter(Boolean);
       const ratingStr = getStr(ratingIdx);
-      
-      let aiKeywords: string[] = [];
-      if (aiKeyIdx !== -1 && row[aiKeyIdx]) {
-        try {
-          aiKeywords = JSON.parse(row[aiKeyIdx].replace(/'/g, '"'));
-        } catch {
-          aiKeywords = row[aiKeyIdx].replace(/[\[\]"']/g, '').split(',').map(k => k.trim()).filter(Boolean);
-        }
-      }
-      
-      let aspects = undefined;
-      if (aspectIdx !== -1 && row[aspectIdx]) {
-        try {
-          aspects = JSON.parse(row[aspectIdx].replace(/'/g, '"'));
-        } catch {}
-      }
 
       return {
         id: `rev-${i}`,
@@ -442,11 +406,11 @@ export async function getAllReviews(): Promise<ReviewItem[]> {
         sentiment: getStr(sentimentIdx) || "분석 스킵",
         rating: ratingStr ? parseFloat(ratingStr) : undefined,
         url: getStr(urlIdx),
-        keywords: aiKeywords.length > 0 ? aiKeywords : [...pos, ...neg],
+        keywords: [...pos, ...neg],
         menus,
         purpose: getStr(purposeIdx),
         customerType: getStr(customerTypeIdx),
-        aspects,
+        customerTypeReason: getStr(customerTypeReasonIdx),
       };
     }).filter(r => r.content.trim().length > 0);
   } catch (e) {
