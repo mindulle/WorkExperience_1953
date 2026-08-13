@@ -71,6 +71,21 @@ export function SegmentExplorer({
 
   const selectedData = purposes.find(p => p.purpose === effectiveSelectedSeg);
 
+  // 선택된 세그먼트(방문 목적)에 속한 리뷰들의 평점/키워드 요약.
+  const segmentStats = React.useMemo(() => {
+    const segReviews = filteredReviews.filter(r => r.purpose === effectiveSelectedSeg);
+    const validRatings = segReviews.map(r => r.rating).filter((n): n is number => typeof n === "number");
+    const avgRating = validRatings.length > 0
+      ? (validRatings.reduce((a, b) => a + b, 0) / validRatings.length).toFixed(1)
+      : null;
+
+    const keywordCounts: Record<string, number> = {};
+    segReviews.forEach(r => r.keywords?.forEach(k => { keywordCounts[k] = (keywordCounts[k] ?? 0) + 1; }));
+    const topKeyword = Object.entries(keywordCounts).sort((a, b) => b[1] - a[1])[0];
+
+    return { avgRating, topKeyword: topKeyword?.[0] };
+  }, [filteredReviews, effectiveSelectedSeg]);
+
   // 유형별 예시 리뷰 (최대 3건). AI가 근거를 남긴 건을 우선하고, 그 다음은 규칙 기반 매칭 건을 채운다.
   const typeSamples = React.useMemo(() => {
     const byType: Record<string, ReviewItem[]> = {};
@@ -150,8 +165,10 @@ export function SegmentExplorer({
               </div>
               <div className="skpi">
                 <div className="skpi-label">데이터 특성</div>
-                <div className="skpi-val text-[16px] text-[var(--muted)]">상세 통계 연동 대기</div>
-                <div className="skpi-cmp">별점/키워드 등 상세 결합 필요</div>
+                <div className="skpi-val text-[16px] text-[var(--brand)]">
+                  평점 {segmentStats.avgRating ?? "-"} · {segmentStats.topKeyword ? `'${segmentStats.topKeyword}' 위주` : "키워드 없음"}
+                </div>
+                <div className="skpi-cmp">해당 세그먼트 리뷰 기준</div>
               </div>
             </div>
           </div>
