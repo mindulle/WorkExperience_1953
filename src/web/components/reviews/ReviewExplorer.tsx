@@ -15,31 +15,26 @@ const TOPIC_PATTERNS: Record<string, RegExp> = {
   "주차": /주차/,
 };
 
+// "브랜드전체"는 특정 지점이 아닌 브랜드 전반/미분류 리뷰에 붙는 원본 태그값이다.
+// 원본 데이터·필터링은 그대로 두고, AI 리뷰 탐색 화면에 노출되는 텍스트만 "기타"로 바꾼다.
+const displayBranch = (branch: string) => (branch === "브랜드전체" ? "기타" : branch);
+
 export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sentimentFilter, setSentimentFilter] = useState<string>("전체");
   const [topicFilter, setTopicFilter] = useState<string>("전체");
 
-  const filtered = useMemo(() => {
+  // 검색어 + AI 토픽 필터만 적용한 목록. 감성 pill의 개수 표시가 이 목록을 기준으로
+  // 계산되어, 검색/토픽을 바꾸면 pill의 숫자도 그에 맞게 바뀐다.
+  const bySearchAndTopic = useMemo(() => {
     return reviews.filter(r => {
-      // 1. 텍스트 검색 (본문, 지점명, 키워드)
       const q = search.toLowerCase();
       const matchSearch = q === "" ||
         r.content.toLowerCase().includes(q) ||
         r.branch.toLowerCase().includes(q) ||
         r.keywords.some(k => k.toLowerCase().includes(q));
 
-      // 2. 감성 필터
-      let matchSent = true;
-      if (sentimentFilter !== "전체") {
-         if (sentimentFilter === "긍정") matchSent = r.sentiment === "긍정";
-         if (sentimentFilter === "부정") matchSent = r.sentiment === "부정";
-         if (sentimentFilter === "중립") matchSent = r.sentiment === "중립" || r.sentiment === "혼합";
-         if (sentimentFilter === "분석 스킵") matchSent = r.sentiment === "분석 스킵" || r.sentiment === "분석 불가" || !r.sentiment;
-      }
-
-      // 3. AI 토픽 필터 (휴리스틱)
       let matchTopic = true;
       if (topicFilter !== "전체") {
         const pattern = TOPIC_PATTERNS[topicFilter];
@@ -47,9 +42,19 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
         matchTopic = pattern ? pattern.test(haystack) : true;
       }
 
-      return matchSearch && matchSent && matchTopic;
+      return matchSearch && matchTopic;
     });
-  }, [reviews, search, sentimentFilter, topicFilter]);
+  }, [reviews, search, topicFilter]);
+
+  const filtered = useMemo(() => {
+    if (sentimentFilter === "전체") return bySearchAndTopic;
+    return bySearchAndTopic.filter(r => {
+      if (sentimentFilter === "긍정") return r.sentiment === "긍정";
+      if (sentimentFilter === "부정") return r.sentiment === "부정";
+      if (sentimentFilter === "중립") return r.sentiment === "중립" || r.sentiment === "혼합";
+      return true;
+    });
+  }, [bySearchAndTopic, sentimentFilter]);
 
   const selectedReview = reviews.find(r => r.id === selectedId) || null;
 
@@ -59,11 +64,10 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
     return [...reviews].sort((a, b) => b.date.localeCompare(a.date))[0];
   }, [reviews]);
 
-  // 요약 카운트
-  const countPos = reviews.filter(r => r.sentiment === "긍정").length;
-  const countNeg = reviews.filter(r => r.sentiment === "부정").length;
-  const countNeu = reviews.filter(r => r.sentiment === "중립" || r.sentiment === "혼합").length;
-  const countSkip = reviews.filter(r => r.sentiment === "분석 스킵").length;
+  // 요약 카운트. 검색/토픽 필터가 바뀌면 이 숫자도 함께 바뀐다 (감성 필터 자체는 제외).
+  const countPos = bySearchAndTopic.filter(r => r.sentiment === "긍정").length;
+  const countNeg = bySearchAndTopic.filter(r => r.sentiment === "부정").length;
+  const countNeu = bySearchAndTopic.filter(r => r.sentiment === "중립" || r.sentiment === "혼합").length;
 
   const validRatings = filtered.map(r => r.rating).filter(Boolean) as number[];
   const avgRating = validRatings.length > 0 ? (validRatings.reduce((a,b)=>a+b,0) / validRatings.length).toFixed(1) : "-";
@@ -132,9 +136,6 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
             <span className={`pill ${sentimentFilter === "중립" ? "on" : ""}`} onClick={() => setSentimentFilter("중립")}>
               <span className="dot" style={{ background: "#cfcec8" }}></span>중립 {countNeu}
             </span>
-            <span className={`pill ${sentimentFilter === "분석 스킵" ? "on" : ""}`} onClick={() => setSentimentFilter("분석 스킵")}>
-              <span className="dot" style={{ background: "var(--muted)" }}></span>스킵 {countSkip}
-            </span>
           </div>
         </div>
       </div>
@@ -195,7 +196,7 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
                 <blockquote className="border-l-[3px] border-[var(--brand)] pl-3.5 text-[13.5px] text-[var(--ink-2)] leading-relaxed m-0">
                   &ldquo;{latestReview.content}&rdquo;
                   <span className="text-[11.5px] text-[var(--muted)] mt-2 block">
-                    - {latestReview.branch} 리뷰 원문 ({latestReview.date || "날짜미상"})
+                    - {displayBranch(latestReview.branch)} 리뷰 원문 ({latestReview.date || "날짜미상"})
                   </span>
                 </blockquote>
               </div>
@@ -224,7 +225,7 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
               >
                 <div className="rcard-top">
                   <div className="rcard-meta">
-                    <span className="branch-badge">{r.branch}</span>
+                    <span className="branch-badge">{displayBranch(r.branch)}</span>
                     <span className="rdate">{r.date || "날짜미상"} · {r.channel}</span>
                   </div>
                   <span className={`sent-badge ${sentClass}`}>{r.sentiment}</span>
@@ -256,7 +257,7 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
               <div className="d-close" onClick={() => setSelectedId(null)}>✕</div>
             </div>
             <div className="d-meta-row">
-              <span className="branch-badge">{selectedReview.branch}</span>
+              <span className="branch-badge">{displayBranch(selectedReview.branch)}</span>
               <span className="d-stars font-bold text-sm text-[var(--s-orange)]">
                 ★ {selectedReview.rating || "-"}
               </span>
