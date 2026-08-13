@@ -113,6 +113,8 @@ export type ReviewItem = {
   menus?: string[];
   purpose?: string;
   customerType?: string;
+  /** customer_type이 규칙 기반으로 못 찾아 AI가 추측한 경우의 판단 근거. 규칙으로 찾은 경우는 비어있다. */
+  customerTypeReason?: string;
 };
 
 /** AI 주간리포트 지점별 인사이트 */

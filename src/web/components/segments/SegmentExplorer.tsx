@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import type { DashboardData } from "@/lib/types";
+import type { DashboardData, ReviewItem } from "@/lib/types";
 import { DonutChart } from "@/components/dashboard/DonutChart";
 
 // Colors for purposes
@@ -22,16 +22,26 @@ const CUSTOMER_TYPE_COLORS: Record<string, string> = {
 export function SegmentExplorer({
   purposes,
   customerTypes,
+  reviews,
 }: {
   purposes: DashboardData["purposes"];
   customerTypes: DashboardData["customerTypes"];
+  reviews: ReviewItem[];
 }) {
   const [selectedSeg, setSelectedSeg] = useState<string>(purposes[0]?.purpose || "");
 
   const selectedData = purposes.find(p => p.purpose === selectedSeg);
-  
-  // Calculate max ratio for mini-track
-  const maxRatio = Math.max(...purposes.map(p => p.ratio));
+
+  // 유형별 예시 리뷰 (최대 3건). AI가 근거를 남긴 건을 우선하고, 그 다음은 규칙 기반 매칭 건을 채운다.
+  const typeSamples = React.useMemo(() => {
+    const byType: Record<string, ReviewItem[]> = {};
+    for (const type of ["직장인", "가족", "학생"]) {
+      const withReason = reviews.filter(r => r.customerType === type && r.customerTypeReason);
+      const withoutReason = reviews.filter(r => r.customerType === type && !r.customerTypeReason);
+      byType[type] = [...withReason, ...withoutReason].slice(0, 3);
+    }
+    return byType;
+  }, [reviews]);
 
   return (
     <div className="flex flex-col h-full">
@@ -140,13 +150,13 @@ export function SegmentExplorer({
           )}
         </div>
 
-        {/* 방문자 고객 유형(직장인/가족/학생). rule_classifier.py/ai_engine.py의 customer_type
-            컬럼이 시트에 반영되기 전까지는 customerTypes가 빈 배열이라 안내 문구로 저하된다. */}
+        {/* 방문자 고객 유형(직장인/가족/학생). rule_classifier.py의 키워드 규칙으로 먼저 분류하고,
+            근거가 없던 "정보없음" 리뷰만 AI가 문맥으로 추측해 보완한다 (근거는 아래 카드에서 확인). */}
         <div className="bg-[var(--surface)] border border-[var(--hairline)] rounded-[var(--r-lg)] shadow-[var(--shadow-sm)] p-6">
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-[15px] font-bold tracking-[-0.3px]">방문자 고객 유형</h3>
             <span className="text-[11px] font-semibold bg-[var(--surface-2)] px-2 py-1 rounded text-[var(--ink-2)]">
-              규칙 기반 분류
+              규칙 + AI 추측
             </span>
           </div>
           {customerTypes.length > 0 ? (
@@ -178,45 +188,39 @@ export function SegmentExplorer({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
-        <div className="bg-[var(--surface)] border border-[var(--hairline)] rounded-[var(--r-lg)] shadow-[var(--shadow-sm)] p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-[15px] font-bold tracking-[-0.3px]">세그먼트 비교</h3>
-            <span className="text-[11px] font-semibold bg-[var(--surface-2)] px-2 py-1 rounded text-[var(--ink-2)]">비율순</span>
-          </div>
-          
-          <table className="w-full text-left text-sm border-collapse">
-            <thead>
-              <tr className="border-b-2 border-[var(--hairline)]">
-                <th className="py-3 font-semibold text-[var(--muted)]">유형</th>
-                <th className="py-3 font-semibold text-[var(--muted)] text-right">리뷰 비중</th>
-              </tr>
-            </thead>
-            <tbody>
-              {purposes.map((p) => {
-                const color = PURPOSE_COLORS[p.purpose] || "var(--brand)";
-                return (
-                  <tr key={p.purpose} className="border-b border-[var(--hairline)]">
-                    <td className="py-4">
-                      <span className="seg-name">
-                        <span className="w-2 h-2 rounded-full" style={{ background: color }}></span>
-                        {p.purpose}
-                      </span>
-                    </td>
-                    <td className="py-4 text-right">
-                      <span className="mini-track mr-2">
-                        <span className="mini-fill" style={{ width: `${(p.ratio / maxRatio) * 100}%`, background: color }}></span>
-                      </span>
-                      <span className="tnum font-semibold">{p.ratio}%</span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-12">
+        {(["직장인", "가족", "학생"] as const).map((type) => {
+          const stat = customerTypes.find((c) => c.type === type);
+          const samples = typeSamples[type] ?? [];
+          return (
+            <div key={type} className="bg-[var(--surface)] border border-[var(--hairline)] rounded-[var(--r-lg)] shadow-[var(--shadow-sm)] p-6 flex flex-col">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-[15px] font-bold tracking-[-0.3px] flex items-center gap-2">
+                  <span style={{ color: CUSTOMER_TYPE_COLORS[type] }}>●</span> {type}
+                </h3>
+                <span className="text-[12px] font-semibold text-[var(--muted)]">{stat ? `${stat.ratio}%` : "-"}</span>
+              </div>
+              {samples.length > 0 ? (
+                <div className="flex flex-col gap-3">
+                  {samples.map((r) => (
+                    <div key={r.id} className="p-3 border border-[var(--hairline)] rounded-[10px] bg-[var(--plane)]">
+                      <p className="text-[12.5px] text-[var(--ink-2)] line-clamp-2">{r.content}</p>
+                      {r.customerTypeReason && (
+                        <p className="text-[11.5px] text-[var(--brand)] mt-1.5">✨ {r.customerTypeReason}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex-1 flex items-center justify-center text-[var(--muted)] text-[12.5px] text-center py-6">
+                  해당 유형으로 분류된 리뷰가 아직 없습니다.
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
-      
+
     </div>
   );
 }

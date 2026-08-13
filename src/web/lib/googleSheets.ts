@@ -385,6 +385,7 @@ export async function getAllReviews(): Promise<ReviewItem[]> {
     const menuIdx = h.indexOf("mentioned_menu");
     const purposeIdx = h.indexOf("visit_origin");
     const customerTypeIdx = h.indexOf("customer_type");
+    const customerTypeReasonIdx = h.indexOf("고객유형_근거");
 
     return reviewSheet.rows.map((row, i) => {
       const getStr = (idx: number) => (idx >= 0 && row[idx]) ? row[idx] : "";
@@ -409,6 +410,7 @@ export async function getAllReviews(): Promise<ReviewItem[]> {
         menus,
         purpose: getStr(purposeIdx),
         customerType: getStr(customerTypeIdx),
+        customerTypeReason: getStr(customerTypeReasonIdx),
       };
     }).filter(r => r.content.trim().length > 0);
   } catch (e) {
