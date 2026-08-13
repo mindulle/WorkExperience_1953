@@ -1,15 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Mail } from "lucide-react";
 import type { ReviewItem, BranchStat } from "@/lib/types";
-
-// 별도 Cloudflare Worker(src/mail-sender/)를 통해서만 실제 발송이 이뤄진다.
-// RULES §3.2: 프론트엔드는 트리거만 하고, 발송 로직/키는 백엔드(Worker)에만 둔다.
-const MAIL_WORKER_URL = process.env.NEXT_PUBLIC_MAIL_WORKER_URL || "";
-// 지점별 담당자 이메일 매핑이 아직 없어(이슈 #131 프로토타입 범위), 보낼 때마다 직접 입력받는다.
-const RECIPIENT_STORAGE_KEY = "1953-dashboard-mail-recipient";
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type SortKey = "reviewCount" | "avgRating" | "positivePct";
 const SORT_LABELS: Record<SortKey, string> = {
@@ -27,47 +19,6 @@ export function BranchExplorer({
 }) {
   const [selectedBranch, setSelectedBranch] = useState<string | null>(branchStats[0]?.branch || null);
   const [sortKey, setSortKey] = useState<SortKey>("reviewCount");
-  const [mailStatus, setMailStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
-  const [mailError, setMailError] = useState<string | null>(null);
-  // 마지막으로 입력했던 수신자 이메일을 기억해 매번 다시 칠 필요가 없게 한다.
-  // 정적 export라 서버에는 이 값이 없고, 클라이언트 최초 렌더에서만 채워진다.
-  const [recipientEmail, setRecipientEmail] = useState(
-    () => (typeof window !== "undefined" ? window.localStorage.getItem(RECIPIENT_STORAGE_KEY) ?? "" : "")
-  );
-
-  async function handleSendMail(branch: string) {
-    if (!MAIL_WORKER_URL) {
-      setMailStatus("error");
-      setMailError("메일 발송 서버가 설정되지 않았습니다 (src/mail-sender/README.md 참고).");
-      return;
-    }
-    if (!EMAIL_PATTERN.test(recipientEmail)) {
-      setMailStatus("error");
-      setMailError("올바른 수신자 이메일을 입력해주세요.");
-      return;
-    }
-    window.localStorage.setItem(RECIPIENT_STORAGE_KEY, recipientEmail);
-    setMailStatus("sending");
-    setMailError(null);
-    try {
-      const res = await fetch(MAIL_WORKER_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          branch,
-          to: recipientEmail,
-          subject: `[1953형제돼지국밥] ${branch} 리뷰 현황 알림`,
-          message: `${branch} 지점의 리뷰 현황을 확인해주세요. 대시보드에서 상세 내용을 볼 수 있습니다.`,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.ok) throw new Error(data.error || "알 수 없는 오류");
-      setMailStatus("sent");
-    } catch (e) {
-      setMailStatus("error");
-      setMailError(e instanceof Error ? e.message : "메일 전송에 실패했습니다.");
-    }
-  }
 
   // 이슈 #124: 대시보드에 있던 "지점별 강점(경쟁우위)"를 지점 관리 탭으로 이동.
   const rankedStats = useMemo(() => {
@@ -98,41 +49,7 @@ export function BranchExplorer({
         </div>
       </div>
 
-      <div className="bcard-row mt-4 pb-2">
-        {branchStats.map((b, idx) => {
-          const isSelected = b.branch === selectedBranch;
-          const statusBg = b.positivePct >= 80 ? "var(--good)" : b.positivePct < 70 ? "var(--critical)" : "var(--warn)";
-          const needsAttention = b.positivePct < 70;
-
-          return (
-            <div 
-              key={b.branch} 
-              className={`bcard ${isSelected ? "selected" : ""}`}
-              onClick={() => {
-                setSelectedBranch(b.branch);
-                setMailStatus("idle");
-                setMailError(null);
-              }}
-            >
-              {needsAttention && <div className="bcard-badge crit">긴급</div>}
-              <div className="bcard-top">
-                <span className="bcard-rank">{idx + 1}</span>
-                <span className="status-dot" style={{ background: statusBg }}></span>
-              </div>
-              <div className="bcard-name">{b.branch}</div>
-              <div className="bcard-stats">
-                <div className="bstat-row">리뷰 수 <b className="tnum">{b.reviewCount.toLocaleString()}</b></div>
-                <div className="bstat-row">평점 <b className="tnum">{b.avgRating ? b.avgRating.toFixed(1) : "-"}</b></div>
-                <div className="bstat-row">
-                  긍정률 <b className="tnum" style={{ color: statusBg }}>{b.positivePct}%</b>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="bg-[var(--surface)] border border-[var(--hairline)] rounded-[var(--r-lg)] shadow-[var(--shadow-sm)] p-6 mb-6">
+      <div className="bg-[var(--surface)] border border-[var(--hairline)] rounded-[var(--r-lg)] shadow-[var(--shadow-sm)] p-6 mb-6 mt-4">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <div>
             <div className="text-[15px] font-bold tracking-[-0.3px]">지점별 강점 (경쟁 우위)</div>
@@ -205,6 +122,36 @@ export function BranchExplorer({
         </table>
       </div>
 
+      <div className="bcard-row pb-2">
+        {branchStats.map((b, idx) => {
+          const isSelected = b.branch === selectedBranch;
+          const statusBg = b.positivePct >= 80 ? "var(--good)" : b.positivePct < 70 ? "var(--critical)" : "var(--warn)";
+          const needsAttention = b.positivePct < 70;
+
+          return (
+            <div
+              key={b.branch}
+              className={`bcard ${isSelected ? "selected" : ""}`}
+              onClick={() => setSelectedBranch(b.branch)}
+            >
+              {needsAttention && <div className="bcard-badge crit">긴급</div>}
+              <div className="bcard-top">
+                <span className="bcard-rank">{idx + 1}</span>
+                <span className="status-dot" style={{ background: statusBg }}></span>
+              </div>
+              <div className="bcard-name">{b.branch}</div>
+              <div className="bcard-stats">
+                <div className="bstat-row">리뷰 수 <b className="tnum">{b.reviewCount.toLocaleString()}</b></div>
+                <div className="bstat-row">평점 <b className="tnum">{b.avgRating ? b.avgRating.toFixed(1) : "-"}</b></div>
+                <div className="bstat-row">
+                  긍정률 <b className="tnum" style={{ color: statusBg }}>{b.positivePct}%</b>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
       {selectedStat && (
         <div className="flex-1 mt-4">
           <div className="detail-header">
@@ -219,32 +166,6 @@ export function BranchExplorer({
                 </div>
                 <div className="dh-meta">1953형제돼지국밥 · {selectedStat.reviewCount.toLocaleString()}개의 누적 리뷰</div>
               </div>
-            </div>
-            <div className="dh-actions flex-col items-end!">
-              {mailStatus === "sent" ? (
-                <span className="text-[12.5px] font-semibold text-[var(--good)]">✓ 메일을 전송했습니다</span>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="email"
-                    value={recipientEmail}
-                    onChange={(e) => setRecipientEmail(e.target.value)}
-                    placeholder="담당자 이메일 입력"
-                    className="h-9 px-3 rounded-[10px] text-[12.5px] border border-[var(--hairline)] bg-[var(--surface)] w-[190px]"
-                  />
-                  <button
-                    onClick={() => handleSendMail(selectedStat.branch)}
-                    disabled={mailStatus === "sending"}
-                    className="inline-flex items-center gap-2 h-9 px-3.5 rounded-[10px] text-[12.5px] font-semibold border border-[var(--hairline)] bg-[var(--surface)] shadow-[var(--shadow-sm)] disabled:opacity-50 shrink-0"
-                  >
-                    <Mail className="w-3.5 h-3.5" />
-                    {mailStatus === "sending" ? "전송 중..." : "메일 전송"}
-                  </button>
-                </div>
-              )}
-              {mailStatus === "error" && mailError && (
-                <div className="text-[11.5px] text-[var(--critical)] mt-1.5 max-w-[300px] text-right">{mailError}</div>
-              )}
             </div>
           </div>
 
