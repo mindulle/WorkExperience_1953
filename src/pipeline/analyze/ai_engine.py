@@ -9,12 +9,16 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # ---------------------------------------------------------
-# 팀원 프롬프트 기반 AI 감성 분석 엔진 (ACP HTTP 통신 버전)
-# (Issue #114: opencode ACP 서버를 통한 AI 감성 분석 엔진 교체)
+# 팀원 프롬프트 기반 AI 감성 분석 엔진 (opencode HTTP API 통신 버전)
+# (Issue #114: opencode 서버를 통한 AI 감성 분석 엔진 교체)
+#
+# 이름은 ACP지만 실제로는 opencode의 진짜 ACP(에디터가 stdio로 subprocess를
+# 띄우는 방식)가 아니라 `opencode serve`가 노출하는 HTTP API(POST /session,
+# POST /session/{id}/message)를 그대로 사용한다. 4100은 존재하지 않는 포트였고,
+# 실제로는 opencode serve가 떠 있는 머신의 8082 포트를 쓴다.
 # ---------------------------------------------------------
 
-ACP_PORT = 4100
-ACP_BASE_URL = f"http://127.0.0.1:{ACP_PORT}"
+ACP_BASE_URL = os.environ.get("OPENCODE_SERVER_URL", "http://llmops-instance:8082")
 MODEL_PAYLOAD = {
     "providerID": "google",
     "modelID": "antigravity-claude-sonnet-4-6"
@@ -91,6 +95,82 @@ def get_dynamic_prompt() -> str:
         return rules + "\n\n" + JSON_FORMAT
     except Exception as e:
         return DEFAULT_RULES + JSON_FORMAT
+
+# ---------------------------------------------------------
+# customer_type 전용 추측 (수정사안 7: "정보없음"을 AI 추측 기반 정보로 대체)
+# rule_classifier.py 의 정규식이 학생/가족/직장인 키워드를 못 찾아 '정보없음'으로 남긴
+# 리뷰를 대상으로, 명시적 키워드가 없어도 문맥(인원수·동행·시간대 등)으로 가장 가능성
+# 높은 유형을 추측하게 한다. 다른 필드(sentiment_final 등)는 건드리지 않는다.
+# ---------------------------------------------------------
+
+CUSTOMER_TYPE_RULES = """
+당신은 음식점 리뷰에서 방문 고객 유형(직장인/가족/학생)을 추정하는 분석가입니다.
+이 리뷰는 규칙 기반 분류가 명시적 키워드(학생/개강, 가족/아이들, 회식/점심시간 등)를
+찾지 못해 '정보없음'으로 남긴 리뷰입니다. 명시적 키워드가 없더라도 아래와 같은 문맥
+신호를 근거로 가장 가능성 높은 유형 하나를 추측해 주세요:
+- 인원수/동행 표현(혼밥, 2인, 단체), 방문 시간대(점심시간, 저녁 회식), 어투나 말투
+- 메뉴 구성(1인상 vs 2인상 이상), 요일/시간 언급
+근거가 전혀 없는 극히 짧은 리뷰일 때만 '정보없음'을 유지하세요.
+"""
+
+CUSTOMER_TYPE_FORMAT = """
+아래 JSON 형식에 맞추어 반드시 ```json 과 ``` 로 감싼 JSON 코드 블록만 출력하세요. 다른 인사말이나 설명은 절대 포함하지 마세요.
+```json
+{
+  "customer_type": "'직장인', '가족', '학생' 중 하나. 정말 아무 단서도 없을 때만 '정보없음'.",
+  "reason": "위 유형으로 판단한 근거를 한국어 한 문장으로. 어떤 표현/문맥을 봤는지 구체적으로.",
+  "confidence": "'HIGH' (인원수/동행/시간대 등 구체적 문맥 근거가 명확함), 'MEDIUM' (근거가 있지만 다른 해석도 가능), 'LOW' (뚜렷한 근거 없이 추측에 가까움) 중 하나. 확신이 없으면 솔직하게 LOW를 쓰세요 — LOW라고 답해도 페널티는 없습니다."
+}
+```
+"""
+
+def infer_customer_type_acp(review_text: str, rating: float) -> dict | None:
+    """customer_type과 그 판단 근거(reason)를 함께 반환한다. 실패 시 None."""
+    if pd.isna(review_text) or str(review_text).strip() == "":
+        return None
+
+    prompt = f"{CUSTOMER_TYPE_RULES}\n\n{CUSTOMER_TYPE_FORMAT}\n\n[분석할 리뷰]\n별점: {rating}\n리뷰 내용: {review_text}"
+
+    try:
+        ses_res = requests.post(f"{ACP_BASE_URL}/session", json={}, timeout=10)
+        ses_res.raise_for_status()
+        session_id = ses_res.json().get("id")
+        if not session_id:
+            raise ValueError("세션 ID를 받지 못했습니다.")
+
+        msg_res = requests.post(
+            f"{ACP_BASE_URL}/session/{session_id}/message",
+            json={"parts": [{"type": "text", "text": prompt}], "model": MODEL_PAYLOAD},
+            timeout=180,
+        )
+        msg_res.raise_for_status()
+
+        data = msg_res.json()
+        full_text = "".join(part.get("text", "") for part in data.get("parts", []) if part.get("type") == "text")
+
+        match = re.search(r'```json\s*(\{.*?\})\s*```', full_text, re.DOTALL)
+        if not match:
+            match = re.search(r'\{.*\}', full_text, re.DOTALL)
+        if not match:
+            print(f"❌ customer_type JSON 파싱 실패: {full_text[:100]}...")
+            return None
+
+        json_str = match.group(1) if match.lastindex else match.group(0)
+        parsed = json.loads(json_str)
+        customer_type = parsed.get("customer_type")
+        if not customer_type:
+            return None
+        return {
+            "customer_type": customer_type,
+            "reason": parsed.get("reason", ""),
+            "confidence": parsed.get("confidence", "LOW"),
+        }
+    except requests.exceptions.RequestException as e:
+        print(f"❌ customer_type 추측 ACP 통신 오류: {e}")
+        return None
+    except Exception as e:
+        print(f"❌ customer_type 추측 오류: {e}")
+        return None
 
 def analyze_review_acp(review_text: str, rating: float, system_prompt: str) -> dict:
     if pd.isna(review_text) or str(review_text).strip() == "":
@@ -192,6 +272,34 @@ def main():
             # 원본 DataFrame 업데이트
             for k, v in result_row.items():
                 df.at[idx, k] = v
+
+    # customer_type이 아직 '정보없음'인 리뷰는 AI로 유형을 추측해 채운다 (수정사안 7).
+    # 혼합 감성 재분석에서 이미 처리된 행은 중복 호출을 피하려고 제외한다.
+    unresolved_df = df[(df['customer_type'] == '정보없음') & (~df.index.isin(mixed_df.index))]
+    print(f"customer_type '정보없음' {len(unresolved_df)}건에 대해 AI 추측을 시작합니다... 🔍")
+
+    def infer_row(idx, row):
+        text = row.get("review_text")
+        if pd.isna(text) or not str(text).strip():
+            text = row.get("본문", "")
+        return (idx, infer_customer_type_acp(text, row.get("rating", 0)))
+
+    if '고객유형_근거' not in df.columns:
+        df['고객유형_근거'] = ""
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        futures = [executor.submit(infer_row, idx, row) for idx, row in unresolved_df.iterrows()]
+        for future in concurrent.futures.as_completed(futures):
+            idx, result = future.result()
+            if not result or not result.get('customer_type') or result['customer_type'] == '정보없음':
+                continue
+            # LOW confidence는 억지 추측일 가능성이 높아 '정보없음'을 그대로 유지한다.
+            if result.get('confidence') == 'LOW':
+                print(f"[{idx}] LOW confidence로 스킵 -> {result['customer_type']} ({result.get('reason', '')})")
+                continue
+            df.at[idx, 'customer_type'] = result['customer_type']
+            df.at[idx, '고객유형_근거'] = result.get('reason', '')
+            print(f"[{idx}] customer_type 추측 -> {result['customer_type']} [{result.get('confidence')}] ({result.get('reason', '')})")
 
     output_csv.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(output_csv, index=False, encoding="utf-8-sig")

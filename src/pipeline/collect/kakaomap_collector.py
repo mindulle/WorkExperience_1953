@@ -99,7 +99,12 @@ def collect_kakaomap(place_id: str, branch_name: str):
 
 def main():
     target_places = [
-        {"id": "16894037", "branch": "본점"}
+        {"id": "16894037", "branch": "경성대본점"},
+        {"id": "1447121016", "branch": "부산역점"},
+        {"id": "1557477270", "branch": "서면점"},
+        {"id": "738253595", "branch": "BIFC문현점"},
+        {"id": "2096890217", "branch": "광안리점"},
+        {"id": "1506445954", "branch": "사직점"},
     ]
     
     all_reviews = []
