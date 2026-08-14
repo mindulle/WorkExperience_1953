@@ -46,9 +46,11 @@ def get_macro_insight(branch_name: str, reviews_text: str) -> dict:
         prompt = prompt[:5000] 
         
         # --- [실제 구동 코드] ---
+        # Issue #114: opencode 서버는 localhost가 아니라 OPENCODE_SERVER_URL(기본 llmops-instance:8082)에 떠 있다.
         import json, subprocess, re
+        opencode_url = os.environ.get("OPENCODE_SERVER_URL", "http://llmops-instance:8082")
         result = subprocess.check_output(
-            ["opencode", "run", "--attach", "http://localhost:8082", "--format", "json", prompt],
+            ["opencode", "run", "--attach", opencode_url, "--format", "json", prompt],
             text=True,
             stderr=subprocess.STDOUT,
             timeout=180
