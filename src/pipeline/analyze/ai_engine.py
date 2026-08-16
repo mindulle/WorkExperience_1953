@@ -62,6 +62,24 @@ DEFAULT_RULES = """
 주의: 별점이 높다고 무조건 긍정이 아니며, 리뷰 문장 자체를 근거로 판별하세요.
 """
 
+# 이슈 #151: 블로그 채널 재검증용 프롬프트.
+# 블로그는 한 게시물에 여러 화제(여행기, 다른 가게, 일상 기록 등)가 섞이는 경우가 많아,
+# 규칙 기반 키워드 매칭이 "브랜드와 무관한 문장에서 뽑힌 감성 표현"을 오분류하는 사례가 QA로 확인됨.
+BLOG_RECHECK_RULES = """
+당신은 블로그 게시물에서 특정 브랜드(1953형제돼지국밥)에 대한 실제 평가만 골라내는 분석가입니다.
+이 게시물은 규칙 기반 분류기가 이미 '긍정' 또는 '부정'으로 확정했지만, 블로그 특성상
+아래와 같은 오분류 위험이 있어 재검증이 필요합니다:
+- 게시물에 여러 장소/주제가 섞여 있어, 브랜드와 무관한 문장의 감성 표현이 브랜드 평가로 잘못 집계됨
+  (예: 다른 식당 이야기의 "아쉬웠다", 숙소 얘기의 "비쌌다", 완전히 무관한 화제의 부정 표현 등)
+- 반대 의미 표현("웨이팅 없어서 좋았다")이 표면적 키워드만 보고 반대로 분류됨
+
+[가장 중요한 규칙]
+1. 반드시 "1953형제돼지국밥"(또는 형제돼지국밥, 국밥집 자체)에 대한 문장만 근거로 판단하세요.
+   게시물 내 다른 장소·화제에 대한 감성 표현은 절대 이 브랜드의 감성으로 채택하지 마세요.
+2. 브랜드에 대한 감성 표현을 찾을 수 없으면(단순 언급뿐이면) '중립'으로 판단하세요.
+3. 존재하지 않는 정보를 생성·추측하지 않습니다.
+"""
+
 def get_dynamic_prompt() -> str:
     env_path = Path(__file__).resolve().parent.parent.parent.parent / ".env"
     if env_path.exists():
@@ -236,22 +254,31 @@ def main():
 
     df = pd.read_csv(input_csv, encoding="utf-8-sig")
     system_prompt = get_dynamic_prompt()
-    
-    # 혼합 상태인 리뷰만 추출 (가장 효과적인 타겟)
+    blog_recheck_prompt = BLOG_RECHECK_RULES + JSON_FORMAT
+
+    # 혼합 상태인 리뷰 (기존 로직 — 가장 효과적인 타겟)
     mixed_df = df[df['sentiment_final'] == '혼합']
-    print(f"총 {len(df)}건 중 '혼합' 상태인 {len(mixed_df)}건에 대해 ACP(Claude) 분석을 시작합니다... 🚀")
-    
-    # 결과를 담을 리스트 (인덱스 추적용)
+
+    # 이슈 #151: 블로그 채널은 규칙이 '긍정'/'부정'으로 확정한 것도 재검증 대상에 포함한다.
+    # 블로그는 한 글에 여러 화제가 섞여, 규칙 기반 키워드 매칭이 브랜드와 무관한 문장의
+    # 감성을 잘못 귀속시키는 사례가 QA(2026-08-17)로 다수 확인되었기 때문.
+    blog_confirmed_df = df[
+        (df['채널'] == '네이버블로그') & (df['sentiment_final'].isin(['긍정', '부정']))
+    ]
+
+    print(f"총 {len(df)}건 중 '혼합' {len(mixed_df)}건 + 블로그 확정({len(blog_confirmed_df)}건) "
+          f"= 총 {len(mixed_df) + len(blog_confirmed_df)}건에 대해 ACP(Claude) 분석을 시작합니다... 🚀")
+
     updated_rows = []
-    
-    def process_row(idx, row):
+
+    def process_row(idx, row, prompt):
         print(f"[{idx}] 분석 중...")
         text = row.get("review_text")
         if pd.isna(text) or not str(text).strip():
             text = row.get("본문", "")
-        
-        analysis = analyze_review_acp(text, row.get("rating", 0), system_prompt)
-        
+
+        analysis = analyze_review_acp(text, row.get("rating", 0), prompt)
+
         if analysis and analysis.get("sentiment_final"):
             new_row = row.to_dict()
             new_row.update(analysis)
@@ -265,8 +292,10 @@ def main():
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         futures = []
         for idx, row in mixed_df.iterrows():
-            futures.append(executor.submit(process_row, idx, row))
-            
+            futures.append(executor.submit(process_row, idx, row, system_prompt))
+        for idx, row in blog_confirmed_df.iterrows():
+            futures.append(executor.submit(process_row, idx, row, blog_recheck_prompt))
+
         for future in concurrent.futures.as_completed(futures):
             idx, result_row = future.result()
             # 원본 DataFrame 업데이트
@@ -274,8 +303,9 @@ def main():
                 df.at[idx, k] = v
 
     # customer_type이 아직 '정보없음'인 리뷰는 AI로 유형을 추측해 채운다 (수정사안 7).
-    # 혼합 감성 재분석에서 이미 처리된 행은 중복 호출을 피하려고 제외한다.
-    unresolved_df = df[(df['customer_type'] == '정보없음') & (~df.index.isin(mixed_df.index))]
+    # 혼합/블로그 재검증에서 이미 처리된 행은 중복 호출을 피하려고 제외한다.
+    already_processed_idx = mixed_df.index.union(blog_confirmed_df.index)
+    unresolved_df = df[(df['customer_type'] == '정보없음') & (~df.index.isin(already_processed_idx))]
     print(f"customer_type '정보없음' {len(unresolved_df)}건에 대해 AI 추측을 시작합니다... 🔍")
 
     def infer_row(idx, row):
