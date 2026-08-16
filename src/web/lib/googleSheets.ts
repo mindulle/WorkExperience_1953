@@ -386,8 +386,16 @@ export async function getAllReviews(): Promise<ReviewItem[]> {
     const purposeIdx = h.indexOf("visit_origin");
     const customerTypeIdx = h.indexOf("customer_type");
     const customerTypeReasonIdx = h.indexOf("고객유형_근거");
+    const basisIdx = h.indexOf("sentiment_basis");
 
-    return reviewSheet.rows.map((row, i) => {
+    // 이슈 #149: sentiment_basis == "비리뷰"(규칙/AI가 리뷰가 아니라고 판정한 글)는
+    // deriveBranchStats()와 동일한 기준으로 제외한다. 이전에는 이 필터가 없어
+    // 지점 관리 화면의 "최근 리뷰" 목록에 브랜드/서비스와 무관한 글이 그대로 노출됐다.
+    const filteredRows = reviewSheet.rows.filter(
+      (row) => basisIdx === -1 || row[basisIdx] !== "비리뷰"
+    );
+
+    return filteredRows.map((row, i) => {
       const getStr = (idx: number) => (idx >= 0 && row[idx]) ? row[idx] : "";
       
       const pos = getStr(pKeyIdx).split(';').map(k => k.trim()).filter(Boolean);
