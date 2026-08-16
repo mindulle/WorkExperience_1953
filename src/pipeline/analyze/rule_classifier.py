@@ -48,11 +48,62 @@ POS_KEYWORDS = [
     "해장", "든든하게", "뜨끈", "뜨뜻", "따끈", "시원한 국물", "진국",
     "성공", "오랜만에", "국밥집", "후기", "먹고 왔", "먹었다", "먹었어",
 ]
+# 이슈 #151 QA(2026-08-17)로 발견된 오탐 키워드 수정:
+# - "짜"는 "진짜"에서 27건 오탐 (실제 "짜다" 계열 표현만 잡도록 아래 KEYWORD_PATTERNS로 이동)
+# - "오래"는 제거 ("오래된 맛집/가게"는 한국어에서 보통 노포=신뢰의 긍정 신호이지, 부정이 아님)
+# - "가격"은 제거 ("가격 정보/메뉴 및 가격" 등 중립적 언급까지 잡음, "비싸"와 의미 중복)
+# - "별로"는 "종류별로"(=종류마다) 오탐 방지를 위해 아래 KEYWORD_PATTERNS로 이동
 NEG_KEYWORDS = [
-    "별로", "실망", "아쉽", "아쉬", "못했", "맛없", "짜", "싱겁", "비싸", "가격",
+    "실망", "아쉽", "아쉬", "못했", "맛없", "싱겁", "비싸",
     "불친절", "불편", "더럽", "위생", "냄새", "기다", "웨이팅", "오래", "실패",
-    "후회", "별로", "그냥 그래", "그저 그래", "노맛", "별로였", "별로네", "별점 낮",
+    "후회", "그냥 그래", "그저 그래", "노맛", "별로였", "별로네", "별점 낮",
 ]
+
+# 단순 부분 문자열 매칭으로는 오탐이 나는 키워드는 정규식 패턴으로 별도 관리한다.
+# 판정된 kw 이름은 기존 POS_KEYWORDS/NEG_KEYWORDS와 동일하게 유지해 하위 로직(메뉴 랭킹 등)에 영향 없게 한다.
+KEYWORD_PATTERNS: dict[str, re.Pattern] = {
+    # "진짜"(=really)에서의 오탐 방지: 앞에 "진"이 오지 않는 "짜"만 인정
+    "짜": re.compile(r"(?<!진)짜(?!장)"),
+    # "종류별로"(=종류마다), "차별로" 등에서의 오탐 방지
+    "별로": re.compile(r"(?<!종류)(?<!유형)(?<!차)별로"),
+}
+# "오래"는 의미 방향이 뒤집히는(긍정 신호로 쓰이는) 경우가 많아 완전히 제거했다 — 위 NEG_KEYWORDS에서 삭제.
+
+# 키워드 뒤에 바로 부정어가 붙으면(예: "웨이팅 없어서", "비싸지 않았다") 반대 의미이므로 매칭에서 제외한다.
+NEGATION_RE = re.compile(r"^\s{0,2}.{0,4}?(없|않|아니|말고|덜)")
+
+
+def _find_matches(text: str, kw: str):
+    """kw가 KEYWORD_PATTERNS에 있으면 정규식으로, 없으면 단순 부분 문자열로 매칭 위치를 찾는다."""
+    pattern = KEYWORD_PATTERNS.get(kw)
+    if pattern:
+        return list(pattern.finditer(text))
+    return list(re.finditer(re.escape(kw), text))
+
+
+def _keyword_negated_everywhere(text: str, kw: str) -> bool:
+    """kw의 모든 매칭 위치 뒤에 부정어가 붙어 있으면 True(=사실상 반대 의미이므로 채택하지 않음)."""
+    matches = _find_matches(text, kw)
+    if not matches:
+        return True  # 매칭 자체가 없음
+    for m in matches:
+        tail = text[m.end():m.end() + 6]
+        if not NEGATION_RE.match(tail):
+            return False  # 부정어 없이 채택 가능한 매칭이 하나라도 있으면 유효
+    return True
+
+
+def find_keywords(text: str, keywords: list[str]) -> list[str]:
+    """부정어 뒤집힘까지 반영해 실제로 채택할 키워드 목록을 반환한다."""
+    found = []
+    for kw in keywords:
+        matches = _find_matches(text, kw)
+        if not matches:
+            continue
+        if _keyword_negated_everywhere(text, kw):
+            continue
+        found.append(kw)
+    return found
 
 # ── 비리뷰 판별 ────────────────────────────────────────────────────────────────
 # 실제 방문/체험 리뷰가 아닌 텍스트 패턴
@@ -177,9 +228,9 @@ def classify_row(row) -> dict:
         menus.remove("돼지국밥")
     result["mentioned_menu"] = ";".join(menus)
 
-    # ── 긍정/부정 키워드 ─────────────────────────────────────────────────────
-    pos_found = [kw for kw in POS_KEYWORDS if kw in text]
-    neg_found = [kw for kw in NEG_KEYWORDS if kw in text]
+    # ── 긍정/부정 키워드 (이슈 #151: 오탐 키워드 수정 + 부정어 뒤집힘 처리) ──
+    pos_found = find_keywords(text, POS_KEYWORDS)
+    neg_found = find_keywords(text, NEG_KEYWORDS)
     result["positive_keywords"] = ";".join(pos_found)
     result["negative_keywords"] = ";".join(neg_found)
 
