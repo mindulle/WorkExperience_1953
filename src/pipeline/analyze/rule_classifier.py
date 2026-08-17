@@ -94,6 +94,11 @@ NON_REVIEW_RE = re.compile("|".join(NON_REVIEW_PATTERNS), re.IGNORECASE)
 # 1953형제돼지국밥 직접 언급 없으면 비리뷰 가능성 높음 (카페 데이터에서)
 BRAND_RE = re.compile(r"1953|형제돼지국밥|형제\s*돼지\s*국밥")
 
+# 이미 브랜드의 매장 페이지에 종속된 채널(네이버 플레이스 영수증 리뷰, 카카오맵 리뷰)은
+# 애초에 해당 매장에 달린 리뷰라 브랜드명을 굳이 언급하지 않는 게 정상이다.
+# "짧은 본문 + 브랜드명 미언급" 비리뷰 판별 규칙에서 이 채널들은 제외한다. (이슈 #148)
+PLACE_BASED_CHANNELS = {"NaverPlace", "KakaoMap"}
+
 # ── visit_origin 패턴 ────────────────────────────────────────────────────────
 TOURIST_PATTERNS = r"여행|관광|ktx|ksx|기차|부산\s*(왔|내려|방문)|타지|외지|서울.*부산|부산.*서울|숙소|호텔|여행자|투어"
 LOCAL_PATTERNS   = r"단골|매일|자주|항상|늘\s*오|근처\s*살|동네|집\s*근처|퇴근|점심\s*(자주|항상|매일)|자주\s*찾|자주\s*가"
@@ -156,7 +161,9 @@ def classify_row(row) -> dict:
     if channel == "네이버카페" and not BRAND_RE.search(text):
         is_non_review = True
     # 본문이 매우 짧고 브랜드 언급 없음
-    if len(text) < 30 and not BRAND_RE.search(text):
+    # 단, 매장 페이지에 종속된 채널(네이버 플레이스 영수증 리뷰, 카카오맵 리뷰)은
+    # 브랜드명을 언급하지 않는 게 정상이므로 이 규칙에서 제외한다. (이슈 #148)
+    if channel not in PLACE_BASED_CHANNELS and len(text) < 30 and not BRAND_RE.search(text):
         is_non_review = True
 
     if is_non_review:
