@@ -19,9 +19,9 @@ from google.oauth2.service_account import Credentials
 # ---------------------------------------------------------
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
-# ⚠️ 모델 ID는 Groq 콘솔(https://console.groq.com/docs/models)에서 실행 전 반드시
-# 재확인할 것 — 이슈 #156 작성 시점 제안값(Qwen3-32B)이며 Groq 쪽 모델명이 바뀔 수 있다.
-DEFAULT_GROQ_MODEL = "qwen/qwen3-32b"
+# 모델 ID는 실제 Groq 키로 /openai/v1/models 조회해 확인한 값(2026-08-17 기준).
+# Groq 쪽 라인업이 바뀌면 다시 안 맞을 수 있으니, 이상하면 다시 조회해서 갱신할 것.
+DEFAULT_GROQ_MODEL = "qwen/qwen3.6-27b"
 
 JSON_FORMAT = """
 아래 JSON 형식에 맞추어 반드시 ```json 과 ``` 로 감싼 JSON 코드 블록만 출력하세요. 다른 인사말이나 설명은 절대 포함하지 마세요.
