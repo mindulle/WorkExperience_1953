@@ -34,6 +34,16 @@ def main():
     print(" 1953형제돼지국밥 데이터 수집/정제 파이프라인 v0.2.0")
     print("==================================================")
 
+    # ---------------------------------------------------------
+    # 이슈 #152: 자동화(GitHub Actions) 실행에서만 건너뛸 단계.
+    # 기본값은 둘 다 "미설정"(false) — 로컬에서 직접 이 스크립트를 실행하면
+    # 지금까지와 완전히 동일하게 전체 7개 수집기 + macro_insight.py까지 돈다.
+    # 자동화 워크플로우(.github/workflows/refresh-data.yml)에서만 이 두
+    # 환경변수를 "1"로 켠다.
+    # ---------------------------------------------------------
+    skip_browser_collectors = os.environ.get("SKIP_BROWSER_COLLECTORS") == "1"
+    skip_macro_insight = os.environ.get("SKIP_MACRO_INSIGHT") == "1"
+
     # 1. 수집 스크립트 실행
     print("\n[1/6] 데이터 수집 시작...")
     run_script(PIPELINE_DIR / "collect" / "naver_review_collector.py", cwd=RAW_DATA_DIR)
@@ -41,9 +51,19 @@ def main():
     run_script(PIPELINE_DIR / "collect" / "naver_blog_time_scraper.py", cwd=RAW_DATA_DIR)
     run_script(PIPELINE_DIR / "collect" / "youtube_collector.py", cwd=RAW_DATA_DIR)
     run_script(PIPELINE_DIR / "collect" / "naver_datalab_trend.py", cwd=RAW_DATA_DIR)
-    run_script(PIPELINE_DIR / "collect" / "catchtable_collector.py", cwd=RAW_DATA_DIR)
-    run_script(PIPELINE_DIR / "collect" / "kakaomap_collector.py", cwd=RAW_DATA_DIR)
-    run_script(PIPELINE_DIR / "collect" / "naver_place_collector.py", cwd=RAW_DATA_DIR)
+    if skip_browser_collectors:
+        print(
+            "⏭️  SKIP_BROWSER_COLLECTORS=1 — 브라우저 기반 수집(캐치테이블/카카오맵/"
+            "네이버플레이스)을 건너뜁니다."
+        )
+        print(
+            "   (이슈 #152: 스텔스 브라우저 수집은 자동화 서버 IP에서 봇 차단에 취약하고, "
+            "kakaomap_collector.py는 실패 시 가짜 데이터를 반환하는 위험이 있어 제외)"
+        )
+    else:
+        run_script(PIPELINE_DIR / "collect" / "catchtable_collector.py", cwd=RAW_DATA_DIR)
+        run_script(PIPELINE_DIR / "collect" / "kakaomap_collector.py", cwd=RAW_DATA_DIR)
+        run_script(PIPELINE_DIR / "collect" / "naver_place_collector.py", cwd=RAW_DATA_DIR)
 
     # 2. 정제 스크립트 실행
     print("\n[2/6] 팀원 데이터 병합 및 데이터 정제 검증 시작...")
@@ -65,8 +85,16 @@ def main():
     run_script(PIPELINE_DIR / "analyze" / "ai_engine.py", cwd=PIPELINE_DIR)
 
     # 5. 거시적(Macro) AI 인사이트 추출
-    print("\n[5/6] 비용 최적화를 위한 거시적(Macro) 지점별 AI 리포트 생성 시작...")
-    run_script(PIPELINE_DIR / "analyze" / "macro_insight.py", cwd=PIPELINE_DIR)
+    if skip_macro_insight:
+        print("\n[5/6] SKIP_MACRO_INSIGHT=1 — 거시적(Macro) 지점별 AI 리포트 생성을 건너뜁니다.")
+        print(
+            "   (이슈 #152: macro_insight.py는 아직 사내망 전용 opencode 서버에 의존해 "
+            "GitHub Actions에서 실행할 수 없고, 실패 시 'AI_주간리포트' 탭을 "
+            "조용히 오류 값으로 덮어쓸 위험이 있어 자동화에서는 제외)"
+        )
+    else:
+        print("\n[5/6] 비용 최적화를 위한 거시적(Macro) 지점별 AI 리포트 생성 시작...")
+        run_script(PIPELINE_DIR / "analyze" / "macro_insight.py", cwd=PIPELINE_DIR)
 
     # 6. 구글 시트 업로드 실행
     print("\n[6/6] Google Sheets 자동 업로드(Mock) 시작...")
