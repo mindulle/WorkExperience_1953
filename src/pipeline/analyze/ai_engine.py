@@ -1,6 +1,7 @@
 import os
 import json
 import re
+import time
 import requests
 import pandas as pd
 import concurrent.futures
@@ -9,20 +10,33 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # ---------------------------------------------------------
-# 팀원 프롬프트 기반 AI 감성 분석 엔진 (opencode HTTP API 통신 버전)
-# (Issue #114: opencode 서버를 통한 AI 감성 분석 엔진 교체)
+# 팀원 프롬프트 기반 AI 감성 분석 엔진 (Groq API 버전)
+# (Issue #156: antigravity 정액제(개인 구독, 비공식 플러그인) → Groq 무료 API 전환)
 #
-# 이름은 ACP지만 실제로는 opencode의 진짜 ACP(에디터가 stdio로 subprocess를
-# 띄우는 방식)가 아니라 `opencode serve`가 노출하는 HTTP API(POST /session,
-# POST /session/{id}/message)를 그대로 사용한다. 4100은 존재하지 않는 포트였고,
-# 실제로는 opencode serve가 떠 있는 머신의 8082 포트를 쓴다.
+# 예전에는 opencode serve가 띄운 자체 HTTP API(세션 생성 → 메시지 전송)를 거쳐
+# antigravity 플러그인으로 개인 정액제 계정을 통해 Claude를 호출했다(Issue #114).
+# 이제는 Groq의 OpenAI 호환 chat completions 엔드포인트를 바로 호출한다 —
+# 세션 개념이 없어 매 요청이 완결된 단일 HTTP 호출이다.
 # ---------------------------------------------------------
 
-ACP_BASE_URL = os.environ.get("OPENCODE_SERVER_URL", "http://llmops-instance:8082")
-MODEL_PAYLOAD = {
-    "providerID": "google",
-    "modelID": "antigravity-claude-sonnet-4-6"
-}
+GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+# 모델 ID는 실제 Groq 키로 /openai/v1/models 조회해 확인한 값(2026-08-17 기준).
+# Groq 쪽 라인업이 바뀌면 다시 안 맞을 수 있으니, 이상하면 다시 조회해서 갱신할 것.
+DEFAULT_GROQ_MODEL = "qwen/qwen3.6-27b"
+# qwen/qwen3.6-27b는 기본이 "thinking 모드"라 매 호출마다 <think>...</think> 추론
+# 텍스트를 먼저 길게 쓰고 그 뒤에 최종 답을 낸다(Groq 문서 console.groq.com/docs/reasoning,
+# console.groq.com/docs/model/qwen/qwen3.6-27b 확인, 2026-08-17). 우리 분류 작업은
+# 복잡한 추론이 필요 없어 "none"으로 꺼서 파싱 안정성과 토큰/속도를 모두 확보한다.
+# 다른 모델로 바꿔서 이 파라미터를 지원하지 않으면 GROQ_REASONING_EFFORT=""로 비활성화할 것.
+DEFAULT_REASONING_EFFORT = "none"
+
+# qwen/qwen3.6-27b 무료 티어 실측 한도 (console.groq.com/docs/rate-limits, 2026-08-17 확인):
+#   RPM 30 / RPD 1,000 / TPM 8,000 / TPD 200,000
+# 실제로 QA 샘플 40건을 순차 호출했을 때도 10건 안팎에서 429가 뜨기 시작함 —
+# 병목은 RPM이 아니라 TPM(분당 토큰 8,000)이라, 프롬프트가 길면 금방 찬다.
+# 그래서 429가 뜨면 포기하지 말고 Retry-After만큼 기다렸다가 재시도한다.
+MAX_RETRIES = 6
+DEFAULT_BACKOFF_SECONDS = 15  # Groq가 Retry-After 헤더를 안 줄 때의 대체 대기시간
 
 JSON_FORMAT = """
 아래 JSON 형식에 맞추어 반드시 ```json 과 ``` 로 감싼 JSON 코드 블록만 출력하세요. 다른 인사말이나 설명은 절대 포함하지 마세요.
@@ -124,30 +138,79 @@ CUSTOMER_TYPE_FORMAT = """
 ```
 """
 
-def infer_customer_type_acp(review_text: str, rating: float) -> dict | None:
+def call_groq(prompt: str) -> str | None:
+    """Groq chat completions를 호출해 응답 텍스트(문자열)를 반환한다. 실패 시 None.
+
+    GROQ_API_KEY/GROQ_MODEL은 호출 시점에 os.environ에서 읽는다 — get_dynamic_prompt()가
+    .env 파일을 읽어 os.environ에 채워 넣는 시점이 모듈 임포트 이후이기 때문에, 모듈
+    최상단에서 미리 읽어두면 .env에만 키가 있는 경우 빈 값을 캐싱하게 되는 문제가 있다.
+
+    429(레이트리밋)를 만나면 포기하지 않고 Retry-After 헤더가 알려주는 시간만큼
+    기다렸다가 재시도한다(최대 MAX_RETRIES회). 무료 티어는 TPM(분당 토큰) 8,000이
+    병목이라, 리뷰를 많이 처리할수록 이 경로를 자주 타게 된다 — 정상 동작이다.
+    """
+    api_key = os.environ.get("GROQ_API_KEY")
+    model = os.environ.get("GROQ_MODEL", DEFAULT_GROQ_MODEL)
+    reasoning_effort = os.environ.get("GROQ_REASONING_EFFORT", DEFAULT_REASONING_EFFORT)
+
+    if not api_key:
+        print("❌ GROQ_API_KEY가 설정되어 있지 않습니다. .env에 키를 추가하세요.")
+        return None
+
+    payload = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.2,
+    }
+    # 모델이 reasoning_effort를 지원하지 않으면 GROQ_REASONING_EFFORT=""로 비워
+    # 파라미터 자체를 안 보내도록 할 수 있다.
+    if reasoning_effort:
+        payload["reasoning_effort"] = reasoning_effort
+
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            res = requests.post(
+                GROQ_API_URL,
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=180,
+            )
+
+            if res.status_code == 429:
+                retry_after = res.headers.get("retry-after")
+                wait_seconds = float(retry_after) if retry_after else DEFAULT_BACKOFF_SECONDS * attempt
+                print(f"⏳ Groq 레이트리밋(429) — {wait_seconds:.0f}초 대기 후 재시도 ({attempt}/{MAX_RETRIES})")
+                time.sleep(wait_seconds)
+                continue
+
+            res.raise_for_status()
+            data = res.json()
+            return data["choices"][0]["message"]["content"]
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Groq API 통신 오류: {e}")
+            return None
+        except (KeyError, IndexError) as e:
+            print(f"❌ Groq 응답 형식 오류: {e}")
+            return None
+
+    print(f"❌ 재시도 {MAX_RETRIES}회 모두 레이트리밋 — 이번 호출은 포기합니다.")
+    return None
+
+def infer_customer_type_groq(review_text: str, rating: float) -> dict | None:
     """customer_type과 그 판단 근거(reason)를 함께 반환한다. 실패 시 None."""
     if pd.isna(review_text) or str(review_text).strip() == "":
         return None
 
     prompt = f"{CUSTOMER_TYPE_RULES}\n\n{CUSTOMER_TYPE_FORMAT}\n\n[분석할 리뷰]\n별점: {rating}\n리뷰 내용: {review_text}"
 
+    full_text = call_groq(prompt)
+    if full_text is None:
+        return None
+
     try:
-        ses_res = requests.post(f"{ACP_BASE_URL}/session", json={}, timeout=10)
-        ses_res.raise_for_status()
-        session_id = ses_res.json().get("id")
-        if not session_id:
-            raise ValueError("세션 ID를 받지 못했습니다.")
-
-        msg_res = requests.post(
-            f"{ACP_BASE_URL}/session/{session_id}/message",
-            json={"parts": [{"type": "text", "text": prompt}], "model": MODEL_PAYLOAD},
-            timeout=180,
-        )
-        msg_res.raise_for_status()
-
-        data = msg_res.json()
-        full_text = "".join(part.get("text", "") for part in data.get("parts", []) if part.get("type") == "text")
-
         match = re.search(r'```json\s*(\{.*?\})\s*```', full_text, re.DOTALL)
         if not match:
             match = re.search(r'\{.*\}', full_text, re.DOTALL)
@@ -165,62 +228,31 @@ def infer_customer_type_acp(review_text: str, rating: float) -> dict | None:
             "reason": parsed.get("reason", ""),
             "confidence": parsed.get("confidence", "LOW"),
         }
-    except requests.exceptions.RequestException as e:
-        print(f"❌ customer_type 추측 ACP 통신 오류: {e}")
-        return None
     except Exception as e:
         print(f"❌ customer_type 추측 오류: {e}")
         return None
 
-def analyze_review_acp(review_text: str, rating: float, system_prompt: str) -> dict:
+def analyze_review_groq(review_text: str, rating: float, system_prompt: str) -> dict:
     if pd.isna(review_text) or str(review_text).strip() == "":
         return {"sentiment_final": "분석 불가"}
-        
+
     prompt = f"{system_prompt}\n\n[분석할 리뷰]\n별점: {rating}\n리뷰 내용: {review_text}"
-    
+
+    full_text = call_groq(prompt)
+    if full_text is None:
+        return None
+
     try:
-        # 1. Create a new session for clean context
-        ses_res = requests.post(f"{ACP_BASE_URL}/session", json={}, timeout=10)
-        ses_res.raise_for_status()
-        session_id = ses_res.json().get("id")
-        
-        if not session_id:
-            raise ValueError("세션 ID를 받지 못했습니다.")
-            
-        # 2. Send message and get synchronous response
-        msg_payload = {
-            "parts": [{"type": "text", "text": prompt}],
-            "model": MODEL_PAYLOAD
-        }
-        msg_res = requests.post(
-            f"{ACP_BASE_URL}/session/{session_id}/message", 
-            json=msg_payload,
-            timeout=180
-        )
-        msg_res.raise_for_status()
-        
-        # 3. Extract text from response
-        data = msg_res.json()
-        full_text = ""
-        for part in data.get("parts", []):
-            if part.get("type") == "text":
-                full_text += part.get("text", "")
-                
-        # 4. Parse JSON
         match = re.search(r'```json\s*(\{.*?\})\s*```', full_text, re.DOTALL)
         if not match:
             match = re.search(r'\{.*\}', full_text, re.DOTALL)
-            
+
         if match:
             json_str = match.group(1) if match.lastindex else match.group(0)
             return json.loads(json_str)
         else:
             print(f"❌ JSON 파싱 실패: {full_text[:100]}...")
             return None
-
-    except requests.exceptions.RequestException as e:
-        print(f"❌ ACP 통신 오류: {e}")
-        return None
     except Exception as e:
         print(f"❌ 분석 오류: {e}")
         return None
@@ -239,7 +271,7 @@ def main():
     
     # 혼합 상태인 리뷰만 추출 (가장 효과적인 타겟)
     mixed_df = df[df['sentiment_final'] == '혼합']
-    print(f"총 {len(df)}건 중 '혼합' 상태인 {len(mixed_df)}건에 대해 ACP(Claude) 분석을 시작합니다... 🚀")
+    print(f"총 {len(df)}건 중 '혼합' 상태인 {len(mixed_df)}건에 대해 Groq 분석을 시작합니다... 🚀")
     
     # 결과를 담을 리스트 (인덱스 추적용)
     updated_rows = []
@@ -250,7 +282,7 @@ def main():
         if pd.isna(text) or not str(text).strip():
             text = row.get("본문", "")
         
-        analysis = analyze_review_acp(text, row.get("rating", 0), system_prompt)
+        analysis = analyze_review_groq(text, row.get("rating", 0), system_prompt)
         
         if analysis and analysis.get("sentiment_final"):
             new_row = row.to_dict()
@@ -261,8 +293,9 @@ def main():
             print(f"[{idx}] 실패 -> 기존 규칙 결과 유지")
             return (idx, row.to_dict())
 
-    # 병렬 처리 (ACP 서버 과부하 방지를 위해 max_workers=5 수준으로 제한)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    # 병렬 처리 — 무료 티어 병목이 TPM(분당 토큰 8,000)이라 동시성을 높여도
+    # 처리량이 늘지 않고 429만 늘어난다. 2 정도로 낮춰서 재시도 로직과 함께 쓴다.
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
         futures = []
         for idx, row in mixed_df.iterrows():
             futures.append(executor.submit(process_row, idx, row))
@@ -282,12 +315,12 @@ def main():
         text = row.get("review_text")
         if pd.isna(text) or not str(text).strip():
             text = row.get("본문", "")
-        return (idx, infer_customer_type_acp(text, row.get("rating", 0)))
+        return (idx, infer_customer_type_groq(text, row.get("rating", 0)))
 
     if '고객유형_근거' not in df.columns:
         df['고객유형_근거'] = ""
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
         futures = [executor.submit(infer_row, idx, row) for idx, row in unresolved_df.iterrows()]
         for future in concurrent.futures.as_completed(futures):
             idx, result = future.result()
