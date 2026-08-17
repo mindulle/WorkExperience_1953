@@ -74,17 +74,26 @@ DEFAULT_RULES = """
 - 중립: 단순 방문 기록이거나 긍정/부정이 혼재되어 방향 판단이 어려운 경우
 - 분석 불가: 텍스트가 없거나 이모티콘만 있는 경우
 주의: 별점이 높다고 무조건 긍정이 아니며, 리뷰 문장 자체를 근거로 판별하세요.
+"""
 
-[블로그 등 여러 화제가 섞인 글 판정 시 주의 — 이슈 #151]
-블로그 글은 한 게시글 안에 여행기, 일상 기록, 다른 가게 이야기 등 브랜드(1953형제돼지국밥)와
-무관한 내용이 함께 섞여 있는 경우가 많습니다. 다음 원칙을 반드시 지키세요:
-- 감성 판정은 반드시 "1953형제돼지국밥"을 직접 언급하거나 명백히 그 가게를 가리키는
-  문장에서만 근거를 찾으세요. 다른 가게, 다른 장소, 숙소, 여행 일정 등에 대한 불만/칭찬
-  표현은 브랜드와 무관하므로 감성 판정 근거로 삼지 마세요.
-- 글 전체가 브랜드와 사실상 무관하고(스쳐 지나가듯 한 번 언급되는 정도), 브랜드 자체에
-  대한 평가라고 보기 어려우면 sentiment_final을 '분석 불가'로 처리하세요.
-- "웨이팅 없어서 좋았다"처럼 부정적으로 보이는 단어(웨이팅, 못했 등)가 실제로는 반대
-  의미(부정어와 함께 쓰여 긍정/중립을 뜻함)로 쓰였는지 문장 전체 의미로 다시 판단하세요.
+# 이슈 #151/#160: 블로그 재검증 전용 프롬프트.
+# 블로그는 한 게시물에 여러 화제(여행기, 다른 가게, 일상 기록 등)가 섞이는 경우가 많아,
+# 규칙 기반 키워드 매칭이 "브랜드와 무관한 문장에서 뽑힌 감성 표현"을 오분류하는 사례가
+# QA로 확인됨. 일반 system_prompt에 안내문을 얹는 대신 이 재검증 전용 프롬프트를 따로 둔 건,
+# 모든 리뷰(혼합 포함)에 쓰이는 공용 프롬프트를 블로그 특수 사정으로 오염시키지 않기 위함.
+BLOG_RECHECK_RULES = """
+당신은 블로그 게시물에서 특정 브랜드(1953형제돼지국밥)에 대한 실제 평가만 골라내는 분석가입니다.
+이 게시물은 규칙 기반 분류기가 이미 '긍정' 또는 '부정'으로 확정했지만, 블로그 특성상
+아래와 같은 오분류 위험이 있어 재검증이 필요합니다:
+- 게시물에 여러 장소/주제가 섞여 있어, 브랜드와 무관한 문장의 감성 표현이 브랜드 평가로 잘못 집계됨
+  (예: 다른 식당 이야기의 "아쉬웠다", 숙소 얘기의 "비쌌다", 완전히 무관한 화제의 부정 표현 등)
+- 반대 의미 표현("웨이팅 없어서 좋았다")이 표면적 키워드만 보고 반대로 분류됨
+
+[가장 중요한 규칙]
+1. 반드시 "1953형제돼지국밥"(또는 형제돼지국밥, 국밥집 자체)에 대한 문장만 근거로 판단하세요.
+   게시물 내 다른 장소·화제에 대한 감성 표현은 절대 이 브랜드의 감성으로 채택하지 마세요.
+2. 브랜드에 대한 감성 표현을 찾을 수 없으면(단순 언급뿐이면) '중립'으로 판단하세요.
+3. 존재하지 않는 정보를 생성·추측하지 않습니다.
 """
 
 def get_dynamic_prompt() -> str:
@@ -268,12 +277,11 @@ def analyze_review_groq(review_text: str, rating: float, system_prompt: str) -> 
         print(f"❌ 분석 오류: {e}")
         return None
 
-# 규칙 단계에서 부정어 처리 없이 keyword-only 매칭을 하다 보니, "혼합"만 재판정해서는
-# 못 잡는 오분류가 있었다(이슈 #151). 네이버블로그는 한 글에 여러 화제(여행기, 다른
-# 가게 얘기 등)가 섞여 있는 경우가 많아, neg_score > 0 / pos_score == 0 조건으로
-# 규칙 단계에서 곧장 "부정"이 확정돼 버리면 재판정 대상에서 빠진다. 그래서 "혼합"뿐
-# 아니라 이 채널의 확정 "부정" 리뷰도 재판정 대상에 포함해 Groq가 문맥(브랜드 관련
-# 문장인지, 부정어로 뒤집힌 표현인지)을 다시 보게 한다.
+# 이슈 #151/#160: 네이버블로그는 한 글에 여러 화제(여행기, 다른 가게 얘기 등)가 섞여
+# 있는 경우가 많아, 규칙 단계에서 확정한 '긍정'/'부정'도 브랜드와 무관한 문장에서 감성이
+# 잘못 귀속됐을 위험이 있다. 그래서 '혼합'뿐 아니라 이 채널의 확정 '긍정'/'부정' 리뷰도
+# 전용 프롬프트(BLOG_RECHECK_RULES)로 재판정한다. 오탐은 양쪽 방향(긍정 쪽으로도, 부정
+# 쪽으로도) 다 날 수 있어 대칭적으로 다룬다.
 BLOG_RECHECK_CHANNEL = "네이버블로그"
 
 
@@ -288,34 +296,33 @@ def main():
 
     df = pd.read_csv(input_csv, encoding="utf-8-sig")
     system_prompt = get_dynamic_prompt()
+    blog_recheck_prompt = BLOG_RECHECK_RULES + JSON_FORMAT
 
-    # 재판정 대상: (1) 규칙 단계에서 '혼합'으로 판정된 리뷰 전체 +
-    #             (2) 네이버블로그 채널에서 '부정'으로 확정된 리뷰 (이슈 #151)
-    # (2)를 넣는 이유는 위 BLOG_RECHECK_CHANNEL 설명 참고.
+    # 혼합 상태인 리뷰 (기존 로직 — 가장 효과적인 타겟)
+    mixed_df = df[df['sentiment_final'] == '혼합']
+
+    # 네이버블로그 채널에서 규칙이 확정한 '긍정'/'부정'도 재검증 대상에 포함한다.
+    # (위 BLOG_RECHECK_CHANNEL 설명 참고)
     if "채널" in df.columns:
-        blog_negative_mask = (df["sentiment_final"] == "부정") & (df["채널"] == BLOG_RECHECK_CHANNEL)
+        blog_confirmed_df = df[
+            (df["채널"] == BLOG_RECHECK_CHANNEL) & (df["sentiment_final"].isin(["긍정", "부정"]))
+        ]
     else:
-        print("⚠️ '채널' 컬럼이 없어 네이버블로그 '부정' 재판정을 건너뜁니다 (이슈 #151 대상 축소).")
-        blog_negative_mask = pd.Series(False, index=df.index)
+        print("⚠️ '채널' 컬럼이 없어 네이버블로그 재검증을 건너뜁니다 (이슈 #151/#160 대상 축소).")
+        blog_confirmed_df = df.iloc[0:0]
 
-    recheck_mask = (df['sentiment_final'] == '혼합') | blog_negative_mask
-    mixed_df = df[recheck_mask]
     print(
-        f"총 {len(df)}건 중 재판정 대상 {len(mixed_df)}건"
-        f"(혼합 {int((df['sentiment_final'] == '혼합').sum())}건"
-        f" + 네이버블로그 부정 {int(blog_negative_mask.sum())}건)에 대해 Groq 분석을 시작합니다... 🚀"
+        f"총 {len(df)}건 중 '혼합' {len(mixed_df)}건 + 블로그 확정(긍정/부정) {len(blog_confirmed_df)}건 "
+        f"= 총 {len(mixed_df) + len(blog_confirmed_df)}건에 대해 Groq 분석을 시작합니다... 🚀"
     )
 
-    # 결과를 담을 리스트 (인덱스 추적용)
-    updated_rows = []
-
-    def process_row(idx, row):
+    def process_row(idx, row, prompt):
         print(f"[{idx}] 분석 중...")
         text = row.get("review_text")
         if pd.isna(text) or not str(text).strip():
             text = row.get("본문", "")
 
-        analysis = analyze_review_groq(text, row.get("rating", 0), system_prompt)
+        analysis = analyze_review_groq(text, row.get("rating", 0), prompt)
 
         if analysis and analysis.get("sentiment_final"):
             new_row = row.to_dict()
@@ -331,7 +338,9 @@ def main():
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
         futures = []
         for idx, row in mixed_df.iterrows():
-            futures.append(executor.submit(process_row, idx, row))
+            futures.append(executor.submit(process_row, idx, row, system_prompt))
+        for idx, row in blog_confirmed_df.iterrows():
+            futures.append(executor.submit(process_row, idx, row, blog_recheck_prompt))
 
         for future in concurrent.futures.as_completed(futures):
             idx, result_row = future.result()
@@ -340,8 +349,9 @@ def main():
                 df.at[idx, k] = v
 
     # customer_type이 아직 '정보없음'인 리뷰는 AI로 유형을 추측해 채운다 (수정사안 7).
-    # 혼합 감성 재분석에서 이미 처리된 행은 중복 호출을 피하려고 제외한다.
-    unresolved_df = df[(df['customer_type'] == '정보없음') & (~df.index.isin(mixed_df.index))]
+    # 혼합/블로그 재검증에서 이미 처리된 행은 중복 호출을 피하려고 제외한다.
+    already_processed_idx = mixed_df.index.union(blog_confirmed_df.index)
+    unresolved_df = df[(df['customer_type'] == '정보없음') & (~df.index.isin(already_processed_idx))]
     print(f"customer_type '정보없음' {len(unresolved_df)}건에 대해 AI 추측을 시작합니다... 🔍")
 
     def infer_row(idx, row):
