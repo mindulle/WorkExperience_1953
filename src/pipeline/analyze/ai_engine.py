@@ -1,6 +1,7 @@
 import os
 import json
 import re
+import time
 import requests
 import pandas as pd
 import concurrent.futures
@@ -28,6 +29,14 @@ DEFAULT_GROQ_MODEL = "qwen/qwen3.6-27b"
 # 복잡한 추론이 필요 없어 "none"으로 꺼서 파싱 안정성과 토큰/속도를 모두 확보한다.
 # 다른 모델로 바꿔서 이 파라미터를 지원하지 않으면 GROQ_REASONING_EFFORT=""로 비활성화할 것.
 DEFAULT_REASONING_EFFORT = "none"
+
+# qwen/qwen3.6-27b 무료 티어 실측 한도 (console.groq.com/docs/rate-limits, 2026-08-17 확인):
+#   RPM 30 / RPD 1,000 / TPM 8,000 / TPD 200,000
+# 실제로 QA 샘플 40건을 순차 호출했을 때도 10건 안팎에서 429가 뜨기 시작함 —
+# 병목은 RPM이 아니라 TPM(분당 토큰 8,000)이라, 프롬프트가 길면 금방 찬다.
+# 그래서 429가 뜨면 포기하지 말고 Retry-After만큼 기다렸다가 재시도한다.
+MAX_RETRIES = 6
+DEFAULT_BACKOFF_SECONDS = 15  # Groq가 Retry-After 헤더를 안 줄 때의 대체 대기시간
 
 JSON_FORMAT = """
 아래 JSON 형식에 맞추어 반드시 ```json 과 ``` 로 감싼 JSON 코드 블록만 출력하세요. 다른 인사말이나 설명은 절대 포함하지 마세요.
@@ -135,6 +144,10 @@ def call_groq(prompt: str) -> str | None:
     GROQ_API_KEY/GROQ_MODEL은 호출 시점에 os.environ에서 읽는다 — get_dynamic_prompt()가
     .env 파일을 읽어 os.environ에 채워 넣는 시점이 모듈 임포트 이후이기 때문에, 모듈
     최상단에서 미리 읽어두면 .env에만 키가 있는 경우 빈 값을 캐싱하게 되는 문제가 있다.
+
+    429(레이트리밋)를 만나면 포기하지 않고 Retry-After 헤더가 알려주는 시간만큼
+    기다렸다가 재시도한다(최대 MAX_RETRIES회). 무료 티어는 TPM(분당 토큰) 8,000이
+    병목이라, 리뷰를 많이 처리할수록 이 경로를 자주 타게 된다 — 정상 동작이다.
     """
     api_key = os.environ.get("GROQ_API_KEY")
     model = os.environ.get("GROQ_MODEL", DEFAULT_GROQ_MODEL)
@@ -154,25 +167,37 @@ def call_groq(prompt: str) -> str | None:
     if reasoning_effort:
         payload["reasoning_effort"] = reasoning_effort
 
-    try:
-        res = requests.post(
-            GROQ_API_URL,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            json=payload,
-            timeout=180,
-        )
-        res.raise_for_status()
-        data = res.json()
-        return data["choices"][0]["message"]["content"]
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Groq API 통신 오류: {e}")
-        return None
-    except (KeyError, IndexError) as e:
-        print(f"❌ Groq 응답 형식 오류: {e}")
-        return None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            res = requests.post(
+                GROQ_API_URL,
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=180,
+            )
+
+            if res.status_code == 429:
+                retry_after = res.headers.get("retry-after")
+                wait_seconds = float(retry_after) if retry_after else DEFAULT_BACKOFF_SECONDS * attempt
+                print(f"⏳ Groq 레이트리밋(429) — {wait_seconds:.0f}초 대기 후 재시도 ({attempt}/{MAX_RETRIES})")
+                time.sleep(wait_seconds)
+                continue
+
+            res.raise_for_status()
+            data = res.json()
+            return data["choices"][0]["message"]["content"]
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Groq API 통신 오류: {e}")
+            return None
+        except (KeyError, IndexError) as e:
+            print(f"❌ Groq 응답 형식 오류: {e}")
+            return None
+
+    print(f"❌ 재시도 {MAX_RETRIES}회 모두 레이트리밋 — 이번 호출은 포기합니다.")
+    return None
 
 def infer_customer_type_groq(review_text: str, rating: float) -> dict | None:
     """customer_type과 그 판단 근거(reason)를 함께 반환한다. 실패 시 None."""
@@ -268,9 +293,9 @@ def main():
             print(f"[{idx}] 실패 -> 기존 규칙 결과 유지")
             return (idx, row.to_dict())
 
-    # 병렬 처리 (Groq 무료 티어 rate limit 방지를 위해 max_workers=5 수준으로 제한.
-    # 실제 한도는 모델별로 다르므로 첫 실행에서 429가 잦으면 낮출 것)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    # 병렬 처리 — 무료 티어 병목이 TPM(분당 토큰 8,000)이라 동시성을 높여도
+    # 처리량이 늘지 않고 429만 늘어난다. 2 정도로 낮춰서 재시도 로직과 함께 쓴다.
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
         futures = []
         for idx, row in mixed_df.iterrows():
             futures.append(executor.submit(process_row, idx, row))
@@ -295,7 +320,7 @@ def main():
     if '고객유형_근거' not in df.columns:
         df['고객유형_근거'] = ""
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
         futures = [executor.submit(infer_row, idx, row) for idx, row in unresolved_df.iterrows()]
         for future in concurrent.futures.as_completed(futures):
             idx, result = future.result()
