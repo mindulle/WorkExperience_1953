@@ -48,15 +48,32 @@ POS_KEYWORDS = [
     "해장", "든든하게", "뜨끈", "뜨뜻", "따끈", "시원한 국물", "진국",
     "성공", "오랜만에", "국밥집", "후기", "먹고 왔", "먹었다", "먹었어",
 ]
+
+# 이슈 #160(원래 이슈 #151 QA 중 발견, feature/151-감성분류-문맥개선 브랜치에서 포팅):
+# - "오래"는 제거. "오래된 맛집/가게"는 한국어에서 보통 노포=신뢰의 긍정 신호지 부정이 아님.
+# - "가격"은 제거. "비싸"와 의미가 중복되고, "가격 정보/메뉴 및 가격" 같은 중립적 언급까지 잡았음.
+# - "짜"/"별로"는 문자열 그대로 두면 "진짜"/"가짜"/"종류별로" 등에서 오탐이 나서, 아래
+#   KEYWORD_PATTERNS의 정규식으로 매칭한다(리스트에는 이름만 남겨 하위 로직에 영향 없게 함).
 NEG_KEYWORDS = [
-    "별로", "실망", "아쉽", "아쉬", "못했", "맛없",
-    # "짜"는 "진짜/가짜"와 겹쳐 오탐이 나서(이슈 #151 QA 중 발견) 더 구체적인
-    # 표현으로 교체했다. 간이 센/짠맛 불만은 대개 이런 형태로 나타난다.
-    "너무 짜", "짜서 아쉬", "간이 세", "지나치게 짜",
-    "싱겁", "비싸", "가격",
-    "불친절", "불편", "더럽", "위생", "냄새", "기다", "웨이팅", "오래", "실패",
-    "후회", "별로", "그냥 그래", "그저 그래", "노맛", "별로였", "별로네", "별점 낮",
+    "실망", "아쉽", "아쉬", "못했", "맛없",
+    "간이 세",
+    "짜",
+    "싱겁", "비싸",
+    "불친절", "불편", "더럽", "위생", "냄새", "기다", "웨이팅", "실패",
+    "후회", "그냥 그래", "그저 그래", "노맛", "별로", "별점 낮",
 ]
+
+# 단순 부분 문자열 매칭으로는 오탐이 나는 키워드는 정규식 패턴으로 별도 관리한다.
+# 판정된 kw 이름은 위 NEG_KEYWORDS와 동일하게 유지해 하위 로직(메뉴 랭킹 등)에 영향 없게 한다.
+KEYWORD_PATTERNS = {
+    # "진짜"/"가짜"/"공짜"(=really/fake/free)와 "짜장"에서의 오탐 방지.
+    # (참고: feature/151-감성분류-문맥개선 브랜치의 원안은 "진짜"만 제외했는데, 로컬
+    # 테스트 중 "가짜 맛집 아니고 진짜 맛집이에요" 같은 문장이 "가짜"의 "짜" 때문에
+    # 여전히 오탐나는 걸 발견해 "가"/"공"도 함께 제외하도록 포팅 과정에서 보강함)
+    "짜": re.compile(r"(?<!진)(?<!가)(?<!공)짜(?!장)"),
+    # "종류별로"(=종류마다), "유형별로", "차별로"(discrimination) 등에서의 오탐 방지
+    "별로": re.compile(r"(?<!종류)(?<!유형)(?<!차)별로"),
+}
 
 # ── 부정어(negation) 처리 ────────────────────────────────────────────────────
 # 이슈 #151: "웨이팅 없는거 확인한 뒤에 들어왔는데"(웨이팅이 없어서 좋았다는 뜻)처럼
@@ -68,25 +85,31 @@ NEGATION_MARKERS_RE = re.compile(r"(?:^|\s)안\s|없|않")
 NEGATION_WINDOW = 6  # 매칭된 키워드 앞뒤로 이 글자 수 안에 부정어가 있으면 제외
 
 
+def _iter_keyword_matches(text: str, kw: str):
+    """kw가 KEYWORD_PATTERNS에 있으면 정규식으로, 없으면 단순 부분 문자열로 매칭 위치를 찾는다."""
+    pattern = KEYWORD_PATTERNS.get(kw)
+    if pattern:
+        return list(pattern.finditer(text))
+    return list(re.finditer(re.escape(kw), text))
+
+
 def find_keywords_excluding_negated(text: str, keywords: list) -> list:
     """text에서 keywords 중 등장하는 것을 찾되, 바로 주변에 부정어가 붙어
     의미가 뒤집힌 매칭은 제외한다. 같은 키워드가 여러 번 등장하면, 부정어가
     안 붙은 등장이 하나라도 있으면 그 키워드를 유효한 것으로 센다."""
     found = []
     for kw in keywords:
-        start = 0
+        matches = _iter_keyword_matches(text, kw)
+        if not matches:
+            continue
         kept = False
-        while True:
-            idx = text.find(kw, start)
-            if idx == -1:
-                break
-            window_start = max(0, idx - NEGATION_WINDOW)
-            window_end = min(len(text), idx + len(kw) + NEGATION_WINDOW)
+        for m in matches:
+            window_start = max(0, m.start() - NEGATION_WINDOW)
+            window_end = min(len(text), m.end() + NEGATION_WINDOW)
             window = text[window_start:window_end]
             if not NEGATION_MARKERS_RE.search(window):
                 kept = True
                 break
-            start = idx + len(kw)
         if kept:
             found.append(kw)
     return found
@@ -245,7 +268,7 @@ def classify_row(row) -> dict:
     elif pos_score > 0 and neg_score > 0:
         result["sentiment_final"] = "혼합"
         result["confidence"]      = "medium"
-    
+
     # ── visit_origin ─────────────────────────────────────────────────────────
     if re.search(TOURIST_PATTERNS, text, re.IGNORECASE):
         result["visit_origin"] = "외지/관광 방문"
