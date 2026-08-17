@@ -22,6 +22,12 @@ GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 # 모델 ID는 실제 Groq 키로 /openai/v1/models 조회해 확인한 값(2026-08-17 기준).
 # Groq 쪽 라인업이 바뀌면 다시 안 맞을 수 있으니, 이상하면 다시 조회해서 갱신할 것.
 DEFAULT_GROQ_MODEL = "qwen/qwen3.6-27b"
+# qwen/qwen3.6-27b는 기본이 "thinking 모드"라 매 호출마다 <think>...</think> 추론
+# 텍스트를 먼저 길게 쓰고 그 뒤에 최종 답을 낸다(Groq 문서 console.groq.com/docs/reasoning,
+# console.groq.com/docs/model/qwen/qwen3.6-27b 확인, 2026-08-17). 우리 분류 작업은
+# 복잡한 추론이 필요 없어 "none"으로 꺼서 파싱 안정성과 토큰/속도를 모두 확보한다.
+# 다른 모델로 바꿔서 이 파라미터를 지원하지 않으면 GROQ_REASONING_EFFORT=""로 비활성화할 것.
+DEFAULT_REASONING_EFFORT = "none"
 
 JSON_FORMAT = """
 아래 JSON 형식에 맞추어 반드시 ```json 과 ``` 로 감싼 JSON 코드 블록만 출력하세요. 다른 인사말이나 설명은 절대 포함하지 마세요.
@@ -132,10 +138,21 @@ def call_groq(prompt: str) -> str | None:
     """
     api_key = os.environ.get("GROQ_API_KEY")
     model = os.environ.get("GROQ_MODEL", DEFAULT_GROQ_MODEL)
+    reasoning_effort = os.environ.get("GROQ_REASONING_EFFORT", DEFAULT_REASONING_EFFORT)
 
     if not api_key:
         print("❌ GROQ_API_KEY가 설정되어 있지 않습니다. .env에 키를 추가하세요.")
         return None
+
+    payload = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.2,
+    }
+    # 모델이 reasoning_effort를 지원하지 않으면 GROQ_REASONING_EFFORT=""로 비워
+    # 파라미터 자체를 안 보내도록 할 수 있다.
+    if reasoning_effort:
+        payload["reasoning_effort"] = reasoning_effort
 
     try:
         res = requests.post(
@@ -144,11 +161,7 @@ def call_groq(prompt: str) -> str | None:
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
             },
-            json={
-                "model": model,
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.2,
-            },
+            json=payload,
             timeout=180,
         )
         res.raise_for_status()
