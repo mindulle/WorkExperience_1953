@@ -74,6 +74,17 @@ DEFAULT_RULES = """
 - 중립: 단순 방문 기록이거나 긍정/부정이 혼재되어 방향 판단이 어려운 경우
 - 분석 불가: 텍스트가 없거나 이모티콘만 있는 경우
 주의: 별점이 높다고 무조건 긍정이 아니며, 리뷰 문장 자체를 근거로 판별하세요.
+
+[블로그 등 여러 화제가 섞인 글 판정 시 주의 — 이슈 #151]
+블로그 글은 한 게시글 안에 여행기, 일상 기록, 다른 가게 이야기 등 브랜드(1953형제돼지국밥)와
+무관한 내용이 함께 섞여 있는 경우가 많습니다. 다음 원칙을 반드시 지키세요:
+- 감성 판정은 반드시 "1953형제돼지국밥"을 직접 언급하거나 명백히 그 가게를 가리키는
+  문장에서만 근거를 찾으세요. 다른 가게, 다른 장소, 숙소, 여행 일정 등에 대한 불만/칭찬
+  표현은 브랜드와 무관하므로 감성 판정 근거로 삼지 마세요.
+- 글 전체가 브랜드와 사실상 무관하고(스쳐 지나가듯 한 번 언급되는 정도), 브랜드 자체에
+  대한 평가라고 보기 어려우면 sentiment_final을 '분석 불가'로 처리하세요.
+- "웨이팅 없어서 좋았다"처럼 부정적으로 보이는 단어(웨이팅, 못했 등)가 실제로는 반대
+  의미(부정어와 함께 쓰여 긍정/중립을 뜻함)로 쓰였는지 문장 전체 의미로 다시 판단하세요.
 """
 
 def get_dynamic_prompt() -> str:
@@ -85,27 +96,27 @@ def get_dynamic_prompt() -> str:
                 if line and not line.startswith("#") and "=" in line:
                     k, v = line.split("=", 1)
                     os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
-                    
+
     cred_path = os.environ.get("GOOGLE_CREDENTIALS_PATH")
     if cred_path and not cred_path.startswith('/'):
         cred_path = str(Path(__file__).resolve().parent.parent.parent.parent / cred_path.lstrip('./'))
     sheet_url = os.environ.get("GOOGLE_SHEET_URL")
-    
+
     if not cred_path or not sheet_url:
         print("⚠️ 구글 시트 환경 변수 누락. 기본 하드코딩 프롬프트를 사용합니다.")
         return DEFAULT_RULES + JSON_FORMAT
-        
+
     try:
         scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
         credentials = Credentials.from_service_account_file(cred_path, scopes=scopes)
         client = gspread.authorize(credentials)
         sh = client.open_by_url(sheet_url)
         worksheet = sh.worksheet("기획")
-        
+
         rules = worksheet.get_all_values()[1][0]
         if not rules.strip():
             return DEFAULT_RULES + JSON_FORMAT
-            
+
         return rules + "\n\n" + JSON_FORMAT
     except Exception as e:
         return DEFAULT_RULES + JSON_FORMAT
@@ -257,33 +268,55 @@ def analyze_review_groq(review_text: str, rating: float, system_prompt: str) -> 
         print(f"❌ 분석 오류: {e}")
         return None
 
+# 규칙 단계에서 부정어 처리 없이 keyword-only 매칭을 하다 보니, "혼합"만 재판정해서는
+# 못 잡는 오분류가 있었다(이슈 #151). 네이버블로그는 한 글에 여러 화제(여행기, 다른
+# 가게 얘기 등)가 섞여 있는 경우가 많아, neg_score > 0 / pos_score == 0 조건으로
+# 규칙 단계에서 곧장 "부정"이 확정돼 버리면 재판정 대상에서 빠진다. 그래서 "혼합"뿐
+# 아니라 이 채널의 확정 "부정" 리뷰도 재판정 대상에 포함해 Groq가 문맥(브랜드 관련
+# 문장인지, 부정어로 뒤집힌 표현인지)을 다시 보게 한다.
+BLOG_RECHECK_CHANNEL = "네이버블로그"
+
+
 def main():
     project_root = Path(__file__).resolve().parent.parent.parent.parent
     input_csv = project_root / "data" / "clean" / "reviews_analyzed.csv"
     output_csv = project_root / "data" / "clean" / "reviews_analyzed_ai.csv"
-    
+
     if not input_csv.exists():
         print(f"❌ {input_csv} 파일이 존재하지 않습니다. 먼저 rule_classifier.py를 실행하세요.")
         return
 
     df = pd.read_csv(input_csv, encoding="utf-8-sig")
     system_prompt = get_dynamic_prompt()
-    
-    # 혼합 상태인 리뷰만 추출 (가장 효과적인 타겟)
-    mixed_df = df[df['sentiment_final'] == '혼합']
-    print(f"총 {len(df)}건 중 '혼합' 상태인 {len(mixed_df)}건에 대해 Groq 분석을 시작합니다... 🚀")
-    
+
+    # 재판정 대상: (1) 규칙 단계에서 '혼합'으로 판정된 리뷰 전체 +
+    #             (2) 네이버블로그 채널에서 '부정'으로 확정된 리뷰 (이슈 #151)
+    # (2)를 넣는 이유는 위 BLOG_RECHECK_CHANNEL 설명 참고.
+    if "채널" in df.columns:
+        blog_negative_mask = (df["sentiment_final"] == "부정") & (df["채널"] == BLOG_RECHECK_CHANNEL)
+    else:
+        print("⚠️ '채널' 컬럼이 없어 네이버블로그 '부정' 재판정을 건너뜁니다 (이슈 #151 대상 축소).")
+        blog_negative_mask = pd.Series(False, index=df.index)
+
+    recheck_mask = (df['sentiment_final'] == '혼합') | blog_negative_mask
+    mixed_df = df[recheck_mask]
+    print(
+        f"총 {len(df)}건 중 재판정 대상 {len(mixed_df)}건"
+        f"(혼합 {int((df['sentiment_final'] == '혼합').sum())}건"
+        f" + 네이버블로그 부정 {int(blog_negative_mask.sum())}건)에 대해 Groq 분석을 시작합니다... 🚀"
+    )
+
     # 결과를 담을 리스트 (인덱스 추적용)
     updated_rows = []
-    
+
     def process_row(idx, row):
         print(f"[{idx}] 분석 중...")
         text = row.get("review_text")
         if pd.isna(text) or not str(text).strip():
             text = row.get("본문", "")
-        
+
         analysis = analyze_review_groq(text, row.get("rating", 0), system_prompt)
-        
+
         if analysis and analysis.get("sentiment_final"):
             new_row = row.to_dict()
             new_row.update(analysis)
@@ -299,7 +332,7 @@ def main():
         futures = []
         for idx, row in mixed_df.iterrows():
             futures.append(executor.submit(process_row, idx, row))
-            
+
         for future in concurrent.futures.as_completed(futures):
             idx, result_row = future.result()
             # 원본 DataFrame 업데이트
