@@ -49,10 +49,47 @@ POS_KEYWORDS = [
     "성공", "오랜만에", "국밥집", "후기", "먹고 왔", "먹었다", "먹었어",
 ]
 NEG_KEYWORDS = [
-    "별로", "실망", "아쉽", "아쉬", "못했", "맛없", "짜", "싱겁", "비싸", "가격",
+    "별로", "실망", "아쉽", "아쉬", "못했", "맛없",
+    # "짜"는 "진짜/가짜"와 겹쳐 오탐이 나서(이슈 #151 QA 중 발견) 더 구체적인
+    # 표현으로 교체했다. 간이 센/짠맛 불만은 대개 이런 형태로 나타난다.
+    "너무 짜", "짜서 아쉬", "간이 세", "지나치게 짜",
+    "싱겁", "비싸", "가격",
     "불친절", "불편", "더럽", "위생", "냄새", "기다", "웨이팅", "오래", "실패",
     "후회", "별로", "그냥 그래", "그저 그래", "노맛", "별로였", "별로네", "별점 낮",
 ]
+
+# ── 부정어(negation) 처리 ────────────────────────────────────────────────────
+# 이슈 #151: "웨이팅 없는거 확인한 뒤에 들어왔는데"(웨이팅이 없어서 좋았다는 뜻)처럼
+# 키워드 바로 앞뒤에 부정어가 붙어 의미가 뒤집힌 경우, 그대로 세면 오분류가 난다.
+# 매칭된 자리 주변에 부정어가 있으면 그 매칭은 제외한다 — 반대 감성으로 억지로
+# 뒤집지는 않는다(과교정 방지). "안"은 "안내/안전/안심"처럼 부정어가 아닌 단어의
+# 일부인 경우가 많아 띄어쓰기로 구분되는 경우만 부정어로 취급한다.
+NEGATION_MARKERS_RE = re.compile(r"(?:^|\s)안\s|없|않")
+NEGATION_WINDOW = 6  # 매칭된 키워드 앞뒤로 이 글자 수 안에 부정어가 있으면 제외
+
+
+def find_keywords_excluding_negated(text: str, keywords: list) -> list:
+    """text에서 keywords 중 등장하는 것을 찾되, 바로 주변에 부정어가 붙어
+    의미가 뒤집힌 매칭은 제외한다. 같은 키워드가 여러 번 등장하면, 부정어가
+    안 붙은 등장이 하나라도 있으면 그 키워드를 유효한 것으로 센다."""
+    found = []
+    for kw in keywords:
+        start = 0
+        kept = False
+        while True:
+            idx = text.find(kw, start)
+            if idx == -1:
+                break
+            window_start = max(0, idx - NEGATION_WINDOW)
+            window_end = min(len(text), idx + len(kw) + NEGATION_WINDOW)
+            window = text[window_start:window_end]
+            if not NEGATION_MARKERS_RE.search(window):
+                kept = True
+                break
+            start = idx + len(kw)
+        if kept:
+            found.append(kw)
+    return found
 
 # ── 비리뷰 판별 ────────────────────────────────────────────────────────────────
 # 실제 방문/체험 리뷰가 아닌 텍스트 패턴
@@ -185,8 +222,9 @@ def classify_row(row) -> dict:
     result["mentioned_menu"] = ";".join(menus)
 
     # ── 긍정/부정 키워드 ─────────────────────────────────────────────────────
-    pos_found = [kw for kw in POS_KEYWORDS if kw in text]
-    neg_found = [kw for kw in NEG_KEYWORDS if kw in text]
+    # 부정어가 붙어 의미가 뒤집힌 매칭은 제외한다 (이슈 #151)
+    pos_found = find_keywords_excluding_negated(text, POS_KEYWORDS)
+    neg_found = find_keywords_excluding_negated(text, NEG_KEYWORDS)
     result["positive_keywords"] = ";".join(pos_found)
     result["negative_keywords"] = ";".join(neg_found)
 
