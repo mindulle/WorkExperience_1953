@@ -291,10 +291,10 @@ BLOG_RECHECK_CHANNEL = "네이버블로그"
 
 # ---------------------------------------------------------
 # 중간 저장(checkpoint) / 이어하기(resume)
-# 이슈 #163 (이슈 #150 QA 중 반복 확인된 문제): Groq 무료 티어 TPD(일일 토큰) 한도에
-# 걸리면 남은 행들은 재시도해도 결국 실패하는데, 예전 코드는 혼합/블로그 재검증 +
-# customer_type 추측을 전부 끝내야만 결과를 저장했다. 그래서 quota 소진(또는 Ctrl+C)으로
-# 중간에 끊기면 이미 처리한 것까지 전부 날아가, 다음 날 처음부터 다시 돌려야 했다.
+# 이슈 #150 QA 중 반복 확인된 문제: Groq 무료 티어 TPD(일일 토큰) 한도에 걸리면
+# 남은 행들은 재시도해도 결국 실패하는데, 예전 코드는 혼합/블로그 재검증 + customer_type
+# 추측을 전부 끝내야만 결과를 저장했다. 그래서 quota 소진(또는 Ctrl+C)으로 중간에
+# 끊기면 이미 처리한 것까지 전부 날아가, 다음 날 처음부터 다시 돌려야 했다.
 # 이제 output_csv가 이미 있으면 그걸 이어서 쓰고(resume), 일정 건수 처리할 때마다
 # 중간 저장도 한다 — 하루치 quota를 다 쓰고 다음 날 이어 돌리는 식의 "수동 배치 실행"이
 # 훨씬 수월해진다.
@@ -307,6 +307,63 @@ SENTIMENT_RECHECK_FLAG_COL = "_sentiment_recheck_done"
 # (LOW confidence라 '정보없음'을 그대로 유지한 경우도 "성공"으로 친다 — 이미 AI가 판단해본
 #  것이므로 다음 실행에서 또 물어볼 필요는 없다. 호출/파싱 자체가 실패한 경우만 재시도 대상.)
 CUSTOMER_TYPE_CHECK_FLAG_COL = "_customer_type_checked"
+
+# ---------------------------------------------------------
+# 시간 예산(time budget)
+# 이슈 #152(대시보드 데이터 갱신 버튼)에서, GitHub Actions로 이 스크립트를 자동
+# 실행할 때 AI 재판정 단계가 무한정 걸리면 워크플로우가 언제 끝날지 예측할 수 없다.
+# AI_ENGINE_TIME_BUDGET_SECONDS 환경변수로 전체 AI 처리(감성 재검증 + customer_type
+# 추측 합산)에 쓸 시간 상한을 줄 수 있다. 값이 없으면(로컬 수동 실행 기본값) 예전처럼
+# 시간 제한 없이 전부 처리한다.
+# 정확한 하드컷은 아니다 — "이 시점 이후로는 새 작업을 시작하지 않는다" 기준이며,
+# 이미 시작된 최대 max_workers개 작업은 끝까지 기다린다(중간에 죽이지 않음). 처리하지
+# 못하고 넘긴 행은 체크포인트 플래그가 안 세워져 있으니 다음 실행에서 자동으로 이어진다.
+# ---------------------------------------------------------
+TIME_BUDGET_ENV_VAR = "AI_ENGINE_TIME_BUDGET_SECONDS"
+
+
+def _get_time_budget_seconds() -> float | None:
+    raw = os.environ.get(TIME_BUDGET_ENV_VAR)
+    if not raw:
+        return None
+    try:
+        value = float(raw)
+    except ValueError:
+        print(f"⚠️ {TIME_BUDGET_ENV_VAR} 값이 숫자가 아닙니다 ({raw!r}) — 시간 제한 없이 진행합니다.")
+        return None
+    if value <= 0:
+        print(f"⚠️ {TIME_BUDGET_ENV_VAR} 값이 0 이하입니다 ({raw!r}) — 시간 제한 없이 진행합니다.")
+        return None
+    return value
+
+
+def _process_with_time_budget(rows, worker_fn, max_workers, deadline, on_result, label):
+    """rows(iterable of (idx, row))의 각 항목에 worker_fn(idx, row)을 실행한다.
+
+    deadline은 time.monotonic() 기준 마감 시각(None이면 시간 제한 없음). max_workers개씩
+    묶어 처리하며, 묶음을 새로 시작하기 전에 마감 시각을 지났으면 남은 항목은 전부
+    건너뛴다(다음 실행에서 재시도됨). on_result(worker_fn의 반환값)는 매 결과마다 호출된다.
+    반환값: 실제로 시작한 항목 수, 시간 예산 때문에 건너뛴 항목 수.
+    """
+    rows = list(rows)
+    started = 0
+    i = 0
+    while i < len(rows):
+        if deadline is not None and time.monotonic() >= deadline:
+            skipped = len(rows) - i
+            print(
+                f"⏰ 시간 예산 소진 — {label} {skipped}건은 이번 실행에서 건너뜁니다 "
+                f"(다음 실행에서 자동으로 이어집니다)."
+            )
+            return started, skipped
+        batch = rows[i:i + max_workers]
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(worker_fn, idx, row) for idx, row in batch]
+            for future in concurrent.futures.as_completed(futures):
+                on_result(future.result())
+        started += len(batch)
+        i += max_workers
+    return started, 0
 
 
 def _load_dataframe_with_resume(input_csv: Path, output_csv: Path) -> pd.DataFrame:
@@ -353,6 +410,11 @@ def main():
     df = _load_dataframe_with_resume(input_csv, output_csv)
     system_prompt = get_dynamic_prompt()
     blog_recheck_prompt = BLOG_RECHECK_RULES + JSON_FORMAT
+
+    time_budget = _get_time_budget_seconds()
+    deadline = (time.monotonic() + time_budget) if time_budget is not None else None
+    if time_budget is not None:
+        print(f"⏳ 이번 실행의 AI 처리 시간 예산: {time_budget:.0f}초 (초과분은 다음 실행으로 넘어갑니다)")
 
     # 혼합 상태인 리뷰 (기존 로직 — 가장 효과적인 타겟). 이미 성공적으로 재검증된 행은
     # sentiment_final이 '혼합'이 아닌 값으로 바뀌어 있어 자연스럽게 제외되지만, 방어적으로
@@ -406,23 +468,30 @@ def main():
     # 병렬 처리 — 무료 티어 병목이 TPM(분당 토큰 8,000)이라 동시성을 높여도
     # 처리량이 늘지 않고 429만 늘어난다. 2 정도로 낮춰서 재시도 로직과 함께 쓴다.
     sentiment_processed = 0
-    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-        futures = []
-        for idx, row in mixed_df.iterrows():
-            futures.append(executor.submit(process_row, idx, row, system_prompt))
-        for idx, row in blog_confirmed_df.iterrows():
-            futures.append(executor.submit(process_row, idx, row, blog_recheck_prompt))
 
-        for future in concurrent.futures.as_completed(futures):
-            idx, result_row = future.result()
-            # 원본 DataFrame 업데이트
-            for k, v in result_row.items():
-                df.at[idx, k] = v
-            sentiment_processed += 1
-            if sentiment_processed % CHECKPOINT_FLUSH_EVERY == 0:
-                output_csv.parent.mkdir(parents=True, exist_ok=True)
-                df.to_csv(output_csv, index=False, encoding="utf-8-sig")
-                print(f"💾 중간 저장: 감성 재검증 {sentiment_processed}건 처리 후 저장했습니다.")
+    def _on_sentiment_result(result):
+        nonlocal sentiment_processed
+        idx, result_row = result
+        for k, v in result_row.items():
+            df.at[idx, k] = v
+        sentiment_processed += 1
+        if sentiment_processed % CHECKPOINT_FLUSH_EVERY == 0:
+            output_csv.parent.mkdir(parents=True, exist_ok=True)
+            df.to_csv(output_csv, index=False, encoding="utf-8-sig")
+            print(f"💾 중간 저장: 감성 재검증 {sentiment_processed}건 처리 후 저장했습니다.")
+
+    sentiment_rows = (
+        [(idx, (row, system_prompt)) for idx, row in mixed_df.iterrows()]
+        + [(idx, (row, blog_recheck_prompt)) for idx, row in blog_confirmed_df.iterrows()]
+    )
+    _process_with_time_budget(
+        [(idx, payload) for idx, payload in sentiment_rows],
+        lambda idx, payload: process_row(idx, payload[0], payload[1]),
+        max_workers=2,
+        deadline=deadline,
+        on_result=_on_sentiment_result,
+        label="감성 재검증",
+    )
 
     # 감성 재검증 단계가 끝나면(quota 소진으로 일부만 처리됐더라도) 한 번 더 저장해둔다 —
     # 아래 customer_type 단계에서 quota가 모자라 아예 못 돌더라도 여기까지는 남는다.
@@ -454,32 +523,41 @@ def main():
         df['고객유형_근거'] = ""
 
     customer_type_processed = 0
-    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-        futures = [executor.submit(infer_row, idx, row) for idx, row in unresolved_df.iterrows()]
-        for future in concurrent.futures.as_completed(futures):
-            idx, result = future.result()
-            if not result:
-                print(f"[{idx}] 호출/파싱 실패 -> 다음 실행에서 재시도")
-                continue
 
-            # 호출 자체는 성공했으므로(결과가 '정보없음' 유지든 아니든) 다음 실행에서
-            # 또 물어보지 않도록 표시한다.
-            df.at[idx, CUSTOMER_TYPE_CHECK_FLAG_COL] = True
-            customer_type_processed += 1
+    def _on_customer_type_result(result):
+        nonlocal customer_type_processed
+        idx, result_value = result
+        if not result_value:
+            print(f"[{idx}] 호출/파싱 실패 -> 다음 실행에서 재시도")
+            return
 
-            if result.get('customer_type') and result['customer_type'] != '정보없음':
-                # LOW confidence는 억지 추측일 가능성이 높아 '정보없음'을 그대로 유지한다.
-                if result.get('confidence') == 'LOW':
-                    print(f"[{idx}] LOW confidence로 스킵 -> {result['customer_type']} ({result.get('reason', '')})")
-                else:
-                    df.at[idx, 'customer_type'] = result['customer_type']
-                    df.at[idx, '고객유형_근거'] = result.get('reason', '')
-                    print(f"[{idx}] customer_type 추측 -> {result['customer_type']} [{result.get('confidence')}] ({result.get('reason', '')})")
+        # 호출 자체는 성공했으므로(결과가 '정보없음' 유지든 아니든) 다음 실행에서
+        # 또 물어보지 않도록 표시한다.
+        df.at[idx, CUSTOMER_TYPE_CHECK_FLAG_COL] = True
+        customer_type_processed += 1
 
-            if customer_type_processed % CHECKPOINT_FLUSH_EVERY == 0:
-                output_csv.parent.mkdir(parents=True, exist_ok=True)
-                df.to_csv(output_csv, index=False, encoding="utf-8-sig")
-                print(f"💾 중간 저장: customer_type {customer_type_processed}건 처리 후 저장했습니다.")
+        if result_value.get('customer_type') and result_value['customer_type'] != '정보없음':
+            # LOW confidence는 억지 추측일 가능성이 높아 '정보없음'을 그대로 유지한다.
+            if result_value.get('confidence') == 'LOW':
+                print(f"[{idx}] LOW confidence로 스킵 -> {result_value['customer_type']} ({result_value.get('reason', '')})")
+            else:
+                df.at[idx, 'customer_type'] = result_value['customer_type']
+                df.at[idx, '고객유형_근거'] = result_value.get('reason', '')
+                print(f"[{idx}] customer_type 추측 -> {result_value['customer_type']} [{result_value.get('confidence')}] ({result_value.get('reason', '')})")
+
+        if customer_type_processed % CHECKPOINT_FLUSH_EVERY == 0:
+            output_csv.parent.mkdir(parents=True, exist_ok=True)
+            df.to_csv(output_csv, index=False, encoding="utf-8-sig")
+            print(f"💾 중간 저장: customer_type {customer_type_processed}건 처리 후 저장했습니다.")
+
+    _process_with_time_budget(
+        list(unresolved_df.iterrows()),
+        infer_row,
+        max_workers=2,
+        deadline=deadline,
+        on_result=_on_customer_type_result,
+        label="customer_type 추측",
+    )
 
     output_csv.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(output_csv, index=False, encoding="utf-8-sig")
