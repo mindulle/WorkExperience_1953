@@ -281,7 +281,12 @@ def analyze_review_groq(review_text: str, rating: float, system_prompt: str) -> 
 # 있는 경우가 많아, 규칙 단계에서 확정한 '긍정'/'부정'도 브랜드와 무관한 문장에서 감성이
 # 잘못 귀속됐을 위험이 있다. 그래서 '혼합'뿐 아니라 이 채널의 확정 '긍정'/'부정' 리뷰도
 # 전용 프롬프트(BLOG_RECHECK_RULES)로 재판정한다. 오탐은 양쪽 방향(긍정 쪽으로도, 부정
-# 쪽으로도) 다 날 수 있어 대칭적으로 다룬다.
+# 쪽으로도) 다 날 수 있어 대칭적으로 다루는 게 원칙이지만, 실제 데이터로 확인해보니
+# 네이버블로그 확정 '긍정'만 500건이 넘어(2026-08-17 기준) Groq 무료 티어 일일 토큰
+# 한도(TPD 200,000)를 크게 초과한다. 그래서 '긍정'은 confidence == 'medium'(긍정
+# 키워드가 1개만 걸려 애매한 경우)만 재검증 대상으로 좁힌다 — 키워드 2개 이상이 겹친
+# 'high'는 여러 신호가 동시에 맞아떨어진 것이라 오분류 가능성이 낮다고 보고 제외했다.
+# '부정'은 건수 자체가 적어(10건 안팎) confidence와 무관하게 전부 재검증한다.
 BLOG_RECHECK_CHANNEL = "네이버블로그"
 
 
@@ -302,18 +307,21 @@ def main():
     mixed_df = df[df['sentiment_final'] == '혼합']
 
     # 네이버블로그 채널에서 규칙이 확정한 '긍정'/'부정'도 재검증 대상에 포함한다.
-    # (위 BLOG_RECHECK_CHANNEL 설명 참고)
+    # '긍정'은 confidence == 'medium'만 (Groq 일일 토큰 한도 때문 — 위 BLOG_RECHECK_CHANNEL
+    # 설명 참고), '부정'은 confidence와 무관하게 전부 포함한다.
     if "채널" in df.columns:
-        blog_confirmed_df = df[
-            (df["채널"] == BLOG_RECHECK_CHANNEL) & (df["sentiment_final"].isin(["긍정", "부정"]))
-        ]
+        is_blog = df["채널"] == BLOG_RECHECK_CHANNEL
+        blog_negative = is_blog & (df["sentiment_final"] == "부정")
+        blog_positive_medium = is_blog & (df["sentiment_final"] == "긍정") & (df["confidence"] == "medium")
+        blog_confirmed_df = df[blog_negative | blog_positive_medium]
     else:
         print("⚠️ '채널' 컬럼이 없어 네이버블로그 재검증을 건너뜁니다 (이슈 #151/#160 대상 축소).")
         blog_confirmed_df = df.iloc[0:0]
 
     print(
-        f"총 {len(df)}건 중 '혼합' {len(mixed_df)}건 + 블로그 확정(긍정/부정) {len(blog_confirmed_df)}건 "
-        f"= 총 {len(mixed_df) + len(blog_confirmed_df)}건에 대해 Groq 분석을 시작합니다... 🚀"
+        f"총 {len(df)}건 중 '혼합' {len(mixed_df)}건 + 블로그 확정(부정 전체 + 긍정 medium만) "
+        f"{len(blog_confirmed_df)}건 = 총 {len(mixed_df) + len(blog_confirmed_df)}건에 대해 "
+        f"Groq 분석을 시작합니다... 🚀"
     )
 
     def process_row(idx, row, prompt):
