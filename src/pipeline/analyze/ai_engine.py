@@ -139,11 +139,11 @@ def get_dynamic_prompt() -> str:
 
 CUSTOMER_TYPE_RULES = """
 당신은 음식점 리뷰에서 방문 고객 유형(직장인/가족/학생)을 추정하는 분석가입니다.
-이 리뷰는 규칙 기반 분류가 명시적 키워드(학생/개강, 가족/아이들, 회식/점심시간 등)를
-찾지 못해 '정보없음'으로 남긴 리뷰입니다. 명시적 키워드가 없더라도 아래와 같은 문맥
-신호를 근거로 가장 가능성 높은 유형 하나를 추측해 주세요:
-- 인원수/동행 표현(혼밥, 2인, 단체), 방문 시간대(점심시간, 저녁 회식), 어투나 말투
-- 메뉴 구성(1인상 vs 2인상 이상), 요일/시간 언급
+이 리뷰는 규칙 기반 분류가 명시적 키워드(학생/개강/MT/시험기간, 가족/아이들/아이 데리고,
+회식/점심시간/출근/동료 등)를 찾지 못해 '정보없음'으로 남긴 리뷰입니다. 명시적 키워드가
+없더라도 아래와 같은 문맥 신호를 근거로 가장 가능성 높은 유형 하나를 추측해 주세요:
+- 인원수/동행 표현(혼밥, 2인, 단체, 아이 동반), 방문 시간대(점심시간, 저녁 회식, 출퇴근길)
+- 메뉴 구성(1인상 vs 2인상 이상), 요일/시간 언급, 학생 특유의 어투(시험/방학/과제 언급)
 근거가 전혀 없는 극히 짧은 리뷰일 때만 '정보없음'을 유지하세요.
 """
 
@@ -289,6 +289,57 @@ def analyze_review_groq(review_text: str, rating: float, system_prompt: str) -> 
 # '부정'은 건수 자체가 적어(10건 안팎) confidence와 무관하게 전부 재검증한다.
 BLOG_RECHECK_CHANNEL = "네이버블로그"
 
+# ---------------------------------------------------------
+# 중간 저장(checkpoint) / 이어하기(resume)
+# 이슈 #163 (이슈 #150 QA 중 반복 확인된 문제): Groq 무료 티어 TPD(일일 토큰) 한도에
+# 걸리면 남은 행들은 재시도해도 결국 실패하는데, 예전 코드는 혼합/블로그 재검증 +
+# customer_type 추측을 전부 끝내야만 결과를 저장했다. 그래서 quota 소진(또는 Ctrl+C)으로
+# 중간에 끊기면 이미 처리한 것까지 전부 날아가, 다음 날 처음부터 다시 돌려야 했다.
+# 이제 output_csv가 이미 있으면 그걸 이어서 쓰고(resume), 일정 건수 처리할 때마다
+# 중간 저장도 한다 — 하루치 quota를 다 쓰고 다음 날 이어 돌리는 식의 "수동 배치 실행"이
+# 훨씬 수월해진다.
+# ---------------------------------------------------------
+CHECKPOINT_FLUSH_EVERY = 20  # 이 건수만큼 처리(성공/확정)할 때마다 중간 저장한다
+# 감성 재검증(혼합/블로그)에 한 번이라도 "성공적으로" 응답을 받은 행 표시.
+# (호출 실패로 기존 규칙 결과를 유지한 행은 플래그를 세우지 않아 다음 실행에서 재시도된다.)
+SENTIMENT_RECHECK_FLAG_COL = "_sentiment_recheck_done"
+# customer_type AI 추측 호출에 한 번이라도 "성공적으로" 응답을 받은 행 표시.
+# (LOW confidence라 '정보없음'을 그대로 유지한 경우도 "성공"으로 친다 — 이미 AI가 판단해본
+#  것이므로 다음 실행에서 또 물어볼 필요는 없다. 호출/파싱 자체가 실패한 경우만 재시도 대상.)
+CUSTOMER_TYPE_CHECK_FLAG_COL = "_customer_type_checked"
+
+
+def _load_dataframe_with_resume(input_csv: Path, output_csv: Path) -> pd.DataFrame:
+    """이전 실행의 중간 결과(output_csv)가 있으면 이어서 쓰고, 없으면 새로 시작한다.
+
+    원본 데이터(input_csv, rule_classifier.py 결과) 건수가 이전 실행 때와 다르면
+    (예: mentions_clean.csv가 새로 갱신됨) 이어하기가 의미 없으므로 처음부터 다시 한다.
+    """
+    base_df = pd.read_csv(input_csv, encoding="utf-8-sig")
+
+    if output_csv.exists():
+        prev_df = pd.read_csv(output_csv, encoding="utf-8-sig")
+        if len(prev_df) == len(base_df):
+            print(f"⏩ 이전 실행 결과({output_csv.name})를 발견해 이어서 진행합니다.")
+            df = prev_df
+        else:
+            print(
+                f"⚠️ 원본 데이터 건수({len(base_df)}건)가 이전 실행 결과({len(prev_df)}건)와 달라 "
+                f"처음부터 다시 시작합니다."
+            )
+            df = base_df
+    else:
+        df = base_df
+
+    for flag_col in (SENTIMENT_RECHECK_FLAG_COL, CUSTOMER_TYPE_CHECK_FLAG_COL):
+        if flag_col not in df.columns:
+            df[flag_col] = False
+        # CSV로 저장/재로딩을 거치면 True/False가 문자열("True"/"False")이나 NaN으로
+        # 바뀔 수 있어, 매번 명시적으로 bool로 다시 맞춘다.
+        df[flag_col] = df[flag_col].astype(str).str.strip().str.lower().eq("true")
+
+    return df
+
 
 def main():
     project_root = Path(__file__).resolve().parent.parent.parent.parent
@@ -299,21 +350,25 @@ def main():
         print(f"❌ {input_csv} 파일이 존재하지 않습니다. 먼저 rule_classifier.py를 실행하세요.")
         return
 
-    df = pd.read_csv(input_csv, encoding="utf-8-sig")
+    df = _load_dataframe_with_resume(input_csv, output_csv)
     system_prompt = get_dynamic_prompt()
     blog_recheck_prompt = BLOG_RECHECK_RULES + JSON_FORMAT
 
-    # 혼합 상태인 리뷰 (기존 로직 — 가장 효과적인 타겟)
-    mixed_df = df[df['sentiment_final'] == '혼합']
+    # 혼합 상태인 리뷰 (기존 로직 — 가장 효과적인 타겟). 이미 성공적으로 재검증된 행은
+    # sentiment_final이 '혼합'이 아닌 값으로 바뀌어 있어 자연스럽게 제외되지만, 방어적으로
+    # 플래그도 함께 확인한다.
+    mixed_df = df[(df['sentiment_final'] == '혼합') & (~df[SENTIMENT_RECHECK_FLAG_COL])]
 
     # 네이버블로그 채널에서 규칙이 확정한 '긍정'/'부정'도 재검증 대상에 포함한다.
     # '긍정'은 confidence == 'medium'만 (Groq 일일 토큰 한도 때문 — 위 BLOG_RECHECK_CHANNEL
-    # 설명 참고), '부정'은 confidence와 무관하게 전부 포함한다.
+    # 설명 참고), '부정'은 confidence와 무관하게 전부 포함한다. 여기는 AI가 같은 값으로
+    # 재확정할 수도 있어(혼합과 달리 '긍정'/'부정'이 그대로 나올 수 있음) sentiment_final
+    # 값만으로는 이미 처리된 행을 걸러낼 수 없다 — SENTIMENT_RECHECK_FLAG_COL이 필수다.
     if "채널" in df.columns:
         is_blog = df["채널"] == BLOG_RECHECK_CHANNEL
         blog_negative = is_blog & (df["sentiment_final"] == "부정")
         blog_positive_medium = is_blog & (df["sentiment_final"] == "긍정") & (df["confidence"] == "medium")
-        blog_confirmed_df = df[blog_negative | blog_positive_medium]
+        blog_confirmed_df = df[(blog_negative | blog_positive_medium) & (~df[SENTIMENT_RECHECK_FLAG_COL])]
     else:
         print("⚠️ '채널' 컬럼이 없어 네이버블로그 재검증을 건너뜁니다 (이슈 #151/#160 대상 축소).")
         blog_confirmed_df = df.iloc[0:0]
@@ -321,7 +376,7 @@ def main():
     print(
         f"총 {len(df)}건 중 '혼합' {len(mixed_df)}건 + 블로그 확정(부정 전체 + 긍정 medium만) "
         f"{len(blog_confirmed_df)}건 = 총 {len(mixed_df) + len(blog_confirmed_df)}건에 대해 "
-        f"Groq 분석을 시작합니다... 🚀"
+        f"Groq 분석을 시작합니다... (이미 처리된 건은 이어하기로 자동 제외) 🚀"
     )
 
     def process_row(idx, row, prompt):
@@ -334,15 +389,23 @@ def main():
 
         if analysis and analysis.get("sentiment_final"):
             new_row = row.to_dict()
-            new_row.update(analysis)
+            # customer_type은 전용 프롬프트(CUSTOMER_TYPE_RULES/infer_customer_type_groq)로만
+            # 판단한다. 이 감성 재검증 프롬프트도 JSON_FORMAT상 customer_type 필드를 같이
+            # 요구하지만 그건 부수적인 추측이라 신뢰도가 낮다 — 그대로 병합하면 이미 전용
+            # 로직이 확정한(또는 나중에 확정할) customer_type을 이 감성 재검증 결과가
+            # 조용히 덮어써 버릴 수 있다 (이어하기 테스트 중 실제로 재현되어 발견함).
+            analysis_for_merge = {k: v for k, v in analysis.items() if k != "customer_type"}
+            new_row.update(analysis_for_merge)
+            new_row[SENTIMENT_RECHECK_FLAG_COL] = True
             print(f"[{idx}] 완료 -> {analysis.get('sentiment_final')}")
             return (idx, new_row)
         else:
-            print(f"[{idx}] 실패 -> 기존 규칙 결과 유지")
+            print(f"[{idx}] 실패 -> 기존 규칙 결과 유지 (다음 실행에서 재시도)")
             return (idx, row.to_dict())
 
     # 병렬 처리 — 무료 티어 병목이 TPM(분당 토큰 8,000)이라 동시성을 높여도
     # 처리량이 늘지 않고 429만 늘어난다. 2 정도로 낮춰서 재시도 로직과 함께 쓴다.
+    sentiment_processed = 0
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
         futures = []
         for idx, row in mixed_df.iterrows():
@@ -355,12 +418,31 @@ def main():
             # 원본 DataFrame 업데이트
             for k, v in result_row.items():
                 df.at[idx, k] = v
+            sentiment_processed += 1
+            if sentiment_processed % CHECKPOINT_FLUSH_EVERY == 0:
+                output_csv.parent.mkdir(parents=True, exist_ok=True)
+                df.to_csv(output_csv, index=False, encoding="utf-8-sig")
+                print(f"💾 중간 저장: 감성 재검증 {sentiment_processed}건 처리 후 저장했습니다.")
+
+    # 감성 재검증 단계가 끝나면(quota 소진으로 일부만 처리됐더라도) 한 번 더 저장해둔다 —
+    # 아래 customer_type 단계에서 quota가 모자라 아예 못 돌더라도 여기까지는 남는다.
+    output_csv.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(output_csv, index=False, encoding="utf-8-sig")
 
     # customer_type이 아직 '정보없음'인 리뷰는 AI로 유형을 추측해 채운다 (수정사안 7).
-    # 혼합/블로그 재검증에서 이미 처리된 행은 중복 호출을 피하려고 제외한다.
-    already_processed_idx = mixed_df.index.union(blog_confirmed_df.index)
-    unresolved_df = df[(df['customer_type'] == '정보없음') & (~df.index.isin(already_processed_idx))]
-    print(f"customer_type '정보없음' {len(unresolved_df)}건에 대해 AI 추측을 시작합니다... 🔍")
+    # 이슈 #150 Finding 1: 예전에는 혼합/블로그 감성 재검증에서 이미 처리된 행(mixed_df,
+    # blog_confirmed_df)을 "중복 호출 방지" 명목으로 여기서도 제외했었다. 하지만 감성
+    # 재검증과 customer_type 추측은 서로 다른 목적의 별개 AI 호출이라 겹쳐도 중복이
+    # 아니며, 오히려 그 제외 때문에 customer_type이 정말 '정보없음'인 행들이 대상에서
+    # 조용히 빠지는 버그였다. 아래는 그 결과와 무관하게 '정보없음' 전체를 대상으로 하되,
+    # 이미 성공적으로 AI 추측을 받아본 행(CUSTOMER_TYPE_CHECK_FLAG_COL)은 이어하기 시
+    # 다시 묻지 않는다 — LOW confidence로 '정보없음'을 유지한 행까지 매번 재질문하면
+    # quota만 낭비하기 때문이다.
+    unresolved_df = df[(df['customer_type'] == '정보없음') & (~df[CUSTOMER_TYPE_CHECK_FLAG_COL])]
+    print(
+        f"customer_type '정보없음' {len(unresolved_df)}건에 대해 AI 추측을 시작합니다... "
+        f"(이미 확인해본 건은 이어하기로 자동 제외) 🔍"
+    )
 
     def infer_row(idx, row):
         text = row.get("review_text")
@@ -371,19 +453,33 @@ def main():
     if '고객유형_근거' not in df.columns:
         df['고객유형_근거'] = ""
 
+    customer_type_processed = 0
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
         futures = [executor.submit(infer_row, idx, row) for idx, row in unresolved_df.iterrows()]
         for future in concurrent.futures.as_completed(futures):
             idx, result = future.result()
-            if not result or not result.get('customer_type') or result['customer_type'] == '정보없음':
+            if not result:
+                print(f"[{idx}] 호출/파싱 실패 -> 다음 실행에서 재시도")
                 continue
-            # LOW confidence는 억지 추측일 가능성이 높아 '정보없음'을 그대로 유지한다.
-            if result.get('confidence') == 'LOW':
-                print(f"[{idx}] LOW confidence로 스킵 -> {result['customer_type']} ({result.get('reason', '')})")
-                continue
-            df.at[idx, 'customer_type'] = result['customer_type']
-            df.at[idx, '고객유형_근거'] = result.get('reason', '')
-            print(f"[{idx}] customer_type 추측 -> {result['customer_type']} [{result.get('confidence')}] ({result.get('reason', '')})")
+
+            # 호출 자체는 성공했으므로(결과가 '정보없음' 유지든 아니든) 다음 실행에서
+            # 또 물어보지 않도록 표시한다.
+            df.at[idx, CUSTOMER_TYPE_CHECK_FLAG_COL] = True
+            customer_type_processed += 1
+
+            if result.get('customer_type') and result['customer_type'] != '정보없음':
+                # LOW confidence는 억지 추측일 가능성이 높아 '정보없음'을 그대로 유지한다.
+                if result.get('confidence') == 'LOW':
+                    print(f"[{idx}] LOW confidence로 스킵 -> {result['customer_type']} ({result.get('reason', '')})")
+                else:
+                    df.at[idx, 'customer_type'] = result['customer_type']
+                    df.at[idx, '고객유형_근거'] = result.get('reason', '')
+                    print(f"[{idx}] customer_type 추측 -> {result['customer_type']} [{result.get('confidence')}] ({result.get('reason', '')})")
+
+            if customer_type_processed % CHECKPOINT_FLUSH_EVERY == 0:
+                output_csv.parent.mkdir(parents=True, exist_ok=True)
+                df.to_csv(output_csv, index=False, encoding="utf-8-sig")
+                print(f"💾 중간 저장: customer_type {customer_type_processed}건 처리 후 저장했습니다.")
 
     output_csv.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(output_csv, index=False, encoding="utf-8-sig")
