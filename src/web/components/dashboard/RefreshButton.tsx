@@ -69,6 +69,7 @@ export function RefreshButton() {
       .then((status) => {
         const keepPolling = applyStatus(status);
         if (keepPolling) {
+          // eslint-disable-next-line
           timerRef.current = setTimeout(poll, POLL_INTERVAL_MS);
         }
       })
