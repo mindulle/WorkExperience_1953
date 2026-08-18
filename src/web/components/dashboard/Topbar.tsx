@@ -1,5 +1,6 @@
 import { Building2, CalendarRange, type LucideIcon } from "lucide-react";
 import type { DashboardSource } from "@/lib/types";
+import { RefreshButton } from "./RefreshButton";
 
 function ScopeChip({ icon: Icon, label, value, options, onChange }: { icon: LucideIcon; label: string; value: string; options?: string[]; onChange?: (val: string) => void }) {
   if (options && onChange) {
@@ -124,6 +125,8 @@ export function Topbar({
         </div>
 
         <div className="flex items-center gap-[9px] flex-wrap">
+          {/* 멘토님이 못 찾으셨던 버튼 — 필터보다 먼저, 가장 눈에 띄는 자리에 둔다. */}
+          <RefreshButton />
           <ScopeChip icon={Building2} label="지점" value={branchFilter || "전체"} options={branchOptions} onChange={onBranchChange} />
           {onDateFromChange && onDateToChange && (
             <DateRangeChip from={dateFrom} to={dateTo} onFromChange={onDateFromChange} onToChange={onDateToChange} />
