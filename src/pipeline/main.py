@@ -20,14 +20,28 @@ CLEAN_DATA_DIR.mkdir(parents=True, exist_ok=True)
 # 환경 변수 연결 (하위 스크립트들이 루트의 .env를 인식하도록)
 os.environ["NAVER_ENV_FILE"] = str(ENV_FILE)
 
+# 이번 실행에서 각 단계의 성공/실패 기록.
+# 트리거 서버(#164)가 실행 상태를 조회할 때 이 정보(및 최종 종료 코드)를
+# 근거로 쓸 수 있도록, 여기서 사실대로 추적한다.
+STEP_RESULTS = []
+
+
 def run_script(script_path, *args, cwd=None):
     cmd = [sys.executable, str(script_path)] + list(args)
     print(f"\n🚀 실행: {' '.join(cmd)}")
     result = subprocess.run(cmd, cwd=cwd or PIPELINE_DIR, env=os.environ)
-    if result.returncode != 0:
-        print(f"⚠️ 경고: {script_path.name} 실행 중 오류 발생 (계속 진행합니다)")
+    success = result.returncode == 0
+    STEP_RESULTS.append({
+        "step": script_path.name,
+        "success": success,
+        "returncode": result.returncode,
+    })
+    if not success:
+        print(f"⚠️ 경고: {script_path.name} 실행 중 오류 발생 (exit code {result.returncode}, 계속 진행합니다)")
     else:
         print(f"✅ 완료: {script_path.name}")
+    return success
+
 
 def main():
     print("==================================================")
@@ -69,11 +83,24 @@ def main():
     run_script(PIPELINE_DIR / "analyze" / "macro_insight.py", cwd=PIPELINE_DIR)
 
     # 6. 구글 시트 업로드 실행
-    print("\n[6/6] Google Sheets 자동 업로드(Mock) 시작...")
+    print("\n[6/6] Google Sheets 자동 업로드 시작...")
     run_script(PIPELINE_DIR / "upload" / "google_sheets.py", cwd=PIPELINE_DIR)
 
-    print("\n🎉 모든 파이프라인 실행이 완료되었습니다!")
+    # 실행 요약. 기존처럼 중간에 실패해도 끝까지는 실행하되,
+    # 마지막에는 사실대로 요약과 종료 코드를 남긴다.
+    failed_steps = [r["step"] for r in STEP_RESULTS if not r["success"]]
+
+    print("\n==================================================")
+    if failed_steps:
+        print(f"⚠️ 파이프라인 실행이 끝났지만 {len(failed_steps)}개 단계가 실패했습니다: {', '.join(failed_steps)}")
+        print("정제된 결과물은 일부만 최신일 수 있습니다. 위 로그에서 실패 원인을 확인하세요.")
+    else:
+        print("🎉 모든 파이프라인 실행이 완료되었습니다!")
     print(f"정제된 결과물은 '{CLEAN_DATA_DIR}' 폴더에서 확인 가능합니다.")
+    print("==================================================")
+
+    return 0 if not failed_steps else 1
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
