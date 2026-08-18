@@ -6,3 +6,5 @@ gspread==6.0.0
 google-auth==2.26.2
 camoufox[geoip]
 scrapling[fetchers]==0.4
+fastapi==0.109.2
+uvicorn==0.27.1
