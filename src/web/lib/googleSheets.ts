@@ -173,7 +173,7 @@ function deriveMenuRanking(header: string[], rows: string[][], topN = 5): MenuMe
  * sentiment_basis == "비리뷰"(수집 불가 메모 등 실제 리뷰가 아닌 행)는 제외.
  */
 function deriveBranchStats(header: string[], rows: string[][]): BranchStat[] | null {
-  const branchCol = header.indexOf("branch");
+  const branchCol = header.indexOf("지점") !== -1 ? header.indexOf("지점") : header.indexOf("branch");
   const ratingCol = header.indexOf("rating");
   const sentimentCol = header.indexOf("sentiment_final");
   const basisCol = header.indexOf("sentiment_basis");

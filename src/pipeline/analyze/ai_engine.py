@@ -196,7 +196,7 @@ def call_groq(prompt: str) -> str | None:
                     "Content-Type": "application/json",
                 },
                 json=payload,
-                timeout=180,
+                timeout=30  # 무한 대기(Hang) 방지용 타임아웃 추가
             )
 
             if res.status_code == 429:

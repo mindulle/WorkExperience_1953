@@ -36,9 +36,12 @@ STATE = {
 API_TOKEN = os.environ.get("PIPELINE_TRIGGER_TOKEN", "default-dev-token")
 DEPLOY_HOOK_URL = os.environ.get("CLOUDFLARE_DEPLOY_HOOK_URL", "")
 
-def verify_token(x_pipeline_token: str = Header(None)):
-    if not x_pipeline_token or x_pipeline_token != API_TOKEN:
+def verify_token(authorization: str = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid or missing token")
+    token = authorization.split("Bearer ")[1]
+    if token != API_TOKEN:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 def run_pipeline():
     global STATE
