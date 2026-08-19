@@ -27,10 +27,10 @@ app.add_middleware(
 
 # 전역 상태 관리
 STATE = {
-    "status": "idle", # idle, running, success, error
-    "last_run_time": None,
-    "last_end_time": None,
-    "error_message": None
+    "status": "idle", # idle, running, success, failed
+    "startedAt": None,
+    "finishedAt": None,
+    "failedSteps": None
 }
 
 API_TOKEN = os.environ.get("PIPELINE_TRIGGER_TOKEN", "default-dev-token")
@@ -56,10 +56,10 @@ def run_pipeline():
             text=True
         )
         
-        STATE["last_end_time"] = datetime.now().isoformat()
+        STATE["finishedAt"] = datetime.now().isoformat()
         if result.returncode == 0:
             STATE["status"] = "success"
-            STATE["error_message"] = None
+            STATE["failedSteps"] = []
             
             # 대시보드 정적 사이트(Cloudflare Pages 등) 자동 갱신을 위한 배포 훅 찌르기
             if DEPLOY_HOOK_URL:
@@ -71,15 +71,17 @@ def run_pipeline():
                     print(f"Deploy Hook 요청 중 오류: {hook_e}")
                     
         else:
-            STATE["status"] = "error"
+            STATE["status"] = "failed"
             # 오류 원인 파악을 위해 로그의 마지막 부분 저장
             all_logs = result.stdout.split('\n') + result.stderr.split('\n')
-            STATE["error_message"] = "\n".join(all_logs[-30:])
+            # Extract names of steps that failed from logs if possible, otherwise use a generic message
+            failed_lines = [line for line in all_logs if "실패" in line or "Error" in line]
+            STATE["failedSteps"] = failed_lines[-5:] if failed_lines else ["Pipeline error"]
             
     except Exception as e:
-        STATE["last_end_time"] = datetime.now().isoformat()
-        STATE["status"] = "error"
-        STATE["error_message"] = str(e)
+        STATE["finishedAt"] = datetime.now().isoformat()
+        STATE["status"] = "failed"
+        STATE["failedSteps"] = [str(e)]
 
 @app.post("/run", dependencies=[Depends(verify_token)])
 def trigger_run():
@@ -88,9 +90,9 @@ def trigger_run():
         return {"message": "Pipeline is already running", "status": STATE["status"]}
     
     STATE["status"] = "running"
-    STATE["last_run_time"] = datetime.now().isoformat()
-    STATE["last_end_time"] = None
-    STATE["error_message"] = None
+    STATE["startedAt"] = datetime.now().isoformat()
+    STATE["finishedAt"] = None
+    STATE["failedSteps"] = []
     
     thread = threading.Thread(target=run_pipeline)
     thread.daemon = True
