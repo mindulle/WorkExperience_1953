@@ -2,6 +2,8 @@
 
 이슈 #66 병합 작업 과정에서 정리된 기준입니다. 앞으로 리뷰를 추가 수집할 때 이 형식을 따르면 병합 작업이 훨씬 수월합니다.
 
+> **(2026-08-19 갱신) 읽기 전에 참고하세요.** 아래 "수집 시 입력 항목"/"후처리 파생 항목"은 이슈 #66 당시(팀원 수동 수집 → `merge_team_data.py` 병합) 기준으로 쓰여졌습니다. 그 이후 파이프라인이 `rule_classifier.py`/`ai_engine.py` 기반 자동 분류로 크게 바뀌었고, **현재 대시보드에 실제로 연결된 최종 데이터(`reviews_analyzed_ai.csv` → Google Sheets "정제_리뷰데이터" 탭)는 `merge_team_data.py` 병합 경로를 거치지 않습니다** (`google_sheets.py`의 관련 주석 참고). §5에 지금 기준 컬럼 목록을 새로 정리해뒀습니다 — 최신 컬럼 스키마가 궁금하면 §5부터 보세요.
+
 ## 공식 지점명 (6개)
 
 수집 시 아래 이름 중 하나로 통일해 주세요. 플랫폼마다 표기가 다를 수 있으니 괄호 안 별칭도 참고하세요.
@@ -34,7 +36,9 @@
 
 ## 후처리 파생 항목 (병합 파이프라인이 자동 생성 — 수집 시 신경 쓰지 않아도 됨)
 
-`review_id`, `source_persons`(출처 인원), `approx_ym`(날짜 정규화, 이슈 #68), `sentiment`/`positive_keywords`/`negative_keywords`/`mentioned_menu`(감성·키워드 분석, 이슈 #67), `duplicate` 관련 필드
+> ⚠️ 이 절은 `merge_team_data.py`(현재 최종 산출 경로에서 안 쓰임, §5 참고) 기준 설명입니다.
+
+`review_id`, `source_persons`(출처 인원), `approx_ym`(날짜 정규화, 이슈 #68), `sentiment_final`/`positive_keywords`/`negative_keywords`/`mentioned_menu`(감성·키워드 분석, 이슈 #67). "`duplicate` 관련 필드"라고 되어 있었으나 실제로는 별도 플래그 컬럼 없이 `merge_team_data.py`의 `drop_duplicates()` 호출(리뷰 텍스트 기준 단순 제거)로만 처리됩니다.
 
 ## 감성 판정 기준 (이슈 #67)
 
@@ -64,3 +68,41 @@ R1(협찬 배제 — `협찬|제공받|원고료|체험단|서포터즈|소정�
 - 상은님이 전달한 "중앙점" 구글 리뷰 15건은 실제로는 **서면점** 리뷰였음을 확인해 정정했습니다 (다른 두 분 데이터와 원문 대조로 확인). 지점 태깅 시 리뷰 내용까지 한 번 더 확인하면 좋습니다.
 - 주은님 데이터(`1953_review_raw.csv`)의 리뷰 본문은 Google 자동번역(영문)본입니다. 원문 언어 재수집이 필요합니다.
 - 상대 날짜("3주 전")는 수집 시점에 따라 실제 월이 달라지므로, 가능하면 수집 시점(`collected_at`)도 함께 기록해 두세요.
+
+---
+
+## 5. 현재 파이프라인 최종 컬럼 스키마 (2026-08-19 기준)
+
+> §1~4는 이슈 #66 당시(팀원 수동 병합) 기준입니다. 지금 대시보드에 실제로 반영되는 최종 데이터(`data/clean/reviews_analyzed_ai.csv` → Google Sheets "정제_리뷰데이터" 탭)는 `clean_mentions.py → rule_classifier.py → ai_engine.py` 경로를 거치며, 아래 컬럼들이 이 단계들에서 생성/갱신됩니다.
+
+### `rule_classifier.py`가 생성하는 컬럼 (`src/pipeline/analyze/rule_classifier.py`)
+
+| 컬럼 | 값 | 설명 |
+|---|---|---|
+| `sentiment_basis` | `리뷰` / `비리뷰` | 실제 방문 후기인지 판별 (비리뷰면 `sentiment_final`도 자동으로 `해당없음`) |
+| `sentiment_final` | `긍정`/`부정`/`중립`/`혼합`/`해당없음` | 규칙 기반 1차 감성 판정 (§2의 "6개 값"과 달리 `판단불가`는 여기서 안 씀 — 대신 애매하면 `중립`) |
+| `confidence` | `high`/`medium`/`low` | 규칙 판정 확신도. `low`인 행은 `reviews_uncertain.csv`로 별도 추출됨 |
+| `positive_keywords` / `negative_keywords` | 세미콜론(`;`) 구분 문자열 | 매칭된 긍/부정 키워드 |
+| `mentioned_menu` | 세미콜론 구분 문자열 | 언급된 메뉴명 |
+| `visit_origin` | `외지/관광 방문`/`현지인/단골`/`정보없음` | §1의 "방문 목적"과는 다른 축 — 관광객 vs 단골 여부 |
+| `customer_type` | `직장인`/`가족`/`학생`/`정보없음` | `visit_origin`과 별개 축(혼동 방지를 위해 분리, 이슈 #150) |
+| `approx_ym` / `date_precision` | `YYYY-MM` / `일`·`월`·`년`·`없음` | 날짜 정규화 (§4와 동일 개념, 컬럼명도 동일) |
+| `rating` | 숫자 문자열 | 별점(⭐ 개수 또는 "별점: N" 패턴에서 추출) |
+
+### `ai_engine.py`가 추가/덮어쓰는 컬럼 (`src/pipeline/analyze/ai_engine.py`)
+
+| 컬럼 | 값 | 설명 |
+|---|---|---|
+| `sentiment_final` | 위 5개 값 + `분석 불가` | 블로그 등 애매한 케이스를 AI로 재검증해 덮어씀 (이슈 #151, #160) |
+| `sentiment_confidence` | `HIGH`/`MEDIUM`/`LOW` | AI가 매긴 확신도. `rule_classifier.py`의 `confidence`(소문자, high/medium/low)와는 **별개 컬럼**이니 혼동 주의 |
+| `needs_response` | `Y`/`N` | 1~2점 평점이거나 불만/개선 요청 포함 시 `Y` |
+| `word_level_keywords` | 배열(문자열로 직렬화) | 단순 명사 키워드(예: 국물, 주차, 웨이팅) |
+| `aspect_analysis` | 배열(문자열로 직렬화) | 항목별(맛/서비스/위생 등) 세부 감성 분석 |
+| `customer_type` | 위와 동일 값 | `정보없음`이었던 행을 AI로 추가 추측해 덮어씀 (이슈 #150) |
+| `고객유형_근거` | 자유 텍스트 | 위 AI 추측의 판단 근거 (한글 컬럼명 — Google Sheets에서 그대로 노출됨) |
+
+### 알아둘 것
+
+- **`sentiment` 단독 컬럼은 존재하지 않습니다.** 항상 `sentiment_final`입니다(§4의 "후처리 파생 항목"에 있던 `sentiment` 표기는 오기였음, 이번에 정정).
+- **지점명 정규화(§1의 공식 지점명 6개)는 최종 데이터에 적용되지 않습니다.** `merge_team_data.py`에만 구현돼 있는데, 이 스크립트의 출력(`reviews_merged.csv`)은 더 이상 최종 업로드 대상이 아닙니다(`google_sheets.py` 주석 참고). 즉 `지점` 컬럼에는 원본 수집 표기(예: 경성대본점, 광안리점, 부산역점, 브랜드전체(유튜브 더미값) 등)가 정규화 없이 그대로 들어갈 수 있습니다. 화면 표시 시점에 정규화가 필요하면 프론트(`src/web/lib/googleSheets.ts`)나 파이프라인 쪽에 별도로 매핑 로직을 추가해야 합니다.
+- `review_date_raw`(§1)라는 컬럼명을 실제로 읽는 코드는 없습니다. 유사한 역할은 `merge_team_data.py`가 읽는 `review_date`(밑줄 없음)이며, 이마저 §5 경로에서는 안 씁니다.
