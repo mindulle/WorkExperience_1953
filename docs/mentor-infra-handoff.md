@@ -7,32 +7,29 @@
 
 ## 1. 현재 아키텍처
 
-```
-[대시보드 "데이터 갱신" 버튼]  (src/web, Next.js 정적 익스포트)
-        │ POST /run  (Authorization: Bearer <PIPELINE_TRIGGER_TOKEN>)
-        ▼
-[trigger_server.py]  ── FastAPI + uvicorn, 이 프로젝트 전용 VM에 systemd로 상시 구동 (#164)
-        │ subprocess로 main.py 실행 (백그라운드 스레드)
-        ▼
-[src/pipeline/main.py] — 6단계 파이프라인, 각 단계는 실패해도 계속 진행 후 마지막에 종료 코드로 요약
-  1. 수집
-     - API 기반: naver_review_collector, naver_blog_time_scraper, naver_datalab_trend
-       (NAVER_ID/SECRET 필요), youtube_collector (YOUTUBE_API_KEY 필요)
-     - 스크래핑 기반(API 키 불요, 대신 헤드리스 브라우저 필요):
-       catchtable_collector(scrapling→Playwright 계열), kakaomap_collector·naver_place_collector(camoufox→헤드리스 Firefox)
-  2. 정제: merge_team_data.py, clean_mentions.py
-  3. 규칙 기반 분류: rule_classifier.py
-  4. AI 분석: ai_engine.py (Groq API, GROQ_API_KEY)
-  5. 매크로 인사이트: macro_insight.py
-  6. 업로드: google_sheets.py (gspread + service_account.json → Google Sheets)
-        │ 성공 시
-        ▼
-[CLOUDFLARE_DEPLOY_HOOK_URL] POST  ── 프론트엔드(Cloudflare Workers 정적 자산) 재빌드 트리거
-        ▼
-[Next.js 빌드 시점] lib/googleSheets.ts의 getDashboardData() 등이
-  Google Sheet를 공개 CSV export URL로 직접 fetch (빌드 타임에 한 번 읽음)
-        ▼
-[정적 사이트 재배포] → 대시보드에 새 데이터 반영
+```mermaid
+flowchart TD
+    A["대시보드 '데이터 갱신' 버튼<br/>(src/web, Next.js 정적 익스포트)"]
+    B["trigger_server.py<br/>FastAPI + uvicorn, 이 프로젝트 전용 VM에 systemd로 상시 구동 (#164)"]
+    A -->|"POST /run<br/>Authorization: Bearer 토큰"| B
+    B -->|"subprocess로 실행<br/>(백그라운드 스레드)"| M["main.py — 6단계 파이프라인<br/>각 단계 실패해도 계속 진행,<br/>마지막에 종료 코드로 요약"]
+
+    subgraph P["src/pipeline/"]
+        direction TB
+        S1["1. 수집<br/>API: naver_*, youtube_collector<br/>브라우저: catchtable_collector(scrapling),<br/>kakaomap·naver_place(camoufox)"]
+        S2["2. 정제<br/>merge_team_data.py, clean_mentions.py"]
+        S3["3. 규칙 기반 분류<br/>rule_classifier.py"]
+        S4["4. AI 분석<br/>ai_engine.py (Groq API)"]
+        S5["5. 매크로 인사이트<br/>macro_insight.py"]
+        S6["6. 업로드<br/>google_sheets.py"]
+        S1 --> S2 --> S3 --> S4 --> S5 --> S6
+    end
+
+    M --> S1
+    S6 --> D[("Google Sheets")]
+    D -->|"성공 시 POST"| H["CLOUDFLARE_DEPLOY_HOOK_URL<br/>프론트 재빌드 트리거"]
+    H --> F["Next.js 빌드 시점<br/>getDashboardData() 등이<br/>시트를 CSV export URL로 fetch"]
+    F --> G["정적 사이트 재배포<br/>대시보드에 새 데이터 반영"]
 ```
 
 **핵심 설계 포인트:** Google Sheets가 파이프라인 ↔ 프론트엔드 사이의 느슨하게 결합된 인터페이스입니다. 프론트는 빌드 시점에 시트를 직접 읽을 뿐, 파이프라인이 어디서 어떻게 도는지 전혀 모릅니다. 이 덕분에 **파이프라인 실행 위치를 바꿔도(이 VM → 멘토님 회사 Docker/n8n) 프론트 코드나 Google Sheet 스키마는 건드릴 필요가 없습니다.** 이관 범위는 사실상 "트리거 서버 + 파이프라인 실행 환경"으로 좁힐 수 있습니다.
@@ -64,8 +61,11 @@
 
 ### 옵션 A — 기존 `trigger_server.py` 유지 + Docker화
 
-```
-[대시보드 버튼] → POST /run → [Docker 컨테이너 안 trigger_server.py(FastAPI)] → main.py 실행 → Google Sheets 업로드
+```mermaid
+flowchart LR
+    A["대시보드 버튼"] -->|"POST /run"| B["Docker 컨테이너<br/>trigger_server.py (FastAPI)"]
+    B --> C["main.py 실행"]
+    C --> D[("Google Sheets 업로드")]
 ```
 
 - Python 파이프라인 + FastAPI 트리거 서버를 통째로 하나의 이미지로 패키징. `docker run -d -p 8080:8080 --env-file .env <image>` 정도로 구동.
@@ -75,13 +75,13 @@
 
 ### 옵션 B — n8n 오케스트레이션으로 전환 (`trigger_server.py` 대체)
 
-```
-[대시보드 버튼] → POST (n8n Webhook 트리거) → n8n 워크플로우
-                                                  │
-                                                  ├─ Execute Command 또는 SSH 노드: docker run <파이프라인 이미지>
-                                                  ├─ (선택) Cron 트리거로 정기 자동 실행 추가
-                                                  └─ 완료 후 상태를 저장(예: n8n 자체 DB/Redis/파일)해
-                                                     별도 Webhook(GET 대응)로 /status 흉내
+```mermaid
+flowchart TD
+    A["대시보드 버튼"] -->|"POST (n8n Webhook 트리거)"| B["n8n 워크플로우"]
+    B --> C["Execute Command 또는 SSH 노드<br/>docker run 파이프라인 이미지"]
+    B -.->|"선택"| D["Cron 트리거로<br/>정기 자동 실행 추가"]
+    C --> E["완료 후 상태 저장<br/>(n8n 자체 DB/Redis/파일)"]
+    E --> F["별도 Webhook(GET 대응)로<br/>/status 흉내"]
 ```
 
 - 파이프라인 실행 로직 자체(collect/clean/analyze/upload)는 여전히 Docker 이미지로 패키징하되, **그 이미지를 트리거하고 상태를 추적하는 역할**을 FastAPI 대신 n8n이 맡습니다.
