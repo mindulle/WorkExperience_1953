@@ -417,6 +417,11 @@ def main():
             idx, result_row = future.result()
             # 원본 DataFrame 업데이트
             for k, v in result_row.items():
+                if isinstance(v, list) or isinstance(v, dict):
+                    v = json.dumps(v, ensure_ascii=False)
+                # DataFrame에 컬럼이 없을 수도 있으므로 loc 대신 안전하게 할당
+                if k not in df.columns:
+                    df[k] = ""
                 df.at[idx, k] = v
             sentiment_processed += 1
             if sentiment_processed % CHECKPOINT_FLUSH_EVERY == 0:

@@ -115,7 +115,14 @@ def main() -> int:
     outdir.mkdir(parents=True, exist_ok=True)
 
     # ── 로드 ──
-    네이버 = pd.read_csv(a.naver)
+    try:
+        네이버 = pd.read_csv(a.naver)
+        print(f"입력: 네이버 블로그/뉴스 {len(네이버):,}건")
+    except Exception as e:
+        print(f"⚠️ 네이버 원천 데이터 로드 실패 (파일이 없거나 읽을 수 없음): {e}")
+        # 빈 DataFrame을 만들되 필요한 컬럼을 설정해둔다
+        네이버 = pd.DataFrame(columns=["지점", "채널", "작성자", "작성일", "제목", "본문", "URL", "검색키워드"])
+    
     try:
         유튜브 = pd.read_excel(a.xlsx, sheet_name="원천_유튜브")
     except Exception as e:
@@ -139,7 +146,7 @@ def main() -> int:
     except Exception as e:
         print(f"카카오맵 데이터 로드 실패 (무시됨): {e}")
         카카오 = pd.DataFrame()
-    print(f"입력: 네이버 {len(네이버):,}건 / 유튜브 {len(유튜브):,}행")
+    print(f"입력: 네이버 블로그/뉴스 {len(네이버):,}건 / 유튜브 {len(유튜브):,}행")
 
     # ── 정제 ──
     nv_keep, nv_drop = 네이버_정제(네이버)

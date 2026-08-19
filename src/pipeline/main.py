@@ -20,6 +20,15 @@ CLEAN_DATA_DIR.mkdir(parents=True, exist_ok=True)
 # 환경 변수 연결 (하위 스크립트들이 루트의 .env를 인식하도록)
 os.environ["NAVER_ENV_FILE"] = str(ENV_FILE)
 
+# main.py 자체에서도 API 키 유무를 판단하기 위해 .env를 로드합니다.
+if ENV_FILE.exists():
+    with open(ENV_FILE, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+
 # 이번 실행에서 각 단계의 성공/실패 기록.
 # 트리거 서버(#164)가 실행 상태를 조회할 때 이 정보(및 최종 종료 코드)를
 # 근거로 쓸 수 있도록, 여기서 사실대로 추적한다.
@@ -50,11 +59,24 @@ def main():
 
     # 1. 수집 스크립트 실행
     print("\n[1/6] 데이터 수집 시작...")
-    run_script(PIPELINE_DIR / "collect" / "naver_review_collector.py", cwd=RAW_DATA_DIR)
-    print("--- [1-1] 네이버 블로그 작성 시간(Time) 스크래핑 복원 ---")
-    run_script(PIPELINE_DIR / "collect" / "naver_blog_time_scraper.py", cwd=RAW_DATA_DIR)
-    run_script(PIPELINE_DIR / "collect" / "youtube_collector.py", cwd=RAW_DATA_DIR)
-    run_script(PIPELINE_DIR / "collect" / "naver_datalab_trend.py", cwd=RAW_DATA_DIR)
+    
+    # 1-1. API 기반 수집 (API 키 필요)
+    print("--- [API 기반 수집기] ---")
+    if os.environ.get("NAVER_ID") and os.environ.get("NAVER_SECRET"):
+        run_script(PIPELINE_DIR / "collect" / "naver_review_collector.py", cwd=RAW_DATA_DIR)
+        print("--- [1-1] 네이버 블로그 작성 시간(Time) 스크래핑 복원 ---")
+        run_script(PIPELINE_DIR / "collect" / "naver_blog_time_scraper.py", cwd=RAW_DATA_DIR)
+        run_script(PIPELINE_DIR / "collect" / "naver_datalab_trend.py", cwd=RAW_DATA_DIR)
+    else:
+        print("⏭️ 스킵: NAVER_ID, NAVER_SECRET 환경변수가 없어 네이버 오픈 API 수집(블로그/뉴스/데이터랩)을 건너뜁니다.")
+
+    if os.environ.get("YOUTUBE_API_KEY"):
+        run_script(PIPELINE_DIR / "collect" / "youtube_collector.py", cwd=RAW_DATA_DIR)
+    else:
+        print("⏭️ 스킵: YOUTUBE_API_KEY 환경변수가 없어 유튜브 API 수집을 건너뜁니다.")
+
+    # 1-2. 스크래핑 기반 수집 (API 키 불필요)
+    print("--- [스크래핑 기반 수집기] ---")
     run_script(PIPELINE_DIR / "collect" / "catchtable_collector.py", cwd=RAW_DATA_DIR)
     run_script(PIPELINE_DIR / "collect" / "kakaomap_collector.py", cwd=RAW_DATA_DIR)
     run_script(PIPELINE_DIR / "collect" / "naver_place_collector.py", cwd=RAW_DATA_DIR)
