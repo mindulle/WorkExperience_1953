@@ -50,7 +50,8 @@
 
 ## 2. 이관 시 까다로운 지점
 
-1. **헤드리스 브라우저 의존성** — `camoufox[geoip]`(카카오맵/네이버플레이스), `scrapling[fetchers]`(캐치테이블)는 실제 브라우저 바이너리 + 시스템 라이브러리(폰트, 각종 `.so` 등)가 필요합니다. Docker화의 실질적 난이도는 대부분 여기서 나옵니다. Playwright 공식 이미지(`mcr.microsoft.com/playwright`) 계열을 베이스로 쓰거나, 빌드 단계에서 `camoufox fetch`/`playwright install --with-deps` 실행이 필요할 가능성이 높습니다. 반대로 `naver_*`, `youtube_collector`는 순수 `requests` 기반 API 호출이라 Docker화가 단순합니다.
+1. **헤드리스 브라우저 의존성** — `camoufox[geoip]`(카카오맵/네이버플레이스), `scrapling[fetchers]`(캐치테이블)는 실제 브라우저 바이너리 + 시스템 라이브러리(폰트, 각종 `.so` 등)가 필요합니다. 반대로 `naver_*`, `youtube_collector`는 순수 `requests` 기반 API 호출이라 Docker화가 단순합니다.
+   > ✅ **검증 완료 (2026-08-19, #178)** — 이 VM(aarch64)에서 `python:3.10-slim` 베이스(Playwright 공식 이미지 아님) + apt 시스템 라이브러리 직접 명시 + `camoufox fetch` + `playwright install --with-deps chromium` 조합으로 실제 Docker 컨테이너 안에서 camoufox·scrapling 둘 다 정상 실행/응답 확인함 (PASS). 이론적 리스크가 아니라 **실제로 되는 것으로 확인**됐습니다. 최종 이미지 크기는 약 3.27GB (두 브라우저 엔진 모두 포함 시). 상세 재현 절차·apt 패키지 목록·주의사항(`/dev/shm` 크기 등)은 `docs/spikes/docker-camoufox-scrapling/README.md` 참고.
 2. **크레덴셜 소유권** (이번 문서에서는 결정 보류, §4 참고) — `service_account.json`(Google), `NAVER_ID/SECRET`, `YOUTUBE_API_KEY`, `GROQ_API_KEY`, `PIPELINE_TRIGGER_TOKEN`을 그대로 이관할지, 멘토님 회사 계정으로 새로 발급할지에 따라 준비물이 달라집니다. 특히 Google Sheet의 소유권이 바뀌면 서비스 계정 자체를 새로 만들어야 합니다.
 3. **트리거 계약 유지** — §1의 `/run`·`/status` 계약을 그대로 흉내 내면 프론트 코드 변경 없이 백엔드만 교체 가능합니다. 계약을 바꾸려면 `src/web/lib/pipelineTrigger.ts`도 같이 고쳐야 합니다.
 4. **`main.py`가 스크립트 파일 경로 기준으로 동작** — `PIPELINE_DIR`, `PROJECT_ROOT`를 `Path(__file__)` 기준 상대 경로로 계산하고, 결과물을 `data/raw`, `data/clean`에 로컬 파일로 씁니다. 컨테이너 안에서 그대로 도는 데는 문제없지만, 컨테이너 재시작 시 중간 산출물이 날아가도 되는지(현재는 매 실행 처음부터 다시 수집하므로 문제없음) 확인은 필요합니다.
@@ -130,13 +131,13 @@
 4. Google 서비스 계정/API 키(네이버·유튜브·Groq)를 회사 명의로 새로 발급받을 계획인지, 아니면 기존 계정을 그대로 넘겨받을 계획인지?
 5. 프론트엔드(대시보드)도 사내 인프라로 옮기길 원하시는지(예: 사내 nginx/Docker로 정적 파일 서빙), 아니면 Cloudflare에 계속 두고 트리거 서버/파이프라인만 이관하길 원하시는지?
 6. 정기 자동 갱신(cron 스케줄)을 이번 이관과 함께 원하시는지, 아니면 지금처럼 수동 버튼만으로 충분한지? (원하시면 n8n Cron 트리거로 자연스럽게 추가 가능 — 옵션 B 선택에 영향)
-7. camoufox/scrapling 같은 헤드리스 브라우저 기반 수집기(카카오맵·캐치테이블)를 회사 Docker 환경에서 그대로 돌려도 되는지, 아니면 이 채널들은 이관 범위에서 제외하고 API 기반 수집기(네이버·유튜브)만 우선 이관할지? (헤드리스 브라우저는 이미지 용량·리소스 사용량이 커서 회사 인프라 정책에 따라 부담이 될 수 있음)
+7. camoufox/scrapling 같은 헤드리스 브라우저 기반 수집기(카카오맵·캐치테이블)를 회사 Docker 환경에서 그대로 돌려도 되는지, 아니면 이 채널들은 이관 범위에서 제외하고 API 기반 수집기(네이버·유튜브)만 우선 이관할지? (실제 검증 결과 이미지 크기 약 3.27GB — §2 참고. 기술적으로는 되지만, 이 용량이 회사 인프라 정책상 부담인지는 확인 필요)
 
 ---
 
 ## 6. 권장 다음 단계
 
-1. 위 §5 질문을 멘토님과 논의해 옵션 A/B 및 크레덴셜 방식을 확정
-2. 확정된 방향에 맞춰 실제 Dockerfile(+ 필요 시 n8n 워크플로우 JSON export)을 작성하는 후속 이슈 생성
-3. 로컬/스테이징에서 Docker 빌드·실행 검증 (특히 camoufox/scrapling 브라우저 의존성 설치가 이미지 안에서 정상 동작하는지)
+1. ~~로컬/스테이징에서 Docker 빌드·실행 검증 (camoufox/scrapling 브라우저 의존성)~~ — **완료 (#178, 2026-08-19)**. `docs/spikes/docker-camoufox-scrapling/` 참고
+2. 위 §5 질문을 멘토님과 논의해 옵션 A/B 및 크레덴셜 방식을 확정
+3. 확정된 방향에 맞춰 실제 프로덕션 Dockerfile(전체 `src/pipeline/requirements.txt` + `main.py`/`trigger_server.py` 포함, 필요 시 n8n 워크플로우 JSON export)을 작성하는 후속 이슈 생성 — 스파이크의 apt 패키지 목록/빌드 순서를 그대로 재사용 가능
 4. 크레덴셜 이관 체크리스트(§4)에 따라 실제 값 전달 — 이 저장소나 채팅에 평문으로 남기지 않고 별도 보안 채널(1Password, 회사 시크릿 매니저 등) 사용 권장
