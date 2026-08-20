@@ -49,7 +49,7 @@ flowchart TD
 
 1. **헤드리스 브라우저 의존성** — `camoufox[geoip]`(카카오맵/네이버플레이스), `scrapling[fetchers]`(캐치테이블)는 실제 브라우저 바이너리 + 시스템 라이브러리(폰트, 각종 `.so` 등)가 필요합니다. 반대로 `naver_*`, `youtube_collector`는 순수 `requests` 기반 API 호출이라 Docker화가 단순합니다.
    > ✅ **검증 완료 (2026-08-19, #178)** — 이 VM(aarch64)에서 `python:3.10-slim` 베이스(Playwright 공식 이미지 아님) + apt 시스템 라이브러리 직접 명시 + `camoufox fetch` + `playwright install --with-deps chromium` 조합으로 실제 Docker 컨테이너 안에서 camoufox·scrapling 둘 다 정상 실행/응답 확인함 (PASS). 이론적 리스크가 아니라 **실제로 되는 것으로 확인**됐습니다. 최종 이미지 크기는 약 3.27GB (두 브라우저 엔진 모두 포함 시). 상세 재현 절차·apt 패키지 목록·주의사항(`/dev/shm` 크기 등)은 `docs/spikes/docker-camoufox-scrapling/README.md` 참고.
-2. **크레덴셜 소유권** (이번 문서에서는 결정 보류, §4 참고) — `service_account.json`(Google), `NAVER_ID/SECRET`, `YOUTUBE_API_KEY`, `GROQ_API_KEY`, `PIPELINE_TRIGGER_TOKEN`을 그대로 이관할지, 멘토님 회사 계정으로 새로 발급할지에 따라 준비물이 달라집니다. 특히 Google Sheet의 소유권이 바뀌면 서비스 계정 자체를 새로 만들어야 합니다.
+2. **크레덴셜 소유권** (개인 키 사용 불가, 멘토님 회사 명의로 신규 발급 필수) — `service_account.json`(Google), `NAVER_ID/SECRET`, `YOUTUBE_API_KEY`, `GROQ_API_KEY`, `PIPELINE_TRIGGER_TOKEN`을 그대로 이관할지, 멘토님 회사 계정으로 새로 발급할지에 따라 준비물이 달라집니다. 특히 Google Sheet의 소유권이 바뀌면 서비스 계정 자체를 새로 만들어야 합니다.
 3. **트리거 계약 유지** — §1의 `/run`·`/status` 계약을 그대로 흉내 내면 프론트 코드 변경 없이 백엔드만 교체 가능합니다. 계약을 바꾸려면 `src/web/lib/pipelineTrigger.ts`도 같이 고쳐야 합니다.
 4. **`main.py`가 스크립트 파일 경로 기준으로 동작** — `PIPELINE_DIR`, `PROJECT_ROOT`를 `Path(__file__)` 기준 상대 경로로 계산하고, 결과물을 `data/raw`, `data/clean`에 로컬 파일로 씁니다. 컨테이너 안에서 그대로 도는 데는 문제없지만, 컨테이너 재시작 시 중간 산출물이 날아가도 되는지(현재는 매 실행 처음부터 다시 수집하므로 문제없음) 확인은 필요합니다.
 5. **데이터 수집 규칙(RULES.md §2.1/§2.2) 재확인 필요** — 멘토님 회사 인프라로 옮긴다고 해도 협찬 배제·개인정보 마스킹 등 규칙은 그대로 적용되어야 합니다. 실행 주체가 바뀌는 것이지 수집 정책이 자동으로 바뀌는 게 아니라는 점을 멘토님께도 명시하는 게 좋습니다.
@@ -111,7 +111,7 @@ flowchart TD
 | 변수 | 용도 | 비고 |
 |---|---|---|
 | `GOOGLE_CREDENTIALS_PATH` | Google 서비스 계정 JSON 파일 경로 | 파일 자체(`service_account.json`)도 별도 이관 필요 |
-| `GOOGLE_SHEET_URL` / `GOOGLE_SHEET_ID` | 결과 업로드 대상 시트 | 시트 소유권 이전 여부에 따라 서비스 계정 재발급 필요할 수 있음 |
+| `GOOGLE_SHEET_URL` / `GOOGLE_SHEET_ID` | 결과 업로드 대상 시트 | 멘토님 회사의 구글 계정으로 서비스 계정 신규 발급 필수 |
 | `NAVER_ID` / `NAVER_SECRET` | 네이버 검색 오픈 API | 앱 등록 계정 이관 또는 재발급 검토 |
 | `YOUTUBE_API_KEY` | YouTube Data API v3 | GCP 프로젝트 이관 또는 재발급 검토 |
 | `GROQ_API_KEY` | AI 분석(ai_engine.py) | 이슈 #156에서 antigravity→Groq 전환. 무료 발급 가능(console.groq.com) |
