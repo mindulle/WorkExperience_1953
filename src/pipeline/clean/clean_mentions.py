@@ -146,6 +146,12 @@ def main() -> int:
     except Exception as e:
         print(f"카카오맵 데이터 로드 실패 (무시됨): {e}")
         카카오 = pd.DataFrame()
+    try:
+        구글 = pd.read_csv(Path(a.naver).parent / "googlemap_reviews.csv")
+        print(f"입력: 구글맵 {len(구글):,}건")
+    except Exception:
+        구글 = pd.DataFrame()
+
     print(f"입력: 네이버 블로그/뉴스 {len(네이버):,}건 / 유튜브 {len(유튜브):,}행")
 
     # ── 정제 ──
@@ -178,6 +184,20 @@ def main() -> int:
         })
         clean = pd.concat([clean, nv_place_norm], ignore_index=True)
         
+    if not 구글.empty:
+        google_norm = pd.DataFrame({
+            "지점": 구글.get("지점명", "본점"),
+            "채널": 구글.get("출처", "GoogleMap"),
+            "작성자": 구글.get("작성자", ""),
+            "작성일": 구글.get("작성일자", ""),
+            "제목": "",
+            "본문": 구글.get("본문", ""),
+            "URL": "",
+            "검색키워드": "",
+            "별점": 구글.get("별점", 0.0)
+        })
+        clean = pd.concat([clean, google_norm], ignore_index=True)
+
     if not 카카오.empty:
         # 카카오 스키마 맞추기
         kakao_norm = pd.DataFrame({

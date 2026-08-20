@@ -78,6 +78,7 @@ def main():
     # 1-2. 스크래핑 기반 수집 (API 키 불필요)
     print("--- [스크래핑 기반 수집기] ---")
     run_script(PIPELINE_DIR / "collect" / "catchtable_collector.py", cwd=RAW_DATA_DIR)
+    run_script(PIPELINE_DIR / "collect" / "google_map_collector.py", cwd=RAW_DATA_DIR)
     run_script(PIPELINE_DIR / "collect" / "kakaomap_collector.py", cwd=RAW_DATA_DIR)
     run_script(PIPELINE_DIR / "collect" / "naver_place_collector.py", cwd=RAW_DATA_DIR)
 
