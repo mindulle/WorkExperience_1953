@@ -125,4 +125,5 @@ export type AiInsightItem = {
   recommendedAction: string;
   severity: string;
   metrics: string;
+  foreignInsight?: string;
 };
