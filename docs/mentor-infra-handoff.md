@@ -1,7 +1,7 @@
 # 멘토님 회사 시스템 이관 대비 설계 문서
 
-> 2026-08-19 기준. 프로젝트 종료 후 이 파이프라인/대시보드를 멘토님 회사의 자체 인프라(n8n 보유, 사내 시스템 Docker 운영)로 이관할 가능성에 대비해 미리 설계를 정리해 둔 문서입니다.
-> **이 문서는 설계·체크리스트만 담고 있으며, 실제 Dockerfile/n8n 워크플로우 등 구현물은 포함하지 않습니다.** (#174 범위 — 구현은 멘토님과 실행 방식 합의 후 별도 이슈로 진행)
+> 2026-08-20 기준. 프로젝트 종료 후 이 파이프라인/대시보드를 멘토님 회사의 자체 인프라(n8n 보유, 사내 시스템 Docker 운영)로 이관할 가능성에 대비해 미리 설계를 정리해 둔 문서입니다.
+> **현재 이 VM에서 `docker compose up -d` 한 줄로 백엔드(trigger_server) + 프론트엔드(Next.js) 모두 Docker 컨테이너로 운영 중입니다.** systemd는 비활성화(inactive)됐으며, 이관 시 `docker-compose.yml` + `.env` + `service_account.json`을 새 서버에 복사하고 `docker compose up -d`를 실행하면 됩니다.
 
 ---
 
@@ -10,7 +10,7 @@
 ```mermaid
 flowchart TD
     A["대시보드 '데이터 갱신' 버튼<br/>(src/web, Next.js 정적 익스포트)"]
-    B["trigger_server.py<br/>FastAPI + uvicorn, 이 프로젝트 전용 VM에 systemd로 상시 구동 (#164)"]
+    B["trigger_server.py<br/>FastAPI + uvicorn, Docker 컨테이너(1953-backend)로 상시 구동<br/>docker-compose.yml, restart: unless-stopped"]
     A -->|"POST /run<br/>Authorization: Bearer 토큰"| B
     B -->|"subprocess로 실행<br/>(백그라운드 스레드)"| M["main.py — 6단계 파이프라인<br/>각 단계 실패해도 계속 진행,<br/>마지막에 종료 코드로 요약"]
 
@@ -145,6 +145,6 @@ flowchart TD
 ## 6. 권장 다음 단계
 
 1. ~~로컬/스테이징에서 Docker 빌드·실행 검증 (camoufox/scrapling 브라우저 의존성)~~ — **완료 (#178, 2026-08-19)**. `docs/spikes/docker-camoufox-scrapling/` 참고
-2. 위 §5 질문을 멘토님과 논의해 옵션 A/B 및 크레덴셜 방식을 확정
-3. 확정된 방향에 맞춰 실제 프로덕션 Dockerfile(전체 `src/pipeline/requirements.txt` + `main.py`/`trigger_server.py` 포함, 필요 시 n8n 워크플로우 JSON export)을 작성하는 후속 이슈 생성 — 스파이크의 apt 패키지 목록/빌드 순서를 그대로 재사용 가능
+2. ~~실제 프로덕션 `Dockerfile` + `docker-compose.yml` 작성~~ — **완료 (2026-08-20)**. 현재 이 VM에서 `docker compose up -d`로 백엔드·프론트엔드 모두 운영 중. `Dockerfile`, `Dockerfile.web`, `docker-compose.yml` 참고
+3. 위 §5 질문을 멘토님과 논의해 옵션 A/B 및 크레덴셜 방식을 확정
 4. 크레덴셜 이관 체크리스트(§4)에 따라 실제 값 전달 — 이 저장소나 채팅에 평문으로 남기지 않고 별도 보안 채널(1Password, 회사 시크릿 매니저 등) 사용 권장
