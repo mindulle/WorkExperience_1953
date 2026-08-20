@@ -28,7 +28,8 @@ MACRO_JSON_FORMAT = """
   "issues": ["주요 불만 사항이나 개선점 1", "주요 불만 사항 2"],
   "action_plans": ["즉시 실행 가능한 추천 액션 1", "추천 액션 2"],
   "severity": "'긴급', '주의', '기회', '모니터링' 중 하나",
-  "metrics": "가장 핵심적인 지표 요약 (예: '긍정률 66%', '부정 214건' 등)"
+  "metrics": "가장 핵심적인 지표 요약 (예: '긍정률 66%', '부정 214건' 등)",
+  "foreign_insight": "외국인 관광객(영어/일어/중국어 리뷰 등)의 주요 반응 및 개선점 (외국어 메뉴판 필요성 등)"
 }
 """
 
@@ -110,7 +111,8 @@ def main():
             "주요이슈": " / ".join(analysis.get("issues", [])),
             "추천액션": " / ".join(analysis.get("action_plans", [])),
             "중요도": analysis.get("severity", "모니터링"),
-            "핵심지표": analysis.get("metrics", "")
+            "핵심지표": analysis.get("metrics", ""),
+            "외국인반응": analysis.get("foreign_insight", "관련 리뷰 없음")
         })
         
     result_df = pd.DataFrame(results)
