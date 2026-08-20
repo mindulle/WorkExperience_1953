@@ -23,6 +23,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.web
+      args:
+        NEXT_PUBLIC_PIPELINE_TRIGGER_URL: "https://pipeline.sonagi.space"
+        NEXT_PUBLIC_PIPELINE_TRIGGER_TOKEN: "${PIPELINE_TRIGGER_TOKEN}"
     container_name: 1953-frontend
     ports:
       - "3000:3000" # 웹 대시보드 포트
