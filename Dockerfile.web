@@ -9,6 +9,7 @@ RUN npm ci
 
 # 소스 복사 및 빌드
 COPY src/web/ ./
+ENV DOCKER_BUILD=1
 RUN npm run build
 
 # 실행 단계
