@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: 1953-backend
+    ports:
+      - "8081:8080" # 트리거 서버 포트 (필요 시 수정 가능)
+    shm_size: '1gb'  # 헤드리스 브라우저(카카오맵, 캐치테이블 수집기) 크래시 방지 필수 설정
+    volumes:
+      # 파이프라인 결과물을 컨테이너 외부(호스트)에서도 확인/저장하기 위함
+      - ./data:/app/data
+      # 시크릿 파일 마운트 (Read-Only)
+      - ./service_account.json:/app/service_account.json:ro
+      - ./.env:/app/.env:ro
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: 1953-frontend
+    ports:
+      - "3000:3000" # 웹 대시보드 포트
+    env_file:
+      - .env
+    restart: unless-stopped
+    depends_on:
+      - backend
