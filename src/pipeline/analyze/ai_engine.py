@@ -342,9 +342,17 @@ def _load_dataframe_with_resume(input_csv: Path, output_csv: Path) -> pd.DataFra
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", default=None)
+    parser.add_argument("--output", default=None)
+    parser.add_argument("--mixed-only", action="store_true",
+                        help="혼합(sentiment_final==혼합) 건만 Groq로 처리. 블로그 재검증 생략.")
+    args = parser.parse_args()
+
     project_root = Path(__file__).resolve().parent.parent.parent.parent
-    input_csv = project_root / "data" / "clean" / "reviews_analyzed.csv"
-    output_csv = project_root / "data" / "clean" / "reviews_analyzed_ai.csv"
+    input_csv = Path(args.input) if args.input else project_root / "data" / "clean" / "reviews_analyzed.csv"
+    output_csv = Path(args.output) if args.output else project_root / "data" / "clean" / "reviews_analyzed_ai.csv"
 
     if not input_csv.exists():
         print(f"❌ {input_csv} 파일이 존재하지 않습니다. 먼저 rule_classifier.py를 실행하세요.")
@@ -359,12 +367,16 @@ def main():
     # 플래그도 함께 확인한다.
     mixed_df = df[(df['sentiment_final'] == '혼합') & (~df[SENTIMENT_RECHECK_FLAG_COL])]
 
+    # --mixed-only 플래그 시 블로그 재검증은 완전히 건너뜀 (Groq TPD 절약)
+    if args.mixed_only:
+        blog_confirmed_df = df.iloc[0:0]
+        print(f"[--mixed-only] 혼합 {len(mixed_df)}건만 처리합니다. 블로그 재검증 생략.")
     # 네이버블로그 채널에서 규칙이 확정한 '긍정'/'부정'도 재검증 대상에 포함한다.
     # '긍정'은 confidence == 'medium'만 (Groq 일일 토큰 한도 때문 — 위 BLOG_RECHECK_CHANNEL
     # 설명 참고), '부정'은 confidence와 무관하게 전부 포함한다. 여기는 AI가 같은 값으로
     # 재확정할 수도 있어(혼합과 달리 '긍정'/'부정'이 그대로 나올 수 있음) sentiment_final
     # 값만으로는 이미 처리된 행을 걸러낼 수 없다 — SENTIMENT_RECHECK_FLAG_COL이 필수다.
-    if "채널" in df.columns:
+    elif "채널" in df.columns:
         is_blog = df["채널"] == BLOG_RECHECK_CHANNEL
         blog_negative = is_blog & (df["sentiment_final"] == "부정")
         blog_positive_medium = is_blog & (df["sentiment_final"] == "긍정") & (df["confidence"] == "medium")
