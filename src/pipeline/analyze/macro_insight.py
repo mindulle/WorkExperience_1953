@@ -8,9 +8,17 @@
 
 import os
 import json
-import subprocess
 import pandas as pd
 from pathlib import Path
+
+# ai_engine.py의 Groq API 호출 함수 재사용 (Docker 이관 시 opencode CLI 종속성 제거)
+try:
+    from ai_engine import call_groq
+except ImportError:
+    # 모듈이 다른 경로에서 실행될 때를 대비한 fallback
+    import sys
+    sys.path.append(str(Path(__file__).parent))
+    from ai_engine import call_groq
 
 # 출력될 JSON 포맷
 MACRO_JSON_FORMAT = """
@@ -45,29 +53,13 @@ def get_macro_insight(branch_name: str, reviews_text: str) -> dict:
         # 텍스트 길이는 적절히 자릅니다 (최대 5000자)
         prompt = prompt[:5000] 
         
-        # --- [실제 구동 코드] ---
-        # Issue #114: opencode 서버는 localhost가 아니라 OPENCODE_SERVER_URL(기본 llmops-instance:8082)에 떠 있다.
-        import json, subprocess, re
-        opencode_url = os.environ.get("OPENCODE_SERVER_URL", "http://llmops-instance:8082")
-        result = subprocess.check_output(
-            ["opencode", "run", "--attach", opencode_url, "--format", "json", prompt],
-            text=True,
-            stderr=subprocess.STDOUT,
-            timeout=180
-        )
+        # --- [실제 구동 코드: Groq API로 대체] ---
+        full_text = call_groq(prompt)
         
-        text_parts = []
-        for line in result.splitlines():
-            line = line.strip()
-            if not line: continue
-            try:
-                event = json.loads(line)
-                if event.get("type") == "text" and "part" in event:
-                    text_parts.append(event["part"].get("text", ""))
-            except Exception:
-                continue
-        full_text = " ".join(text_parts)
+        if not full_text:
+            return {"summary": "분석 오류", "issues": [], "action_plans": [], "severity": "모니터링", "metrics": "API 호출 실패"}
 
+        import re
         match = re.search(r'```json\s*(\{.*?\})\s*```', full_text, re.DOTALL)
         if not match:
             match = re.search(r'\{.*\}', full_text, re.DOTALL)
@@ -78,9 +70,6 @@ def get_macro_insight(branch_name: str, reviews_text: str) -> dict:
             print(f"❌ JSON 파싱 실패 (원본 응답): {full_text[:200]}")
             return {"summary": "분석 오류", "issues": [], "action_plans": [], "severity": "모니터링", "metrics": "오류"}
 
-    except subprocess.TimeoutExpired:
-        print(f"⏱️ 타임아웃 발생")
-        return {"summary": "타임아웃", "issues": [], "action_plans": [], "severity": "모니터링", "metrics": "오류"}
     except Exception as e:
         print(f"API Error for {branch_name}: {e}")
         return {"summary": "분석 오류", "issues": [], "action_plans": [], "severity": "모니터링", "metrics": "오류"}
