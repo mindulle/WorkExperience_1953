@@ -3,10 +3,5 @@
   "compatibility_date": "2026-07-22",
   "assets": {
     "directory": "./out"
-  },
-  // custom_domain: true 는 DNS 설정이나 인증서 관리 없이 Worker 를 도메인에 연결한다.
-  // 이 항목을 지우면 배포 시 도메인 연결이 해제되므로 주의.
-  "routes": [
-    { "pattern": "workexpr.proto.sonagi.space", "custom_domain": true }
-  ]
+  }
 }

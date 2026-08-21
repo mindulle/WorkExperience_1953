@@ -61,6 +61,7 @@ export type BranchStat = {
   avgRating?: number;
   positivePct: number;
   negativePct: number;
+  neutralPct: number;
 };
 
 /** 데이터 출처. 시트 조회 실패 시 기본값이 쓰였음을 화면에 알리기 위해 필요하다. */
@@ -80,6 +81,7 @@ export type DashboardData = {
   totalReviews: number;
   positivePct: number;
   negativePct: number;
+  neutralPct: number;
 
   // ── 파이프라인 연동 대기 (빈 배열로 온다) ──
   topKeywords: KeywordMention[];

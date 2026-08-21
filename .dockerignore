@@ -1,0 +1,8 @@
+data/
+venv/
+__pycache__/
+.git/
+.github/
+*.csv
+*.xlsx
+*.zip

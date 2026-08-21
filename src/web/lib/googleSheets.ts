@@ -213,6 +213,7 @@ function deriveBranchStats(header: string[], rows: string[][]): BranchStat[] | n
         avgRating: b.ratingN > 0 ? Math.round((b.ratingSum / b.ratingN) * 100) / 100 : undefined,
         positivePct: b.judged > 0 ? Math.round((b.pos / b.judged) * 100) : 0,
         negativePct: b.judged > 0 ? Math.round((b.neg / b.judged) * 100) : 0,
+        neutralPct: b.judged > 0 ? Math.max(0, 100 - Math.round((b.pos / b.judged) * 100) - Math.round((b.neg / b.judged) * 100)) : 0,
       };
     })
     .sort((a, b) => b.positivePct - a.positivePct);
@@ -252,7 +253,8 @@ export async function getDashboardData(): Promise<DashboardData> {
     source: "fallback",
     totalReviews: 1716,
     positivePct: 80,
-    negativePct: 20,
+    negativePct: 5,
+    neutralPct: 15,
     topKeywords: [
       { keyword: "맛있", count: 177 },
       { keyword: "깔끔", count: 65 },
@@ -272,12 +274,12 @@ export async function getDashboardData(): Promise<DashboardData> {
     // 아직 시트에 반영되기 전) 가짜 수치를 채우지 않고 빈 배열로 둔다 — UI가 "미구현" 상태를 표시한다.
     customerTypes: [],
     branchStats: [
-      { branch: "서면점", reviewCount: 15, avgRating: 5.0, positivePct: 100, negativePct: 0 },
-      { branch: "광안점", reviewCount: 258, avgRating: 4.5, positivePct: 85, negativePct: 9 },
-      { branch: "중앙동점", reviewCount: 29, avgRating: 4.42, positivePct: 76, negativePct: 10 },
-      { branch: "본점", reviewCount: 276, avgRating: 4.26, positivePct: 75, negativePct: 12 },
-      { branch: "사직점", reviewCount: 7, avgRating: 4.43, positivePct: 71, negativePct: 14 },
-      { branch: "BIFC문현점", reviewCount: 7, avgRating: 4.36, positivePct: 57, negativePct: 14 },
+      { branch: "서면점", reviewCount: 15, avgRating: 5.0, positivePct: 100, negativePct: 0, neutralPct: 0 },
+      { branch: "광안점", reviewCount: 258, avgRating: 4.5, positivePct: 85, negativePct: 9, neutralPct: 0 },
+      { branch: "중앙동점", reviewCount: 29, avgRating: 4.42, positivePct: 76, negativePct: 10, neutralPct: 0 },
+      { branch: "본점", reviewCount: 276, avgRating: 4.26, positivePct: 75, negativePct: 12, neutralPct: 0 },
+      { branch: "사직점", reviewCount: 7, avgRating: 4.43, positivePct: 71, negativePct: 14, neutralPct: 0 },
+      { branch: "BIFC문현점", reviewCount: 7, avgRating: 4.36, positivePct: 57, negativePct: 14, neutralPct: 0 },
     ],
     monthlyTrend: [
       { month: "2025-07", count: 9, avgRating: 4.91 },
@@ -298,6 +300,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     // [정제_리뷰데이터] 탭에서 직접 집계
     let positive = 0;
     let negative = 0;
+    let neutral = 0;
     
     let ratingSum = 0;
     let ratingCount = 0;
@@ -311,7 +314,7 @@ export async function getDashboardData(): Promise<DashboardData> {
         const s = row[sentimentCol];
         if (s === "긍정") positive++;
         else if (s === "부정") negative++;
-        else if (s === "중립" || s === "혼합") {}
+        else if (s === "중립" || s === "혼합") neutral++;
         
         let r = NaN;
         if (ratingCol !== -1 && row[ratingCol]) {
@@ -332,9 +335,10 @@ export async function getDashboardData(): Promise<DashboardData> {
     const averageRating = ratingCount > 0 ? Math.round((ratingSum / ratingCount) * 10) / 10 : undefined;
 
     const total = reviewSheet.rows.length;
-    const totalPosNeg = positive + negative;
-    const posPct = totalPosNeg > 0 ? Math.round((positive / totalPosNeg) * 100) : 80;
-    const negPct = totalPosNeg > 0 ? 100 - posPct : 20;
+    const totalJudged = positive + negative + neutral;
+    const posPct = totalJudged > 0 ? Math.round((positive / totalJudged) * 100) : 80;
+    const negPct = totalJudged > 0 ? Math.round((negative / totalJudged) * 100) : 5;
+    const neutralPct = totalJudged > 0 ? Math.max(0, 100 - posPct - negPct) : 15;
 
     const purposes = derivePurposes(reviewSheet.header, reviewSheet.rows);
     const customerTypes = deriveCustomerTypes(reviewSheet.header, reviewSheet.rows);
@@ -349,6 +353,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       totalReviews: total > 0 ? total : FALLBACK.totalReviews,
       positivePct: posPct,
       negativePct: negPct,
+      neutralPct,
       averageRating,
       pendingReplies,
       purposes: purposes ?? FALLBACK.purposes,

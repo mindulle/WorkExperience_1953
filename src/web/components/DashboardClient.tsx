@@ -148,11 +148,13 @@ export function DashboardClient({
           <DonutChart
             segments={[
               { label: "긍정", ratio: initialData.positivePct, color: "var(--brand)" },
+              { label: "혼합/중립", ratio: initialData.neutralPct, color: "#cfcec8" },
               { label: "부정", ratio: initialData.negativePct, color: "var(--critical)" },
             ]}
           />
           <div className="flex justify-around mt-4 text-sm">
             <span className="text-[var(--brand)] font-semibold">긍정 {initialData.positivePct}%</span>
+            <span className="text-[#a1a1aa] font-semibold">혼합/중립 {initialData.neutralPct}%</span>
             <span className="text-[var(--critical)] font-semibold">부정 {initialData.negativePct}%</span>
           </div>
         </Card>
