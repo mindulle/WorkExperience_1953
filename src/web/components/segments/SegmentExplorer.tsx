@@ -16,8 +16,15 @@ const CUSTOMER_TYPE_COLORS: Record<string, string> = {
   "직장인": "var(--s-blue)",
   "가족": "var(--s-aqua)",
   "학생": "var(--s-yellow)",
+  "친구": "var(--s-orange)",
+  "커플": "var(--s-magenta)",
+  "혼밥(1인)": "var(--s-violet)",
   "정보없음": "var(--muted)",
 };
+
+// rule_classifier.py의 classify_row 분류 우선순위와 동일한 순서로 유지한다 (가족→커플→친구→혼밥→직장인→학생).
+// "정보없음"은 유형별 예시 카드에서는 의미가 없어 제외한다.
+const CUSTOMER_TYPES_ORDERED = ["가족", "커플", "친구", "혼밥(1인)", "직장인", "학생"] as const;
 
 /** 값 배열에서 합계 100이 되는 비율(%) 목록을 낸다 (반올림 오차는 마지막 항목이 흡수). */
 function toRatioList(values: string[]): Array<{ key: string; ratio: number }> {
@@ -89,7 +96,7 @@ export function SegmentExplorer({
   // 유형별 예시 리뷰 (최대 3건). AI가 근거를 남긴 건을 우선하고, 그 다음은 규칙 기반 매칭 건을 채운다.
   const typeSamples = React.useMemo(() => {
     const byType: Record<string, ReviewItem[]> = {};
-    for (const type of ["직장인", "가족", "학생"]) {
+    for (const type of CUSTOMER_TYPES_ORDERED) {
       const withReason = filteredReviews.filter(r => r.customerType === type && r.customerTypeReason);
       const withoutReason = filteredReviews.filter(r => r.customerType === type && !r.customerTypeReason);
       byType[type] = [...withReason, ...withoutReason].slice(0, 3);
@@ -251,7 +258,7 @@ export function SegmentExplorer({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-12">
-        {(["직장인", "가족", "학생"] as const).map((type) => {
+        {CUSTOMER_TYPES_ORDERED.map((type) => {
           const stat = customerTypes.find((c) => c.type === type);
           const samples = typeSamples[type] ?? [];
           return (

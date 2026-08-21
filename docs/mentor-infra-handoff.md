@@ -1,7 +1,7 @@
 # 멘토님 회사 시스템 이관 대비 설계 문서
 
-> 2026-08-19 기준. 프로젝트 종료 후 이 파이프라인/대시보드를 멘토님 회사의 자체 인프라(n8n 보유, 사내 시스템 Docker 운영)로 이관할 가능성에 대비해 미리 설계를 정리해 둔 문서입니다.
-> **이 문서는 설계·체크리스트만 담고 있으며, 실제 Dockerfile/n8n 워크플로우 등 구현물은 포함하지 않습니다.** (#174 범위 — 구현은 멘토님과 실행 방식 합의 후 별도 이슈로 진행)
+> 2026-08-20 기준. 프로젝트 종료 후 이 파이프라인/대시보드를 멘토님 회사의 자체 인프라(n8n 보유, 사내 시스템 Docker 운영)로 이관할 가능성에 대비해 미리 설계를 정리해 둔 문서입니다.
+> **현재 이 VM에서 `docker compose up -d` 한 줄로 백엔드(trigger_server) + 프론트엔드(Next.js) 모두 Docker 컨테이너로 운영 중입니다.** systemd는 비활성화(inactive)됐으며, 이관 시 `docker-compose.yml` + `.env` + `service_account.json`을 새 서버에 복사하고 `docker compose up -d`를 실행하면 됩니다.
 
 ---
 
@@ -10,7 +10,7 @@
 ```mermaid
 flowchart TD
     A["대시보드 '데이터 갱신' 버튼<br/>(src/web, Next.js 정적 익스포트)"]
-    B["trigger_server.py<br/>FastAPI + uvicorn, 이 프로젝트 전용 VM에 systemd로 상시 구동 (#164)"]
+    B["trigger_server.py<br/>FastAPI + uvicorn, Docker 컨테이너(1953-backend)로 상시 구동<br/>docker-compose.yml, restart: unless-stopped"]
     A -->|"POST /run<br/>Authorization: Bearer 토큰"| B
     B -->|"subprocess로 실행<br/>(백그라운드 스레드)"| M["main.py — 6단계 파이프라인<br/>각 단계 실패해도 계속 진행,<br/>마지막에 종료 코드로 요약"]
 
@@ -54,6 +54,10 @@ flowchart TD
 4. **`main.py`가 스크립트 파일 경로 기준으로 동작** — `PIPELINE_DIR`, `PROJECT_ROOT`를 `Path(__file__)` 기준 상대 경로로 계산하고, 결과물을 `data/raw`, `data/clean`에 로컬 파일로 씁니다. 컨테이너 안에서 그대로 도는 데는 문제없지만, 컨테이너 재시작 시 중간 산출물이 날아가도 되는지(현재는 매 실행 처음부터 다시 수집하므로 문제없음) 확인은 필요합니다.
 5. **데이터 수집 규칙(RULES.md §2.1/§2.2) 재확인 필요** — 멘토님 회사 인프라로 옮긴다고 해도 협찬 배제·개인정보 마스킹 등 규칙은 그대로 적용되어야 합니다. 실행 주체가 바뀌는 것이지 수집 정책이 자동으로 바뀌는 게 아니라는 점을 멘토님께도 명시하는 게 좋습니다.
 6. **스케줄링 유무** — 지금은 수동 버튼뿐이지만, n8n으로 옮기면 Cron 트리거를 자연스럽게 추가할 수 있습니다. 정기 실행을 원하시는지는 별도 확인이 필요합니다(§5 질문 목록 참고).
+7. **`GOOGLE_MAPS_API_KEY` 재발급 시 "레거시 Places API" 활성화 필수** (2026-08-20 검증)
+   - GCP 콘솔의 API 라이브러리 목록에는 **"Places API (New)"**만 눈에 잘 띄게 노출되고, 이 프로젝트가 실제로 호출하는 **레거시 "Places API"**(`google_map_collector.py`의 `maps.googleapis.com/maps/api/place/...` 엔드포인트, 서비스명 `places-backend.googleapis.com`)는 콘솔 UI에서 숨겨져 있는 경우가 있습니다. New API로 키를 발급하면 요청 형식이 완전히 달라 코드 수정 없이는 작동하지 않습니다.
+   - 활성화 방법: 콘솔에서 직접 `console.cloud.google.com/apis/library/places-backend.googleapis.com` URL로 접속하거나, `gcloud services enable places-backend.googleapis.com --project=<PROJECT_ID>` 명령으로 활성화(둘 다 동작 확인함). 결제(Billing) 계정 연결이 되어 있어야 함.
+   - **매장명이 Google Maps 등록명과 다를 수 있음**: 이번 검증 중 "본점"이 Google Maps에는 브랜드명 없이 옛 상호명 "형제국밥"으로 등록되어 있고, 일부 지점은 "○○점"이 아니라 "○○"로만 등록되어 있어 `Text Search` 쿼리가 정확히 일치하지 않으면 결과가 안 나오는 사례를 확인했습니다(`google_map_collector.py`의 `BRANCHES` 상수에 실제 등록명 기준으로 이미 반영해둠). 사장님 쪽에서 매장명을 바꾸거나 신규 지점을 추가하면, 재이관 시 Google Maps 실제 등록명을 다시 대조해 `BRANCHES`를 갱신해야 합니다.
 
 ---
 
@@ -120,6 +124,8 @@ flowchart TD
 | `NEXT_PUBLIC_PIPELINE_TRIGGER_URL` / `NEXT_PUBLIC_PIPELINE_TRIGGER_TOKEN` | 프론트가 호출할 트리거 서버 주소/토큰 | 빌드 시점에 JS 번들에 그대로 박힘 — 완전한 비밀로 취급 불가(스팸성 재실행 방지용 최소 장치 수준) |
 | `CLOUDFLARE_DEPLOY_HOOK_URL` | 파이프라인 성공 시 프론트 재빌드 훅 | 프론트를 계속 Cloudflare에 둘지, 멘토님 회사 인프라(Docker+nginx 등)로 옮길지에 따라 값/유무가 달라짐 |
 | `KAKAO_REST_API_KEY` | (현재 미사용 추정 — `src/.env.example`에만 존재, 실제 코드에서 `KAKAO_REST_API_KEY` 참조 여부는 재확인 필요) | 이관 전 코드 재확인 권장 |
+| `GOOGLE_MAPS_API_KEY` | 구글맵 리뷰 수집(Places API, 지점당 최대 5개) | 현재 채택된 경로. 재발급 여부는 다른 Google 키와 동일한 흐름. **재발급 시 주의사항은 §2.7 참고(레거시 Places API 활성화 필요, "Places API (New)" 아님)** |
+| `GOOGLE_MAPS_REVIEW_PROVIDER` / `GOOGLE_BUSINESS_PROFILE_*` | (선택, 핸드오프 후 사용) Business Profile API로 전환 시 전체 리뷰 수집 | 사장님/회사 명의 계정이 각 지점 Business Profile Owner/Manager로 등록 + OAuth 승인 필요. 코드 스위치는 이미 준비됨(`google_map_collector.py`) — §5 질문 8 참고 |
 
 ---
 
@@ -132,12 +138,13 @@ flowchart TD
 5. 프론트엔드(대시보드)도 사내 인프라로 옮기길 원하시는지(예: 사내 nginx/Docker로 정적 파일 서빙), 아니면 Cloudflare에 계속 두고 트리거 서버/파이프라인만 이관하길 원하시는지?
 6. 정기 자동 갱신(cron 스케줄)을 이번 이관과 함께 원하시는지, 아니면 지금처럼 수동 버튼만으로 충분한지? (원하시면 n8n Cron 트리거로 자연스럽게 추가 가능 — 옵션 B 선택에 영향)
 7. camoufox/scrapling 같은 헤드리스 브라우저 기반 수집기(카카오맵·캐치테이블)를 회사 Docker 환경에서 그대로 돌려도 되는지, 아니면 이 채널들은 이관 범위에서 제외하고 API 기반 수집기(네이버·유튜브)만 우선 이관할지? (실제 검증 결과 이미지 크기 약 3.27GB — §2 참고. 기술적으로는 되지만, 이 용량이 회사 인프라 정책상 부담인지는 확인 필요)
+8. 구글맵 리뷰를 지점당 5개 샘플이 아니라 **전체** 리뷰로 받고 싶으신지? 원하시면 사장님(또는 회사) 명의 Google 계정을 각 지점 Business Profile의 Owner/Manager로 등록하고 Business Profile API OAuth 승인을 받아야 합니다(비용은 없지만 사장님 쪽 계정 작업 필요). 코드 전환 지점은 이미 준비돼 있습니다(`docs/collection-pipeline-feasibility.md` "D" 절, `google_map_collector.py`의 `get_reviews_via_business_profile()`).
 
 ---
 
 ## 6. 권장 다음 단계
 
 1. ~~로컬/스테이징에서 Docker 빌드·실행 검증 (camoufox/scrapling 브라우저 의존성)~~ — **완료 (#178, 2026-08-19)**. `docs/spikes/docker-camoufox-scrapling/` 참고
-2. 위 §5 질문을 멘토님과 논의해 옵션 A/B 및 크레덴셜 방식을 확정
-3. 확정된 방향에 맞춰 실제 프로덕션 Dockerfile(전체 `src/pipeline/requirements.txt` + `main.py`/`trigger_server.py` 포함, 필요 시 n8n 워크플로우 JSON export)을 작성하는 후속 이슈 생성 — 스파이크의 apt 패키지 목록/빌드 순서를 그대로 재사용 가능
+2. ~~실제 프로덕션 `Dockerfile` + `docker-compose.yml` 작성~~ — **완료 (2026-08-20)**. 현재 이 VM에서 `docker compose up -d`로 백엔드·프론트엔드 모두 운영 중. `Dockerfile`, `Dockerfile.web`, `docker-compose.yml` 참고
+3. 위 §5 질문을 멘토님과 논의해 옵션 A/B 및 크레덴셜 방식을 확정
 4. 크레덴셜 이관 체크리스트(§4)에 따라 실제 값 전달 — 이 저장소나 채팅에 평문으로 남기지 않고 별도 보안 채널(1Password, 회사 시크릿 매니저 등) 사용 권장

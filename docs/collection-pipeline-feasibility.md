@@ -37,6 +37,7 @@
 ### D. 구글 공식 Places API (Place Details의 reviews 필드) 병행
 - 장점: 100% 합법, 스케줄링 용이, 무료 크레딧 존재
 - 단점: 지점당 "관련성 높은" 리뷰 **최대 5개**만 제공 — 지금 수집한 양(지점당 수십~수백 건)에 크게 못 미침. 보조 수단으로는 유효하나 대체는 불가능
+- **(2026-08-20 추가) 5개 제한은 결제 등급으로 풀 수 없음:** Places API는 구조적으로 5개까지만 반환하도록 설계돼 있어 사용량/결제 등급을 올려도 그대로입니다. 전체 리뷰를 받으려면 별도 API인 **Google Business Profile API**(`accounts.locations.reviews.list`)를 써야 하며, 이건 결제 등급이 아니라 **권한(OAuth) 문제**입니다 — 사장님(또는 회사) 명의 계정이 각 지점 Business Profile의 Owner/Manager로 등록돼 있어야 하고, 그 계정으로 OAuth 인증을 받아야만 호출할 수 있습니다. **지금 단계(일경험 프로젝트, 샘플 시연)는 Places API 5개로 충분하다고 판단해 이 경로를 채택했고**, 실제 기업 핸드오프 시점에 사장님이 Business Profile 소유권 확인 및 OAuth 승인을 마치면 바로 전환할 수 있도록 코드에 스위치 지점을 미리 마련해 두었습니다 (`src/pipeline/collect/google_map_collector.py`의 `GOOGLE_MAPS_REVIEW_PROVIDER` 환경변수 및 `get_reviews_via_business_profile()` 함수 — 현재는 미구현 스텁).
 
 ### E. Appium 기반 모바일 앱 자동화 (캐치테이블/배달의민족 등)
 

@@ -57,7 +57,7 @@ SHEET_MAPPING = {
     # reviews_merged.csv를 매핑했으나, 이는 rule_classifier.py/ai_engine.py를 거친
     # 최종 분석 결과가 아니었다. "정제_리뷰데이터" 탭 안내문("AI 분석이 완료된 최종
     # 정제 데이터")과 일치시키기 위해 실제 최종 산출물로 교체한다.
-    CLEAN_DATA_DIR / "reviews_analyzed_ai.csv": "정제_리뷰데이터",
+    CLEAN_DATA_DIR / "reviews_analyzed.csv": "정제_리뷰데이터",
     CLEAN_DATA_DIR / "macro_insights.csv": "AI_주간리포트",
 }
 

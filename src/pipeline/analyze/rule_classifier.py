@@ -160,16 +160,25 @@ BRAND_RE = re.compile(r"1953|형제돼지국밥|형제\s*돼지\s*국밥")
 PLACE_BASED_CHANNELS = {"NaverPlace", "KakaoMap"}
 
 # ── visit_origin 패턴 ────────────────────────────────────────────────────────
-TOURIST_PATTERNS = r"여행|관광|ktx|ksx|기차|부산\s*(왔|내려|방문)|타지|외지|서울.*부산|부산.*서울|숙소|호텔|여행자|투어"
-LOCAL_PATTERNS   = r"단골|매일|자주|항상|늘\s*오|근처\s*살|동네|집\s*근처|퇴근|점심\s*(자주|항상|매일)|자주\s*찾|자주\s*가"
+# 정보없음 표본 조사 결과: "여행/관광" 같은 노골적 표현이 없어도 "놀러 왔다/도착하자마자"
+# 처럼 타지 방문을 암시하는 표현, "오랜만에/N번째 방문/월에 N번"처럼 재방문을 암시하는
+# 표현으로도 축이 갈리는 걸 확인해 보강.
+# ("경성대/부경대"는 시도했으나 리뷰 964건 중 다수가 매장 위치 설명(홍보성 블로그)일 뿐 개인의
+#  거주지 신호가 아니어서 폐기 — 대학가 지명은 신호로 쓰기엔 너무 광범위함.)
+# 단, 이 축은 문맥 추론이 필요해 규칙만으로는 한계가 있다 — customer_type만큼의 개선은 기대하지 않음.
+TOURIST_PATTERNS = r"여행|관광|ktx|ksx|기차|부산\s*(왔|내려|방문)|타지|외지|서울.*부산|부산.*서울|숙소|호텔|여행자|투어|놀러\s*(왔|와서|온)|부산\s*도착"
+LOCAL_PATTERNS   = r"단골|매일|자주|항상|늘\s*오|늘\s*가|근처\s*살|동네|집\s*근처|퇴근|점심\s*(자주|항상|매일)|자주\s*찾|자주\s*가|오랜만에|\d+\s*번째\s*방문|월에\s*\d+\s*번"
 
-# ── customer_type 패턴 (고객 유형: 직장인/가족/학생) ──────────────────────────
-# visit_origin(외지/현지인)과는 별개의 축이다 — 혼동 방지를 위해 별도 컬럼으로 관리한다.
-# 이슈 #150: customer_type '정보없음' 비율이 높다는 QA 지적에 따라, 실제 놓치고 있던
-# 표현(MT, 시험 끝나고/기간, 아이 데리고, 출근, 동료 등)을 추가로 보강함.
-STUDENT_PATTERNS   = r"학생|개강|방학|중간고사|기말고사|캠퍼스|동아리|학교\s*근처|MT|시험\s*(끝나고|기간|끝난)"
-FAMILY_PATTERNS    = r"가족|아이들|아이와|아기|부모님|엄마.*아빠|유모차|아이\s*데리고"
-OFFICE_PATTERNS    = r"직장|퇴근|출근|회사|점심시간|회식|동료"
+# ── customer_type 패턴 (고객 유형: 직장인/가족/학생/친구/커플/혼밥) ──────────────────────────
+STUDENT_PATTERNS   = r"학생|개강|방학|중간고사|기말고사|캠퍼스|동아리|학교\s*근처|MT|시험\s*(끝나고|기간|끝난)|선배|후배|대학생|수업\s*끝나고|교수님"
+FAMILY_PATTERNS    = r"가족|아이들|아이와|아기|부모님|엄마|아빠|유모차|아이\s*데리고|남편|아내|와이프|신랑|딸내미|아들내미|시부모님|장인어른|장모님|가족\s*모임|가족\s*외식"
+# ("할머니"/"할아버지"는 원래 있었으나 폐기 — 이 브랜드는 "할머니(나묘식)로부터 시작된
+#  레시피"라는 창업 스토리를 대부분의 블로그 글이 반복 서술해서, 원문 수집 후 실측 검증
+#  결과 133건 중 95건(71%)이 고객의 가족 동반이 아니라 이 브랜드 스토리 문구였다.)
+OFFICE_PATTERNS    = r"직장|퇴근|출근|회사|점심시간|회식|동료|부장님|과장님|대리님|팀장님|법카|연차|반차|사무실"
+FRIEND_PATTERNS    = r"친구|(?<!현)지인|절친|베프|동네친구"
+COUPLE_PATTERNS    = r"커플|데이트|남자친구|여자친구|남친|여친|오빠랑|기념일|연인"
+SOLO_PATTERNS      = r"혼밥|혼자|혼술|솔플|프로혼밥러|1인\s*방문"
 
 # ── 날짜 정규화 ────────────────────────────────────────────────────────────────
 def normalize_date(date_str: str) -> tuple[str, str]:
@@ -280,12 +289,18 @@ def classify_row(row) -> dict:
         result["visit_origin"] = "정보없음"
 
     # ── customer_type (고객 유형) ────────────────────────────────────────────
-    if re.search(STUDENT_PATTERNS, text, re.IGNORECASE):
-        result["customer_type"] = "학생"
-    elif re.search(FAMILY_PATTERNS, text, re.IGNORECASE):
+    if re.search(FAMILY_PATTERNS, text, re.IGNORECASE):
         result["customer_type"] = "가족"
+    elif re.search(COUPLE_PATTERNS, text, re.IGNORECASE):
+        result["customer_type"] = "커플"
+    elif re.search(FRIEND_PATTERNS, text, re.IGNORECASE):
+        result["customer_type"] = "친구"
+    elif re.search(SOLO_PATTERNS, text, re.IGNORECASE):
+        result["customer_type"] = "혼밥(1인)"
     elif re.search(OFFICE_PATTERNS, text, re.IGNORECASE):
         result["customer_type"] = "직장인"
+    elif re.search(STUDENT_PATTERNS, text, re.IGNORECASE):
+        result["customer_type"] = "학생"
     else:
         result["customer_type"] = "정보없음"
 

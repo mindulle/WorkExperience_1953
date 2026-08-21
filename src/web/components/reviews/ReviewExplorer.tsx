@@ -1,6 +1,27 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+
+function ReadMoreText({ text, limit = 200 }: { text: string; limit?: number }) {
+  const [expanded, setExpanded] = React.useState(false);
+  if (!text) return null;
+  if (text.length <= limit) return <div className="whitespace-pre-wrap">{text}</div>;
+  
+  return (
+    <div>
+      <div className="whitespace-pre-wrap">
+        {expanded ? text : text.slice(0, limit) + "..."}
+      </div>
+      <button 
+        onClick={() => setExpanded(!expanded)} 
+        className="text-[var(--brand)] font-semibold mt-2 hover:underline text-[13px]"
+      >
+        {expanded ? "접기" : "더보기"}
+      </button>
+    </div>
+  );
+}
+
 import type { ReviewItem } from "@/lib/types";
 import { Search, ChevronDown } from "lucide-react";
 import { Card } from "@/components/ui/Card";
@@ -243,7 +264,7 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
                   ))}
                 </p>
                 <blockquote className="border-l-[3px] border-[var(--brand)] pl-3.5 text-[13.5px] text-[var(--ink-2)] leading-relaxed m-0">
-                  &ldquo;{latestReview.content}&rdquo;
+                  <ReadMoreText text={latestReview.content} limit={150} />
                   <span className="text-[11.5px] text-[var(--muted)] mt-2 block">
                     - {displayBranch(latestReview.branch)} 리뷰 원문 ({latestReview.date || "날짜미상"})
                   </span>
@@ -313,7 +334,7 @@ export function ReviewExplorer({ reviews }: { reviews: ReviewItem[] }) {
               <span className="rdate">{selectedReview.date || "날짜미상"} · {selectedReview.channel}</span>
             </div>
             <div className="d-body">
-              {selectedReview.content}
+              <ReadMoreText text={selectedReview.content} limit={300} />
             </div>
 
             <div className="d-section">

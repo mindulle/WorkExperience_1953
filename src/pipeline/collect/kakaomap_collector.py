@@ -104,7 +104,10 @@ def collect_kakaomap(place_id: str, branch_name: str):
 def main():
     target_places = [
         {"id": "16894037", "branch": "경성대본점"},
-        {"id": "1447121016", "branch": "부산역점"},
+        # place_id 1447121016의 실제 주소는 "부산 중구 중앙대로81번길 8-1"로
+        # 공식 지점(1953bros.com) "#03 중앙점"과 정확히 일치. 예전 "부산역점" 라벨은
+        # 오기였음(2026-08-20 정정, google_map_collector.py의 "중앙점"과 통일).
+        {"id": "1447121016", "branch": "중앙점"},
         {"id": "1557477270", "branch": "서면점"},
         {"id": "738253595", "branch": "BIFC문현점"},
         {"id": "2096890217", "branch": "광안리점"},

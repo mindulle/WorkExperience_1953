@@ -128,7 +128,9 @@ def main():
     print("==================================================")
     
     target_places = [
-        {"id": "1959901593", "branch": "광안리본점"},
+        # 지점명은 kakaomap_collector.py / google_map_collector.py와 통일
+        # (이전에는 "광안리본점"이라 macro_insight.py의 지점별 그룹화가 어긋났음)
+        {"id": "1959901593", "branch": "광안리점"},
         {"id": "19542599", "branch": "경성대본점"}
     ]
     
